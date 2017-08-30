@@ -2,14 +2,14 @@
 ismn
 ====
 
-.. image:: https://travis-ci.org/TUW-GEO/imsn.svg?branch=master
-    :target: https://travis-ci.org/TUW-GEO/imsn
+.. image:: https://travis-ci.org/TUW-GEO/ismn.svg?branch=master
+    :target: https://travis-ci.org/TUW-GEO/ismn
 
-.. image:: https://coveralls.io/repos/TUW-GEO/imsn/badge.png?branch=master
-  :target: https://coveralls.io/r/TUW-GEO/imsn?branch=master
+.. image:: https://coveralls.io/repos/TUW-GEO/ismn/badge.png?branch=master
+  :target: https://coveralls.io/r/TUW-GEO/ismn?branch=master
 
-.. image:: https://badge.fury.io/py/imsn.svg
-    :target: http://badge.fury.io/py/imsn
+.. image:: https://badge.fury.io/py/ismn.svg
+    :target: http://badge.fury.io/py/ismn
 
 .. image:: https://readthedocs.org/projects/ismn/badge/?version=latest
    :target: http://ismn.readthedocs.org/
