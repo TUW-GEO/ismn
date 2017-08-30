@@ -30,6 +30,7 @@ install:
   - source activate ismn
   - conda env update -f environment.yml
   - python setup.py install
+  - pip install -r test-requirements.txt
 
 script:
   - python setup.py test
