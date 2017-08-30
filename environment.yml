@@ -1,0 +1,11 @@
+name: ismn
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - basemap
+  - pip:
+      - pygeogrids
