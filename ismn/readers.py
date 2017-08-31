@@ -373,7 +373,7 @@ def read_format_ceop(filename):
                                             date_index])
     data.index.names = ['depth_from', 'depth_to', 'date']
 
-    data = data.sortlevel(0)
+    data = data.sort_index(level=0)
 
     metadata['depth_from'] = np.unique(
         data.index.get_level_values(0).values).tolist()
