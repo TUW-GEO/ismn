@@ -92,9 +92,8 @@ Citation
 
 If you use the software please cite it using the following DOI:
 
-.. image:: https://zenodo.org/badge/12761/TUW-GEO/ismn.svg
-   :target: https://zenodo.org/badge/latestdoi/12761/TUW-GEO/ismn
-
+.. image:: https://zenodo.org/badge/101878880.svg
+   :target: https://zenodo.org/badge/latestdoi/101878880
 
 Note
 ====
