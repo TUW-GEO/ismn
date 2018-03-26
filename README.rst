@@ -11,9 +11,6 @@ ismn
 .. image:: https://badge.fury.io/py/ismn.svg
     :target: http://badge.fury.io/py/ismn
 
-.. image:: https://zenodo.org/badge/101878880.svg
-   :target: https://zenodo.org/badge/latestdoi/101878880
-
 .. image:: https://readthedocs.org/projects/ismn/badge/?version=latest
    :target: http://ismn.readthedocs.org/
 
@@ -22,10 +19,17 @@ Readers for the data from the International Soil Moisture Database (ISMN).
 Citation
 ========
 
-If you use the software please cite it using the following DOI:
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.855308.svg
+   :target: https://doi.org/10.5281/zenodo.855308
 
-.. image:: https://zenodo.org/badge/101878880.svg
-   :target: https://zenodo.org/badge/latestdoi/101878880
+If you use the software in a publication then please cite it using the Zenodo DOI.
+Be aware that this badge links to the latest package version.
+
+Please select your specific version at https://doi.org/10.5281/zenodo.855308 to get the DOI of that version.
+You should normally always use the DOI for the specific version of your record in citations.
+This is to ensure that other researchers can access the exact research artefact you used for reproducibility.
+
+You can find additional information regarding DOI versioning at http://help.zenodo.org/#versioning
 
 Installation
 ============
