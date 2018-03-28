@@ -1,3 +1,4 @@
+#this file is not used at the moment
 name: ismn_docs
 channels:
   - conda-forge
