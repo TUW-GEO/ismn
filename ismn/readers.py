@@ -369,7 +369,7 @@ def read_format_ceop(filename):
     del data['depth_from']
 
     data.index = pd.MultiIndex.from_arrays([depth_index,
-                                            depth_index,
+                                            depth_index.rename('depth_to'),
                                             date_index])
     data.index.names = ['depth_from', 'depth_to', 'date']
 
