@@ -57,20 +57,21 @@ def collect_from_folder(rootdir):
     for root, subFolders, files in os.walk(rootdir):
         # print root,subFolders,files
         for filename in files:
-            fullfilename = os.path.join(root, filename)
-            try:
-                metadata = readers.get_metadata(fullfilename)
-            except (readers.ReaderException, IOError) as e:
-                continue
-
-            for i, variable in enumerate(metadata['variable']):
-
-                metadata_catalog.append((metadata['network'], metadata['station'],
-                                         variable, metadata['depth_from'][
-                                             i], metadata['depth_to'][i],
-                                         metadata['sensor'], metadata[
-                                             'longitude'], metadata['latitude'],
-                                         metadata['elevation'], fullfilename))
+            if filename.endswith('.stm'):
+                fullfilename = os.path.join(root, filename)
+                try:
+                    metadata = readers.get_metadata(fullfilename)
+                except (readers.ReaderException, IOError) as e:
+                    continue
+    
+                for i, variable in enumerate(metadata['variable']):
+    
+                    metadata_catalog.append((metadata['network'], metadata['station'],
+                                             variable, metadata['depth_from'][
+                                                 i], metadata['depth_to'][i],
+                                             metadata['sensor'], metadata[
+                                                 'longitude'], metadata['latitude'],
+                                             metadata['elevation'], fullfilename))
 
     return np.array(metadata_catalog, dtype=np.dtype([('network', object), ('station', object), ('variable', object),
                                                       ('depth_from',
