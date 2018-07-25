@@ -40,6 +40,7 @@ import os
 import datetime
 import pytest
 import numpy.testing as nptest
+import ismn.metadata_collector as metadata_collector
 
 
 def test_min_max_obstime_getting():
