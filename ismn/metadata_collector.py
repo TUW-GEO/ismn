@@ -55,6 +55,8 @@ def collect_from_folder(rootdir):
 
     metadata_catalog = []
     for root, subFolders, files in os.walk(rootdir):
+        subFolders.sort()
+        files.sort()
         # print root,subFolders,files
         for filename in files:
             if filename.endswith('.stm'):
