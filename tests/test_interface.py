@@ -130,3 +130,21 @@ def test_interface_plotting():
         path_header_values, network=['SCAN'])
     fig, axes = hv_interface.plot_station_locations()
     return fig
+
+
+def test_station_order():
+    """
+    Test the station order returned by the metadata collector
+    """
+    path_header_values = os.path.join(os.path.dirname(__file__),
+                                      'test_data', 'multinetwork', 'header_values')
+
+    metadata = metadata_collector.collect_from_folder(path_header_values)
+
+    filenames = []
+    for m in metadata:
+        filenames.append(m[-1])
+
+    sorted_filenames = sorted(filenames)
+
+    assert sorted_filenames == filenames
