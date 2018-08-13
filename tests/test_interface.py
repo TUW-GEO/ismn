@@ -144,7 +144,7 @@ def test_station_order():
 
     filenames = []
     for m in metadata:
-        filenames.append(m[-1])
+        filenames.append(m['filename'])
 
     sorted_filenames = sorted(filenames)
 

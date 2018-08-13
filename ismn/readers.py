@@ -548,7 +548,18 @@ def get_metadata_from_csv(filename):
         landcover = list(landcover)[-1]
     climate = data.loc['climate classification']['description']
 
-    return [landcover, climate]
+    saturation = np.array([tuple(data.loc['saturation']['value'])],
+                          dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
+    clay_fraction = np.array([tuple(data.loc['clay fraction']['value'])],
+                             dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
+    sand_fraction = np.array([tuple(data.loc['sand fraction']['value'])],
+                             dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
+    silt_fraction = np.array([tuple(data.loc['silt fraction']['value'])],
+                             dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
+    organic_carbon = np.array([tuple(data.loc['organic carbon']['value'])[0:2]],
+                              dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
+
+    return landcover, climate, saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon
 
 
 def get_metadata(filename):

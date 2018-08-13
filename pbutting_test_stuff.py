@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import random
 import ismn.interface as ismn
+import pandas as pd
 
 path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
                                  'Data_seperate_files_20170810_20180809')
@@ -17,11 +18,14 @@ stations = ISMN_reader.list_stations()
 station = random.choice(stations)
 station_obj = ISMN_reader.get_station(station)
 
-
 ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover='Water')
 ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover='Water', climate='Polar - Tundra')
+# simply all data
+ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=10)
 
 ts = ISMN_reader.read_ts(ids1[0])
+
+df_station_info = pd.DataFrame(ISMN_reader.metadata[ids3])
 
 lc = ISMN_reader.list_landcover_types()
 clim = ISMN_reader.list_climate_types()

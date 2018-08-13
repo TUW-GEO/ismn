@@ -61,12 +61,13 @@ def collect_from_folder(rootdir):
 
         # read additional metadata from csv file
         filename_csv = glob.glob('{}/*.csv'.format(root))
-        # default values, if there is no csv file available
-        meta_csv = ['', '']
+        # TODO: default values, if there is no csv file available or it crashes for e.g saturation
+        landcover, climate, saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon = [None] * 7
         if len(filename_csv) > 0:
             path_csv = os.path.join(root, filename_csv[0])
             try:
-                meta_csv = readers.get_metadata_from_csv(path_csv)
+                landcover, climate, saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon = \
+                    readers.get_metadata_from_csv(path_csv)
             except (readers.ReaderException, IOError, KeyError) as e:
                 pass
 
@@ -87,12 +88,15 @@ def collect_from_folder(rootdir):
                                              metadata['sensor'], metadata[
                                                  'longitude'], metadata['latitude'],
                                              metadata['elevation'], fullfilename,
-                                             meta_csv[0], meta_csv[1]))
+                                             landcover, climate, saturation, clay_fraction,
+                                             sand_fraction, silt_fraction, organic_carbon))
 
     return np.array(metadata_catalog, dtype=np.dtype([('network', object), ('station', object), ('variable', object),
-                                                      ('depth_from',
-                                                       np.float), ('depth_to', np.float),
-                                                      ('sensor', object), ('longitude',
-                                                                           np.float), ('latitude', np.float),
+                                                      ('depth_from', np.float), ('depth_to', np.float),
+                                                      ('sensor', object), ('longitude', np.float),
+                                                      ('latitude', np.float),
                                                       ('elevation', np.float), ('filename', object),
-                                                      ('landcover', object), ('climate', object)]))
+                                                      ('landcover', object), ('climate', object),
+                                                      ('saturation', object),
+                                                      ('clay_fraction', object), ('sand_fraction', object),
+                                                      ('silt_fraction', object), ('organic_carbon', object)]))

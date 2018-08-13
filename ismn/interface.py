@@ -53,6 +53,7 @@ class ISMNError(Exception):
 
 
 class ISMN_station(object):
+    #TODO: add fractions and saturation to attributes (they are in variables list now)
     """
     Knows everything about the station, like which variables are measured there in which depths
     and in which files the data is stored. This is not completely true for the CEOP format
@@ -138,8 +139,13 @@ class ISMN_station(object):
         self.depth_to = []
         self.sensors = []
         self.filenames = []
-        self.landcover = None
-        self.climate = None
+        self.landcover = metadata[0]['landcover']
+        self.climate = metadata[0]['climate']
+        self.saturation = metadata[0]['saturation']
+        self.clay_fraction = metadata[0]['clay_fraction']
+        self.sand_fraction = metadata[0]['sand_fraction']
+        self.silt_fraction = metadata[0]['silt_fraction']
+        self.organic_carbon = metadata[0]['organic_carbon']
 
         for dataset in metadata:
             if self.network is None:
@@ -155,8 +161,6 @@ class ISMN_station(object):
             self.latitude = dataset['latitude']
             self.longitude = dataset['longitude']
             self.elevation = dataset['elevation']
-            self.landcover = dataset['landcover']
-            self.climate = dataset['climate']
             self.variables.append(dataset['variable'])
             self.depth_from.append(dataset['depth_from'])
             self.depth_to.append(dataset['depth_to'])
