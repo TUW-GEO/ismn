@@ -5,11 +5,13 @@ import random
 import ismn.interface as ismn
 import pandas as pd
 
-path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
-                                 'Data_seperate_files_20170810_20180809')
+# path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
+#                                  'Data_seperate_files_20170810_20180809')
 
 # path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
 #                                  'Data_seperate_files_header_20170810_20180809')
+
+path_to_ismn_data = os.path.join('/home/pbutting/shares/radar/Datapool_processed/ESA_CCI_SM/ISMN/4J89')
 
 ISMN_reader = ismn.ISMN_Interface(path_to_ismn_data)
 networks = ISMN_reader.list_networks()

@@ -848,7 +848,7 @@ class ISMN_Interface(object):
             ismn_map.drawcountries(linewidth=0.25)
             ismn_map.drawstates(linewidth=0.25)
             plt.legend(
-                rect, uniq_networks.tolist(), loc='lower center', ncol=uniq_networks.size / 4)
+                rect, uniq_networks.tolist(), loc='lower center', ncol=int(uniq_networks.size / 4))
 
             return fig, ax
         else:
@@ -917,7 +917,7 @@ class ISMN_Interface(object):
                              "end date": end_dates}, index=[np.array(networks), np.array(stations)])
         return data
 
-    def list_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=1):
+    def list_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=10):
         """
         returns all landcover types in data for specific variable at certain depths
 
@@ -957,13 +957,14 @@ class ISMN_Interface(object):
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
-                       (self.metadata['depth_from'] >= min_depth))[0]
+                       (self.metadata['depth_from'] >= min_depth) &
+                       (self.metadata['landcover'] != None))[0]
 
         meta = self.metadata[ids]
         lc_types = np.unique(meta['landcover'])
         return lc_types
 
-    def list_climate_types(self, variable='soil moisture', min_depth=0, max_depth=1):
+    def list_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10):
         """
         returns all climate types in data for specific variable at certain depths
 
@@ -1003,7 +1004,8 @@ class ISMN_Interface(object):
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
-                       (self.metadata['depth_from'] >= min_depth))[0]
+                       (self.metadata['depth_from'] >= min_depth) &
+                       (self.metadata['landcover'] != None))[0]
 
         meta = self.metadata[ids]
         lc_types = np.unique(meta['climate'])

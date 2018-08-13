@@ -539,25 +539,35 @@ def get_metadata_from_csv(filename):
     landcover: str, landcover classification for station
     climate: str, climate classification for station
     """
+    def read_field(fieldname):
+        if fieldname in data.index:
+            dt = list()
+            for i, j in zip(np.atleast_1d(data.loc[fieldname]['depth_from[m]']),
+                            np.atleast_1d(data.loc[fieldname]['depth_to[m]'])):
+                dt.append(('{}m_{}m'.format(i, j), np.float))
+            return np.array([tuple(np.atleast_1d(data.loc[fieldname]['value']))], dtype=np.dtype(dt))
+        else:
+            return None
+
     data = pd.read_csv(filename, delimiter=";")
     data.set_index('quantity_name', inplace=True)
 
     landcover = data.loc['land cover classification']['description']
     if type(landcover) is not str:
         # pick the most recent landcover specification
+        landcover.dropna(inplace=True) # in case of in situ classification
         landcover = list(landcover)[-1]
     climate = data.loc['climate classification']['description']
+    if type(climate) is not str:
+        # pick the most recent climate specification
+        climate.dropna(inplace=True) # in case of in situ classification
+        climate = list(climate)[-1]
 
-    saturation = np.array([tuple(data.loc['saturation']['value'])],
-                          dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
-    clay_fraction = np.array([tuple(data.loc['clay fraction']['value'])],
-                             dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
-    sand_fraction = np.array([tuple(data.loc['sand fraction']['value'])],
-                             dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
-    silt_fraction = np.array([tuple(data.loc['silt fraction']['value'])],
-                             dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
-    organic_carbon = np.array([tuple(data.loc['organic carbon']['value'])[0:2]],
-                              dtype=np.dtype([('0m_0.3m', np.float), ('0.3m_1m', np.float)]))
+    saturation = read_field('saturation')
+    clay_fraction = read_field('clay fraction')
+    sand_fraction = read_field('sand fraction')
+    silt_fraction = read_field('silt fraction')
+    organic_carbon = read_field('organic carbon')
 
     return landcover, climate, saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon
 
