@@ -53,7 +53,6 @@ class ISMNError(Exception):
 
 
 class ISMN_station(object):
-
     """
     Knows everything about the station, like which variables are measured there in which depths
     and in which files the data is stored. This is not completely true for the CEOP format
@@ -79,6 +78,10 @@ class ISMN_station(object):
         longitude of station
     elevation : float
         elevation of station
+    landcover: string
+        land cover classification for station
+    climate: string
+        climate classification for station
     variables : numpy.array
         variables measured at this station
         one of
@@ -135,6 +138,8 @@ class ISMN_station(object):
         self.depth_to = []
         self.sensors = []
         self.filenames = []
+        self.landcover = None
+        self.climate = None
 
         for dataset in metadata:
             if self.network is None:
@@ -150,6 +155,8 @@ class ISMN_station(object):
             self.latitude = dataset['latitude']
             self.longitude = dataset['longitude']
             self.elevation = dataset['elevation']
+            self.landcover = dataset['landcover']
+            self.climate = dataset['climate']
             self.variables.append(dataset['variable'])
             self.depth_from.append(dataset['depth_from'])
             self.depth_to.append(dataset['depth_to'])
@@ -667,17 +674,63 @@ class ISMN_Interface(object):
                 if variable in station.variables:
                     yield station
 
-    def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1):
+    def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1, landcover=None, climate=None):
         """
         returnes list of dataset_id's that can be used to read a
         dataset directly through the read_ts function
+
+        Parameters
+        ----------
+        self: type
+            description
+        variable: string, optional
+            one of
+                * 'soil moisture',
+                * 'soil temperature',
+                * 'soil suction',
+                * 'precipitation',
+                * 'air temperature',
+                * 'field capacity',
+                * 'permanent wilting point',
+                * 'plant available water',
+                * 'potential plant available water',
+                * 'saturation',
+                * 'silt fraction',
+                * 'snow depth',
+                * 'sand fraction',
+                * 'clay fraction',
+                * 'organic carbon',
+                * 'snow water equivalent',
+                * 'surface temperature',
+                * 'surface temperature quality flag original'
+        min_depth : float, optional
+            depth_from of variable has to be >= min_depth in order to be
+            included.
+        max_depth : float, optional
+            depth_to of variable has to be <= max_depth in order to be
+            included.
+        landcover: string
+            land cover classification
+        climate: string
+            climate classification
         """
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
 
+        if landcover is not None:
+            landcover = self.metadata['landcover'] == landcover
+        else:
+            landcover = np.ones(self.metadata['variable'].shape, dtype=bool)
+
+        if climate is not None:
+            climate = self.metadata['climate'] == climate
+        else:
+            climate = np.ones(self.metadata['variable'].shape, dtype=bool)
+
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
-                       (self.metadata['depth_from'] >= min_depth))[0]
+                       (self.metadata['depth_from'] >= min_depth) &
+                       landcover & climate)[0]
 
         return ids
 
@@ -859,3 +912,95 @@ class ISMN_Interface(object):
         data = pd.DataFrame({"start date": start_dates,
                              "end date": end_dates}, index=[np.array(networks), np.array(stations)])
         return data
+
+    def list_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=1):
+        """
+        returns all landcover types in data for specific variable at certain depths
+
+        Parameters
+        ----------
+        self: type
+            description
+        variable: string, optional
+            one of
+                * 'soil moisture',
+                * 'soil temperature',
+                * 'soil suction',
+                * 'precipitation',
+                * 'air temperature',
+                * 'field capacity',
+                * 'permanent wilting point',
+                * 'plant available water',
+                * 'potential plant available water',
+                * 'saturation',
+                * 'silt fraction',
+                * 'snow depth',
+                * 'sand fraction',
+                * 'clay fraction',
+                * 'organic carbon',
+                * 'snow water equivalent',
+                * 'surface temperature',
+                * 'surface temperature quality flag original'
+        min_depth : float, optional
+            depth_from of variable has to be >= min_depth in order to be
+            included.
+        max_depth : float, optional
+            depth_to of variable has to be <= max_depth in order to be
+            included.
+        """
+        if max_depth < min_depth:
+            raise ValueError("max_depth can not be less than min_depth")
+
+        ids = np.where((self.metadata['variable'] == variable) &
+                       (self.metadata['depth_to'] <= max_depth) &
+                       (self.metadata['depth_from'] >= min_depth))[0]
+
+        meta = self.metadata[ids]
+        lc_types = np.unique(meta['landcover'])
+        return lc_types
+
+    def list_climate_types(self, variable='soil moisture', min_depth=0, max_depth=1):
+        """
+        returns all climate types in data for specific variable at certain depths
+
+        Parameters
+        ----------
+        self: type
+            description
+        variable: string, optional
+            one of
+                * 'soil moisture',
+                * 'soil temperature',
+                * 'soil suction',
+                * 'precipitation',
+                * 'air temperature',
+                * 'field capacity',
+                * 'permanent wilting point',
+                * 'plant available water',
+                * 'potential plant available water',
+                * 'saturation',
+                * 'silt fraction',
+                * 'snow depth',
+                * 'sand fraction',
+                * 'clay fraction',
+                * 'organic carbon',
+                * 'snow water equivalent',
+                * 'surface temperature',
+                * 'surface temperature quality flag original'
+        min_depth : float, optional
+            depth_from of variable has to be >= min_depth in order to be
+            included.
+        max_depth : float, optional
+            depth_to of variable has to be <= max_depth in order to be
+            included.
+        """
+        if max_depth < min_depth:
+            raise ValueError("max_depth can not be less than min_depth")
+
+        ids = np.where((self.metadata['variable'] == variable) &
+                       (self.metadata['depth_to'] <= max_depth) &
+                       (self.metadata['depth_from'] >= min_depth))[0]
+
+        meta = self.metadata[ids]
+        lc_types = np.unique(meta['climate'])
+        return lc_types

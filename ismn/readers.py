@@ -526,6 +526,31 @@ def read_data(filename):
     return func(filename)
 
 
+def get_metadata_from_csv(filename):
+    """
+    reads ISMN metadata from csv file
+
+    Parameters
+    ----------
+    filename: str, path to csv file
+
+    Returns
+    -------
+    landcover: str, landcover classification for station
+    climate: str, climate classification for station
+    """
+    data = pd.read_csv(filename, delimiter=";")
+    data.set_index('quantity_name', inplace=True)
+
+    landcover = data.loc['land cover classification']['description']
+    if type(landcover) is not str:
+        # pick the most recent landcover specification
+        landcover = list(landcover)[-1]
+    climate = data.loc['climate classification']['description']
+
+    return [landcover, climate]
+
+
 def get_metadata(filename):
     """
     reads ISMN metadata from any format

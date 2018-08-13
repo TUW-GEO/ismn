@@ -1,0 +1,51 @@
+ISMN Quality Flags
+
+For a detailed description of the methodology behind the quality flags we refer to:
+
+Dorigo, W.A. , Xaver, A. Vreugdenhil, M. Gruber, A., Hegyiová, A. Sanchis-Dufau, A.D., Zamojski, D. , Cordes, C., Wagner, W., and Drusch, M. (2013). Global Automated Quality Control of In Situ Soil Moisture data from the International Soil Moisture Network. Vadose Zone Journal, 12, 3, doi:10.2136/vzj2012.0097
+
+This paper shall be cited when you use the quality flags for your research.
+
+variable; flag category; flag; flag is set if following condition is met
+soil moisture;C - reported value exceeds output format field size;C01;soil moisture < 0.0 m3/m3
+soil moisture;C - reported value exceeds output format field size;C02;soil moisture > 0.6 m3/m3
+soil moisture;C - reported value exceeds output format field size;C03;soil moisture > saturation point (derived from HWSD parameter values)
+soil moisture;D - questionable/dubious - geophysical based;D01;in situ soil temperature(*) < 0°C
+soil moisture;D - questionable/dubious - geophysical based;D02;in situ air temperature < 0°C
+soil moisture;D - questionable/dubious - geophysical based;D03;GLDAS soil temperature(*) < 0°C
+soil moisture;D - questionable/dubious - geophysical based;D04;soil moisture shows peaks without precipitation event (in situ) in the preceeding 24 hours
+soil moisture;D - questionable/dubious - geophysical based;D05;soil moisture shows peaks without precipitation event (GLDAS) in the preceeding 24 hours
+soil moisture;D - questionable/dubious - spectrum based;D06;a spike is detected in soil moisture spectrum
+soil moisture;D - questionable/dubious - spectrum based;D07;a negative jump is detected in soil moisture spectrum
+soil moisture;D - questionable/dubious - spectrum based;D08;a positive jump is detected in soil moisture spectrum
+soil moisture;D - questionable/dubious - spectrum based;D09;low constant values (for a minimum time of 12 hours) occur in soil moisture spectrum
+soil moisture;D - questionable/dubious - spectrum based;D10;saturated plateau (for a minimum time length of 12 hours) occurs in soil moisture spectrum
+soil moisture;M;parameter value missing
+soil moisture;G;good
+soil temperature;C - reported value exceeds output format field size;C01;soil temperature < -60°C
+soil temperature;C - reported value exceeds output format field size;C02;soil temperature > 60°C
+soil temperature;M;parameter value missing
+soil temperature;G;good
+soil surface temperature;C - reported value exceeds output format field size;C01;soil surface temperature < -60°C
+soil surface temperature;C - reported value exceeds output format field size;C02;soil surface temperature > 60°C
+soil surface temperature;M;parameter value missing
+soil surface temperature;G;good
+air temperature;C - reported value exceeds output format field size;C01;air temperature < -60°C
+air temperature;C - reported value exceeds output format field size;C02;air temperature > 60°C
+air temperature;M;parameter value missing
+air temperature;G;good
+precipitation;C - reported value exceeds output format field size;C01;precipitation < 0 mm/h
+precipitation;C - reported value exceeds output format field size;C02;precipitation > 100 mm/h
+precipitation;M;parameter value missing
+precipitation;G;good
+soil suction;C - reported value exceeds output format field size;C01;soil suction < 0 kPa
+soil suction;C - reported value exceeds output format field size;C02;soil suction > 2500 kPa
+soil suction;M;parameter value missing
+soil suction;G;good
+snow water equivalent;C - reported value exceeds output format field size;C01;snow water equivalent < 0 mm
+snow water equivalent;M;parameter value missing
+snow water equivalent;G;good
+snow depth;C - reported value exceeds output format field size;C01;snow depth < 0 mm
+snow depth;M;parameter value missing
+snow depth;G;good
+(*) at corresponding depth layer

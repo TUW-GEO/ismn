@@ -32,6 +32,7 @@ Created on Aug 1, 2013
 
 
 import os
+import glob
 import ismn.readers as readers
 import numpy as np
 
@@ -57,6 +58,18 @@ def collect_from_folder(rootdir):
     for root, subFolders, files in os.walk(rootdir):
         subFolders.sort()
         files.sort()
+
+        # read additional metadata from csv file
+        filename_csv = glob.glob('{}/*.csv'.format(root))
+        # default values, if there is no csv file available
+        meta_csv = ['', '']
+        if len(filename_csv) > 0:
+            path_csv = os.path.join(root, filename_csv[0])
+            try:
+                meta_csv = readers.get_metadata_from_csv(path_csv)
+            except (readers.ReaderException, IOError, KeyError) as e:
+                pass
+
         # print root,subFolders,files
         for filename in files:
             if filename.endswith('.stm'):
@@ -65,7 +78,7 @@ def collect_from_folder(rootdir):
                     metadata = readers.get_metadata(fullfilename)
                 except (readers.ReaderException, IOError) as e:
                     continue
-    
+
                 for i, variable in enumerate(metadata['variable']):
     
                     metadata_catalog.append((metadata['network'], metadata['station'],
@@ -73,11 +86,13 @@ def collect_from_folder(rootdir):
                                                  i], metadata['depth_to'][i],
                                              metadata['sensor'], metadata[
                                                  'longitude'], metadata['latitude'],
-                                             metadata['elevation'], fullfilename))
+                                             metadata['elevation'], fullfilename,
+                                             meta_csv[0], meta_csv[1]))
 
     return np.array(metadata_catalog, dtype=np.dtype([('network', object), ('station', object), ('variable', object),
                                                       ('depth_from',
                                                        np.float), ('depth_to', np.float),
                                                       ('sensor', object), ('longitude',
                                                                            np.float), ('latitude', np.float),
-                                                      ('elevation', np.float), ('filename', object)]))
+                                                      ('elevation', np.float), ('filename', object),
+                                                      ('landcover', object), ('climate', object)]))
