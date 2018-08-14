@@ -86,23 +86,24 @@ class ISMN_station(object):
     variables : numpy.array
         variables measured at this station
         one of
+        - dynamic (time series):
                 * 'soil moisture',
                 * 'soil temperature',
                 * 'soil suction',
                 * 'precipitation',
                 * 'air temperature',
+                * 'snow depth',
+                * 'snow water equivalent',
+                * 'surface temperature',
+        - static:
                 * 'field capacity',
                 * 'permanent wilting point',
-                * 'plant available water',
                 * 'potential plant available water',
                 * 'saturation',
                 * 'silt fraction',
-                * 'snow depth',
                 * 'sand fraction',
                 * 'clay fraction',
                 * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
                 * 'surface temperature quality flag original'
     depth_from : numpy.array
         shallower depth of layer the variable with same index was measured at
@@ -917,7 +918,7 @@ class ISMN_Interface(object):
                              "end date": end_dates}, index=[np.array(networks), np.array(stations)])
         return data
 
-    def list_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=10):
+    def get_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=10):
         """
         returns all landcover types in data for specific variable at certain depths
 
@@ -964,7 +965,7 @@ class ISMN_Interface(object):
         lc_types = np.unique(meta['landcover'])
         return lc_types
 
-    def list_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10):
+    def get_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10):
         """
         returns all climate types in data for specific variable at certain depths
 
@@ -1010,3 +1011,14 @@ class ISMN_Interface(object):
         meta = self.metadata[ids]
         lc_types = np.unique(meta['climate'])
         return lc_types
+
+    def get_variables(self):
+        """
+        get a list of variables available for the data
+
+        Returns
+        -------
+        variables : numpy.array
+            array of variables available for the data
+        """
+        return np.unique(self.metadata['variable'])
