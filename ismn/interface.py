@@ -819,7 +819,7 @@ class ISMN_Interface(object):
             else:
                 fig = None
                 ax = axes
-            colormap = plt.get_cmap('Set1')
+            colormap = plt.get_cmap('tab20')
 
             ismn_map = Basemap(projection='robin', lon_0=0)
 
