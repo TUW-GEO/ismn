@@ -538,6 +538,11 @@ def get_metadata_from_csv(filename):
     -------
     landcover: str, landcover classification for station
     climate: str, climate classification for station
+    saturation: nd.array, saturation for all available depths
+    clay_fraction: nd.array, clay fraction for all available depths (in % weight)
+    sand_fraction: nd.array, sand fraction for all available depths (in % weight)
+    silt_fraction: nd.array, silt fraction for all available depths (in % weight)
+    organic_carbon: nd.array, organic carbon for all available depths (in % weight)
     """
     def read_field(fieldname):
         if fieldname in data.index:
@@ -547,21 +552,33 @@ def get_metadata_from_csv(filename):
                 dt.append(('{}m_{}m'.format(i, j), np.float))
             return np.array([tuple(np.atleast_1d(data.loc[fieldname]['value']))], dtype=np.dtype(dt))
         else:
-            return None
+            return np.nan
 
-    data = pd.read_csv(filename, delimiter=";")
-    data.set_index('quantity_name', inplace=True)
+    # TODO: some stations dont come with correct format in csv (like gnps-scgn (network PBO_H2O) --> no header)
+    try:
+        data = pd.read_csv(filename, delimiter=";")
+        data.set_index('quantity_name', inplace=True)
+    except:
+        # set columns manually
+        data = pd.read_csv(filename, delimiter=";", header=None)
+        cols = list(data.columns.values)
+        cols[0:6] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]', 'value', 'description']
+        data.columns = cols
+        data.set_index('quantity_name', inplace=True)
 
-    landcover = data.loc['land cover classification']['description']
-    if type(landcover) is not str:
-        # pick the most recent landcover specification
-        landcover.dropna(inplace=True) # in case of in situ classification
+    landcover = pd.Series(data.loc['land cover classification']['description'])
+    landcover.dropna(inplace=True)  # in case of in situ classification
+    if len(landcover) > 0:
         landcover = list(landcover)[-1]
-    climate = data.loc['climate classification']['description']
-    if type(climate) is not str:
-        # pick the most recent climate specification
-        climate.dropna(inplace=True) # in case of in situ classification
+    else:
+        landcover = np.nan
+
+    climate = pd.Series(data.loc['climate classification']['description'])
+    climate.dropna(inplace=True)  # in case of in situ classification
+    if len(climate) > 0:
         climate = list(climate)[-1]
+    else:
+        climate = np.nan
 
     saturation = read_field('saturation')
     clay_fraction = read_field('clay fraction')
