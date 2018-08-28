@@ -11,17 +11,17 @@ import numpy as np
 # path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
 #                                  'Data_seperate_files_20170810_20180809')
 
-# path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
-#                                  'Data_seperate_files_header_20170810_20180809')
+path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
+                                 'Data_seperate_files_header_20170810_20180809')
 
 # path_to_ismn_data = os.path.join('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/'
 #                                  'Data_seperate_files_20150820_20180820_2366439')
 
-path_to_ismn_data = os.path.join('/home/pbutting/shares/radar/Datapool_processed/ESA_CCI_SM/ISMN/4J89')
+# path_to_ismn_data = os.path.join('/home/pbutting/shares/radar/Datapool_processed/ESA_CCI_SM/ISMN/4J89')
 
 
 ISMN_reader = ismn.ISMN_Interface(path_to_ismn_data)
-SCAN_network = ismn.ISMN_Interface(path_to_ismn_data, network=['SCAN'])
+#SCAN_network = ismn.ISMN_Interface(path_to_ismn_data, network=['SCAN'])
 df_station_info = pd.DataFrame(ISMN_reader.metadata)
 
 networks = ISMN_reader.list_networks()

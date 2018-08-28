@@ -225,6 +225,7 @@ def read_format_header_values(filename):
                        parse_dates=[[0, 1]])
 
     data.set_index('date_time', inplace=True)
+    data = data.tz_localize('UTC')
 
     metadata['data'] = data
 
@@ -299,6 +300,7 @@ def read_format_ceop_sep(filename):
                        parse_dates=[[0, 1]])
 
     data.set_index('date_time', inplace=True)
+    data = data.tz_localize('UTC')
 
     metadata['data'] = data
 
@@ -374,6 +376,7 @@ def read_format_ceop(filename):
     data.index.names = ['depth_from', 'depth_to', 'date']
 
     data = data.sort_index(level=0)
+    data = data.tz_localize('UTC')
 
     metadata['depth_from'] = np.unique(
         data.index.get_level_values(0).values).tolist()
