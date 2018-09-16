@@ -2,6 +2,8 @@ name: ismn
 channels:
 - defaults
 dependencies:
+- atomicwrites=1.2.1=py27_0
+- attrs=18.2.0=py27h28b3542_0
 - basemap=1.0.7=np111py27_0
 - blas=1.0=mkl
 - ca-certificates=2018.03.07=0
@@ -10,6 +12,7 @@ dependencies:
 - cycler=0.10.0=py27_0
 - fontconfig=2.12.1=3
 - freetype=2.5.5=2
+- funcsigs=1.0.2=py27_0
 - geos=3.4.2=0
 - icu=58.2=h9c2bf20_1
 - intel-openmp=2018.0.3=0
@@ -23,20 +26,26 @@ dependencies:
 - libxml2=2.9.8=h26e45fe_1
 - matplotlib=1.5.1=np111py27_0
 - mkl=2017.0.4=h4c4d0af_0
+- more-itertools=4.3.0=py27_0
 - ncurses=6.1=hf484d3e_0
 - numpy=1.11.3=py27_0
 - openssl=1.0.2p=h14c3975_0
 - pandas=0.23.0=py27h637b7d7_0
+- pathlib2=2.3.2=py27_0
 - pip=10.0.1=py27_0
 - pixman=0.34.0=hceecf20_3
+- pluggy=0.7.1=py27h28b3542_0
+- py=1.6.0=py27_0
 - pycairo=1.13.3=py27hea6d626_0
 - pyparsing=2.2.0=py27_1
 - pyqt=4.11.4=py27_4
+- pytest=3.8.0=py27_0
 - python=2.7.15=h1571d57_0
 - python-dateutil=2.7.3=py27_0
 - pytz=2018.5=py27_0
 - qt=4.8.7=3
 - readline=7.0=h7b6447c_5
+- scandir=1.9.0=py27h14c3975_0
 - scipy=0.19.0=np111py27_0
 - setuptools=40.2.0=py27_0
 - sip=4.18=py27_0

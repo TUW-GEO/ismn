@@ -7,6 +7,7 @@
 *.orig
 *.log
 *.pot
+.pytest_cache
 __pycache__/*
 .cache/*
 .*.swp
