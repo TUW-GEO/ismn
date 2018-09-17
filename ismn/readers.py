@@ -576,7 +576,7 @@ def get_metadata_from_csv(filename):
     else:
         landcover = np.nan
 
-    climate = pd.Series(data.loc['climate classification']['description'])
+    climate = pd.Series(data.loc['climate classification']['value'])
     climate.dropna(inplace=True)  # in case of in situ classification
     if len(climate) > 0:
         climate = list(climate)[-1]
