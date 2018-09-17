@@ -569,7 +569,7 @@ def get_metadata_from_csv(filename):
         data.columns = cols
         data.set_index('quantity_name', inplace=True)
 
-    landcover = pd.Series(data.loc['land cover classification']['description'])
+    landcover = pd.Series(data.loc['land cover classification']['value'])
     landcover.dropna(inplace=True)  # in case of in situ classification
     if len(landcover) > 0:
         landcover = list(landcover)[-1]
