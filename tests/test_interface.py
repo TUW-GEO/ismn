@@ -157,13 +157,13 @@ def test_list_landcover_types():
                                      'Data_seperate_files_header_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     lc = ISMN_reader.get_landcover_types()
-    assert list(lc) == ['Grassland', 'Water']
+    assert list(lc) == [130, 210]
 
     path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
                                      'Data_seperate_files_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     lc = ISMN_reader.get_landcover_types()
-    assert list(lc) == ['Grassland', 'Water']
+    assert list(lc) == [130, 210]
 
 
 def test_list_climate_types():
@@ -172,10 +172,10 @@ def test_list_climate_types():
                                      'Data_seperate_files_header_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     lc = ISMN_reader.get_climate_types()
-    assert list(lc) == ['Polar - Tundra', 'Temperate - Without dry season - Hot Summer']
+    assert list(lc) == ['Cfa', 'ET']
 
     path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
                                      'Data_seperate_files_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     lc = ISMN_reader.get_climate_types()
-    assert list(lc) == ['Polar - Tundra', 'Temperate - Without dry season - Hot Summer']
+    assert list(lc) == ['Cfa', 'ET']

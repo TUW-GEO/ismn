@@ -35,6 +35,7 @@ import os
 import glob
 import ismn.readers as readers
 import numpy as np
+import logging
 
 
 def collect_from_folder(rootdir):
@@ -54,6 +55,9 @@ def collect_from_folder(rootdir):
         structured numpy array which contains the metadata for one file per row
     """
 
+    logging.basicConfig(filename=os.path.join(rootdir, 'metadata.log'),
+                        level=logging.DEBUG)
+
     metadata_catalog = []
     for root, subFolders, files in os.walk(rootdir):
         subFolders.sort()
@@ -62,14 +66,17 @@ def collect_from_folder(rootdir):
         # read additional metadata from csv file
         filename_csv = glob.glob('{}/*.csv'.format(root))
         # TODO: default values, if there is no csv file available or it crashes for e.g saturation
-        landcover, climate, saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon = [None] * 7
+        lc2000, lc2005, lc2010, lc_insitu, climate, climate_insitu, saturation, clay_fraction, sand_fraction, \
+        silt_fraction, organic_carbon = [np.nan, np.nan, np.nan, '', '', '', np.nan, np.nan, np.nan, np.nan, np.nan]
         if len(filename_csv) > 0:
             path_csv = os.path.join(root, filename_csv[0])
             try:
-                landcover, climate, saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon = \
-                    readers.get_metadata_from_csv(path_csv)
-            except (readers.ReaderException, IOError, KeyError) as e:
-                pass
+                lc2000, lc2005, lc2010, lc_insitu, climate, climate_insitu, saturation, clay_fraction, sand_fraction, \
+                silt_fraction, organic_carbon = readers.get_metadata_from_csv(path_csv)
+            except:
+                print('Error occured when reading metadata from csv files')
+        else:
+            logging.info('no csv file ({})'.format(root))
 
         # print root,subFolders,files
         for filename in files:
@@ -81,22 +88,24 @@ def collect_from_folder(rootdir):
                     continue
 
                 for i, variable in enumerate(metadata['variable']):
-    
+
                     metadata_catalog.append((metadata['network'], metadata['station'],
                                              variable, metadata['depth_from'][
                                                  i], metadata['depth_to'][i],
                                              metadata['sensor'], metadata[
                                                  'longitude'], metadata['latitude'],
                                              metadata['elevation'], fullfilename,
-                                             landcover, climate, saturation, clay_fraction,
-                                             sand_fraction, silt_fraction, organic_carbon))
+                                             lc2000, lc2005, lc2010, lc_insitu, climate, climate_insitu,
+                                             saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon))
 
     return np.array(metadata_catalog, dtype=np.dtype([('network', object), ('station', object), ('variable', object),
                                                       ('depth_from', np.float), ('depth_to', np.float),
                                                       ('sensor', object), ('longitude', np.float),
                                                       ('latitude', np.float),
                                                       ('elevation', np.float), ('filename', object),
-                                                      ('landcover', object), ('climate', object),
+                                                      ('landcover_2000', object), ('landcover_2005', object),
+                                                      ('landcover_2010', object), ('landcover_insitu', object),
+                                                      ('climate', object), ('climate_insitu', object),
                                                       ('saturation', object),
                                                       ('clay_fraction', object), ('sand_fraction', object),
                                                       ('silt_fraction', object), ('organic_carbon', object)]))

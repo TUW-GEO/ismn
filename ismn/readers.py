@@ -33,6 +33,7 @@ import os
 import pandas as pd
 from datetime import datetime
 import numpy as np
+import logging
 
 
 variable_lookup = {'sm': 'soil moisture',
@@ -563,25 +564,32 @@ def get_metadata_from_csv(filename):
         data.set_index('quantity_name', inplace=True)
     except:
         # set columns manually
+        logging.info('no header: {}'.format(filename))
         data = pd.read_csv(filename, delimiter=";", header=None)
         cols = list(data.columns.values)
-        cols[0:6] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]', 'value', 'description']
+        cols[0:7] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]', 'value', 'description', 'quantity_source_name']
         data.columns = cols
         data.set_index('quantity_name', inplace=True)
 
-    landcover = pd.Series(data.loc['land cover classification']['value'])
-    landcover.dropna(inplace=True)  # in case of in situ classification
-    if len(landcover) > 0:
-        landcover = list(landcover)[-1]
-    else:
-        landcover = np.nan
+    # read landcover classifications
+    lc = data.loc[['land cover classification']][['value', 'quantity_source_name']]
+    lc_dict = {'CCI_landcover_2000': np.nan, 'CCI_landcover_2005': np.nan, 'CCI_landcover_2010': np.nan, 'insitu': ''}
+    for key in lc_dict.keys():
+        if key in lc['quantity_source_name'].values:
+            if key != 'insitu':
+                lc_dict[key] = np.int(lc.loc[lc['quantity_source_name'] == key]['value'].values[0])
+            else:
+                lc_dict[key] = lc.loc[lc['quantity_source_name'] == key]['value'].values[0]
+                logging.info('insitu land cover classification available: {}'.format(filename))
 
-    climate = pd.Series(data.loc['climate classification']['value'])
-    climate.dropna(inplace=True)  # in case of in situ classification
-    if len(climate) > 0:
-        climate = list(climate)[-1]
-    else:
-        climate = np.nan
+    # read climate classifications
+    cl = data.loc[['climate classification']][['value', 'quantity_source_name']]
+    cl_dict = {'koeppen_geiger_2007': '', 'insitu': ''}
+    for key in cl_dict.keys():
+        if key in cl['quantity_source_name'].values:
+            cl_dict[key] = cl.loc[cl['quantity_source_name'] == key]['value'].values[0]
+            if key == 'insitu':
+                logging.info('insitu climate classification available: {}'.format(filename))
 
     saturation = read_field('saturation')
     clay_fraction = read_field('clay fraction')
@@ -589,7 +597,9 @@ def get_metadata_from_csv(filename):
     silt_fraction = read_field('silt fraction')
     organic_carbon = read_field('organic carbon')
 
-    return landcover, climate, saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon
+    return lc_dict['CCI_landcover_2000'], lc_dict['CCI_landcover_2005'], lc_dict['CCI_landcover_2010'], \
+           lc_dict['insitu'], cl_dict['koeppen_geiger_2007'], cl_dict['insitu'], saturation, clay_fraction, \
+           sand_fraction, silt_fraction, organic_carbon
 
 
 def get_metadata(filename):

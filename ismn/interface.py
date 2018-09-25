@@ -140,8 +140,12 @@ class ISMN_station(object):
         self.depth_to = []
         self.sensors = []
         self.filenames = []
-        self.landcover = metadata[0]['landcover']
+        self.landcover_2000 = metadata[0]['landcover_2000']
+        self.landcover_2005 = metadata[0]['landcover_2005']
+        self.landcover_2010 = metadata[0]['landcover_2010']
+        self.landcover_insitu = metadata[0]['landcover_insitu']
         self.climate = metadata[0]['climate']
+        self.climate_insitu = metadata[0]['climate_insitu']
         self.saturation = metadata[0]['saturation']
         self.clay_fraction = metadata[0]['clay_fraction']
         self.sand_fraction = metadata[0]['sand_fraction']
@@ -679,7 +683,8 @@ class ISMN_Interface(object):
                 if variable in station.variables:
                     yield station
 
-    def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1, landcover=None, climate=None):
+    def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
+                        **kwargs):
         """
         returnes list of dataset_id's that can be used to read a
         dataset directly through the read_ts function
@@ -714,7 +719,7 @@ class ISMN_Interface(object):
         max_depth : float, optional
             depth_to of variable has to be <= max_depth in order to be
             included.
-        landcover: string
+        landcover_2000: string
             land cover classification
         climate: string
             climate classification
@@ -722,20 +727,15 @@ class ISMN_Interface(object):
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
 
-        if landcover is not None:
-            landcover = self.metadata['landcover'] == landcover
-        else:
-            landcover = np.ones(self.metadata['variable'].shape, dtype=bool)
+        landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
 
-        if climate is not None:
-            climate = self.metadata['climate'] == climate
-        else:
-            climate = np.ones(self.metadata['variable'].shape, dtype=bool)
+        for k in kwargs.keys():
+            landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
                        (self.metadata['depth_from'] >= min_depth) &
-                       landcover & climate)[0]
+                       landcover_climate)[0]
 
         return ids
 
@@ -918,7 +918,7 @@ class ISMN_Interface(object):
                              "end date": end_dates}, index=[np.array(networks), np.array(stations)])
         return data
 
-    def get_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=10):
+    def get_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=10, landcover='landcover_2010'):
         """
         returns all landcover types in data for specific variable at certain depths
 
@@ -959,13 +959,14 @@ class ISMN_Interface(object):
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
                        (self.metadata['depth_from'] >= min_depth) &
-                       (self.metadata['landcover'] != None))[0]
+                       (self.metadata[landcover] != np.nan))[0]
 
         meta = self.metadata[ids]
-        lc_types = np.unique(meta['landcover'])
+        lc_types = np.unique(meta[landcover])
+        lc_types = lc_types[~pd.isnull(lc_types)]
         return lc_types
 
-    def get_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10):
+    def get_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10, climate='climate'):
         """
         returns all climate types in data for specific variable at certain depths
 
@@ -1006,11 +1007,12 @@ class ISMN_Interface(object):
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
                        (self.metadata['depth_from'] >= min_depth) &
-                       (self.metadata['landcover'] != None))[0]
+                       (self.metadata[climate] != ''))[0]
 
         meta = self.metadata[ids]
-        lc_types = np.unique(meta['climate'])
-        return lc_types
+        cl_types = np.unique(meta[climate])
+        cl_types = cl_types[~pd.isnull(cl_types)]
+        return cl_types
 
     def get_variables(self):
         """
