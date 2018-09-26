@@ -365,10 +365,11 @@ def read_format_ceop(filename):
                        na_values=['-999.99'],
                        parse_dates=[[0, 1]])
 
-    date_index = data['date_time']
+    data = data.set_index('date_time')
+    data = data.tz_localize('UTC')
+    date_index = data.index
     depth_index = data['depth_from']
 
-    del data['date_time']
     del data['depth_from']
 
     data.index = pd.MultiIndex.from_arrays([depth_index,
@@ -377,7 +378,6 @@ def read_format_ceop(filename):
     data.index.names = ['depth_from', 'depth_to', 'date']
 
     data = data.sort_index(level=0)
-    data = data.tz_localize('UTC')
 
     metadata['depth_from'] = np.unique(
         data.index.get_level_values(0).values).tolist()

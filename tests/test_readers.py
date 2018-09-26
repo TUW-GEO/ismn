@@ -114,7 +114,7 @@ class TestReaders(unittest.TestCase):
         assert dataset.depth_to == [0.05]
         assert dataset.sensor == 'ThetaProbe-ML2X'
         assert type(dataset.data) == pd.DataFrame
-        assert dataset.data.index[7] == datetime(2007, 1, 1, 8, 0, 0)
+        assert dataset.data.index[7] == pd.Timestamp('2007-1-1 8:0:0', tz='UTC')
         assert sorted(dataset.data.columns) == sorted(
             ['soil moisture', 'soil moisture_flag', 'soil moisture_orig_flag'])
         assert dataset.data['soil moisture'].values[8] == 0.2135
@@ -139,7 +139,7 @@ class TestReaders(unittest.TestCase):
         assert dataset.depth_to == [0.05]
         assert dataset.sensor == 'ThetaProbe-ML2X'
         assert type(dataset.data) == pd.DataFrame
-        assert dataset.data.index[7] == datetime(2007, 1, 1, 8, 0, 0)
+        assert dataset.data.index[7] == pd.Timestamp('2007-1-1 8:0:0', tz='utc')
         assert sorted(dataset.data.columns) == sorted(
             ['soil moisture', 'soil moisture_flag', 'soil moisture_orig_flag'])
         assert dataset.data['soil moisture'].values[8] == 0.2135
@@ -164,8 +164,7 @@ class TestReaders(unittest.TestCase):
         assert sorted(dataset.depth_to) == sorted([0.05, 0.1, 0.2, 0.3])
         assert dataset.sensor == 'n.s'
         assert type(dataset.data) == pd.DataFrame
-        assert dataset.data.index[7] == (
-            0.05, 0.05, datetime(2010, 10, 21, 9, 0, 0))
+        assert dataset.data.index[7] == (0.05, 0.05, pd.Timestamp('2010-10-21 9:0:0', tz='utc'))
         assert sorted(dataset.data.columns) == sorted(
             ['sm', 'sm_flag', 'ts', 'ts_flag'])
         assert dataset.data['sm'].values[8] == 0.2227

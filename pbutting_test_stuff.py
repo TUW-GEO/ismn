@@ -5,7 +5,8 @@ import random
 import ismn.interface as ismn
 import pandas as pd
 import numpy as np
-import datetime
+from datetime import datetime, timezone
+import pytz
 
 # TODO: check if data for soil fractions is useful or not
 
@@ -61,22 +62,65 @@ path_to_ismn_data = os.path.join('/home/pbutting/shares/radar/Datapool_processed
 # plt.show()
 
 
-dataset = ismn.readers.read_format_ceop('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/format_ceop/SMOSMANIA/SMOSMANIA_SMOSMANIA_NBN_20100304_20130801.stm')
-assert dataset.network == 'SMOSMANIA'
-assert dataset.station == 'Narbonne'
-assert dataset.latitude == 43.15
-assert dataset.longitude == 2.9567
-assert dataset.elevation == 112.0
-assert sorted(dataset.variable) == sorted(['sm', 'ts'])
-assert sorted(dataset.depth_from) == sorted([0.05, 0.1, 0.2, 0.3])
-assert sorted(dataset.depth_to) == sorted([0.05, 0.1, 0.2, 0.3])
-assert dataset.sensor == 'n.s'
-assert type(dataset.data) == pd.DataFrame
-assert dataset.data.index[7] == (
-    0.05, 0.05, datetime(2010, 10, 21, 9, 0, 0))
-assert sorted(dataset.data.columns) == sorted(
-    ['sm', 'sm_flag', 'ts', 'ts_flag'])
-assert dataset.data['sm'].values[8] == 0.2227
-assert dataset.data['sm_flag'].values[8] == 'U'
-assert np.isnan(dataset.data.ix[0.3, 0.3]['ts'].values[6])
-assert dataset.data.ix[0.3, 0.3]['ts_flag'].values[6] == 'M'
+# dataset = ismn.readers.read_format_ceop_sep('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/format_ceop_sep/SMOSMANIA/SMOSMANIA_SMOSMANIA_Narbonne_sm_0.050000_0.050000_ThetaProbe-ML2X_20070101_20070131.stm')
+# assert dataset.network == 'SMOSMANIA'
+# assert dataset.station == 'Narbonne'
+# assert dataset.latitude == 43.15
+# assert dataset.longitude == 2.9567
+# assert dataset.elevation == 112.0
+# assert dataset.variable == ['soil moisture']
+# assert dataset.depth_from == [0.05]
+# assert dataset.depth_to == [0.05]
+# assert dataset.sensor == 'ThetaProbe-ML2X'
+# assert type(dataset.data) == pd.DataFrame
+# assert dataset.data.index[7] == datetime(2007, 1, 1, 8, 0, 0)
+# assert sorted(dataset.data.columns) == sorted(
+#     ['soil moisture', 'soil moisture_flag', 'soil moisture_orig_flag'])
+# assert dataset.data['soil moisture'].values[8] == 0.2135
+# assert dataset.data['soil moisture_flag'].values[8] == 'U'
+# assert dataset.data['soil moisture_orig_flag'].values[347] == 'M'
+
+
+# dataset = ismn.readers.read_format_ceop('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/format_ceop/SMOSMANIA/SMOSMANIA_SMOSMANIA_NBN_20100304_20130801.stm')
+# assert dataset.network == 'SMOSMANIA'
+# assert dataset.station == 'Narbonne'
+# assert dataset.latitude == 43.15
+# assert dataset.longitude == 2.9567
+# assert dataset.elevation == 112.0
+# assert sorted(dataset.variable) == sorted(['sm', 'ts'])
+# assert sorted(dataset.depth_from) == sorted([0.05, 0.1, 0.2, 0.3])
+# assert sorted(dataset.depth_to) == sorted([0.05, 0.1, 0.2, 0.3])
+# assert dataset.sensor == 'n.s'
+# assert type(dataset.data) == pd.DataFrame
+# assert dataset.data.index[7] == (0.05, 0.05, pd.Timestamp('2010-10-21 9:0:0', tz='utc'))
+# assert sorted(dataset.data.columns) == sorted(
+#     ['sm', 'sm_flag', 'ts', 'ts_flag'])
+# assert dataset.data['sm'].values[8] == 0.2227
+# assert dataset.data['sm_flag'].values[8] == 'U'
+# assert np.isnan(dataset.data.ix[0.3, 0.3]['ts'].values[6])
+# assert dataset.data.ix[0.3, 0.3]['ts_flag'].values[6] == 'M'
+
+
+# dataset = ismn.readers.read_format_header_values('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/format_header_values/SMOSMANIA/SMOSMANIA_SMOSMANIA_Narbonne_sm_0.050000_0.050000_ThetaProbe-ML2X_20070101_20070131.stm')
+# assert dataset.network == 'SMOSMANIA'
+# assert dataset.station == 'Narbonne'
+# assert dataset.latitude == 43.15
+# assert dataset.longitude == 2.9567
+# assert dataset.elevation == 112.0
+# assert dataset.variable == ['soil moisture']
+# assert dataset.depth_from == [0.05]
+# assert dataset.depth_to == [0.05]
+# assert dataset.sensor == 'ThetaProbe-ML2X'
+# assert type(dataset.data) == pd.DataFrame
+# assert dataset.data.index[7] == pd.Timestamp('2007-1-1 8:0:0', tz='UTC')
+# assert sorted(dataset.data.columns) == sorted(
+#     ['soil moisture', 'soil moisture_flag', 'soil moisture_orig_flag'])
+# assert dataset.data['soil moisture'].values[8] == 0.2135
+# assert dataset.data['soil moisture_flag'].values[8] == 'U'
+# assert dataset.data['soil moisture_orig_flag'].values[8] == 'M'
+
+
+# path_header_values = '/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/multinetwork/header_values'
+# hv_interface = ismn.ISMN_Interface(path_header_values, network=['SCAN'])
+# fig, axes = hv_interface.plot_station_locations()
+# plt.savefig('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/baseline/test_interface_plotting.png')
