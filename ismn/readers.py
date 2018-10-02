@@ -558,7 +558,7 @@ def get_metadata_from_csv(filename):
         else:
             return np.nan
 
-    # TODO: some stations dont come with correct format in csv (like gnps-scgn (network PBO_H2O) --> no header)
+    # some stations don't come with correct format in csv (like gnps-scgn (network PBO_H2O) --> no header)
     try:
         data = pd.read_csv(filename, delimiter=";")
         data.set_index('quantity_name', inplace=True)

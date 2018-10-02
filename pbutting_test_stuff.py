@@ -25,41 +25,41 @@ import pytz
 path_to_ismn_data = os.path.join('/home/pbutting/shares/radar/Datapool_processed/ESA_CCI_SM/ISMN/v20180830/')
 
 
-# ISMN_reader = ismn.ISMN_Interface(path_to_ismn_data)
-# #SCAN_network = ismn.ISMN_Interface(path_to_ismn_data, network=['SCAN'])
-# df_station_info = pd.DataFrame(ISMN_reader.metadata)
-#
-# networks = ISMN_reader.list_networks()
-#
-# stations = ISMN_reader.list_stations()
-# station = random.choice(stations)
-# station_obj = ISMN_reader.get_station(station)
-#
-# ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=10)
-# ts_1 = ISMN_reader.read_ts(ids1[0])
-# ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130, climate='Csa')
-# # simply all data
-# ids3 = ISMN_reader.get_dataset_ids(variable='air temperature', min_depth=0, max_depth=10)
-# ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=10)
-# ts_4 = ISMN_reader.read_ts(ids4[0])
-#
-# # TODO: a way to search for certain values in the soil fraction parameters --> need function for that?
-# clay = ISMN_reader.metadata['clay_fraction']
-# ids5 = np.where(['0.2m_0.2m' in t.dtype.fields and t['0.2m_0.2m'] < 10 if type(t) is np.ndarray else False for t in clay])[0]
-#
-# lc = ISMN_reader.get_landcover_types(landcover='landcover_2000')
-# clim = ISMN_reader.get_climate_types(climate='climate')
-# clim_insitu = ISMN_reader.get_climate_types(climate='climate_insitu')
-#
-# # TODO: changed the colormap from Set1 to tab20 to get more colors for plotting the networks
-# # fig, ax = ISMN_reader.plot_station_locations()
-#
-# # ISMN_reader.metadata = ISMN_reader.metadata[ids1]
-# # ISMN_reader.plot_station_locations()
-#
-# print(ISMN_reader.get_variables())
-#
-# plt.show()
+ISMN_reader = ismn.ISMN_Interface(path_to_ismn_data)
+#SCAN_network = ismn.ISMN_Interface(path_to_ismn_data, network=['SCAN'])
+df_station_info = pd.DataFrame(ISMN_reader.metadata)
+
+networks = ISMN_reader.list_networks()
+
+stations = ISMN_reader.list_stations()
+station = random.choice(stations)
+station_obj = ISMN_reader.get_station(station)
+
+ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=10)
+ts_1 = ISMN_reader.read_ts(ids1[0])
+ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130, climate='Csa')
+# simply all data
+ids3 = ISMN_reader.get_dataset_ids(variable='air temperature', min_depth=0, max_depth=10)
+ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=10)
+ts_4 = ISMN_reader.read_ts(ids4[0])
+
+# TODO: a way to search for certain values in the soil fraction parameters --> need function for that?
+clay = ISMN_reader.metadata['clay_fraction']
+ids5 = np.where(['0.2m_0.2m' in t.dtype.fields and t['0.2m_0.2m'] < 10 if type(t) is np.ndarray else False for t in clay])[0]
+
+lc = ISMN_reader.get_landcover_types(landcover='landcover_2000')
+clim = ISMN_reader.get_climate_types(climate='climate')
+clim_insitu = ISMN_reader.get_climate_types(climate='climate_insitu')
+
+# TODO: changed the colormap from Set1 to tab20 to get more colors for plotting the networks
+# fig, ax = ISMN_reader.plot_station_locations()
+
+# ISMN_reader.metadata = ISMN_reader.metadata[ids1]
+# ISMN_reader.plot_station_locations()
+
+print(ISMN_reader.get_variables())
+
+plt.show()
 
 
 # dataset = ismn.readers.read_format_ceop_sep('/home/pbutting/shares/exchange/Staff/pbutting/Python_Projects/ismn/tests/test_data/format_ceop_sep/SMOSMANIA/SMOSMANIA_SMOSMANIA_Narbonne_sm_0.050000_0.050000_ThetaProbe-ML2X_20070101_20070131.stm')

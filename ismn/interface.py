@@ -543,9 +543,9 @@ class ISMN_Interface(object):
         """
 
         if not os.path.exists(os.path.join(path_to_data, 'python_metadata', 'metadata.npy')):
+            os.mkdir(os.path.join(path_to_data, 'python_metadata'))
             self.metadata = metadata_collector.collect_from_folder(
                 path_to_data)
-            os.mkdir(os.path.join(path_to_data, 'python_metadata'))
             np.save(
                 os.path.join(path_to_data, 'python_metadata', 'metadata.npy'), self.metadata)
             #np.savetxt(os.path.join(path_to_data,'python_metadata','metadata.npy'), self.metadata,delimiter=',')
@@ -686,7 +686,7 @@ class ISMN_Interface(object):
     def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
                         **kwargs):
         """
-        returnes list of dataset_id's that can be used to read a
+        returns list of dataset_id's that can be used to read a
         dataset directly through the read_ts function
 
         Parameters
@@ -719,10 +719,15 @@ class ISMN_Interface(object):
         max_depth : float, optional
             depth_to of variable has to be <= max_depth in order to be
             included.
-        landcover_2000: string
-            land cover classification
-        climate: string
-            climate classification
+        kwargs:
+            filter by landcover and/or climate classifications
+            keys:
+                * landcover_2000
+                * landcover_2005
+                * landcover_2010
+                * landcover_insitu
+                * climate
+                * climate_insitu
         """
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
@@ -952,7 +957,14 @@ class ISMN_Interface(object):
         max_depth : float, optional
             depth_to of variable has to be <= max_depth in order to be
             included.
+        landcover: string
+            * landcover_2000: return all landcover types in data as specified in CCI landcover classification 2000
+            * landcover_2005: return all landcover types in data as specified in CCI landcover classification 2005
+            * landcover_2010 (default):
+                return all landcover types in data as specified in CCI landcover classification 2010
+            * landcover_insitu: return all landcover types in data (in situ measurements)
         """
+
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
 
@@ -1000,6 +1012,9 @@ class ISMN_Interface(object):
         max_depth : float, optional
             depth_to of variable has to be <= max_depth in order to be
             included.
+        climate: string
+            * climate (default): return climate types in data from Koeppen Geiger classification
+            * climate_insitu: return climate types in data from in situ classification
         """
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")

@@ -55,7 +55,7 @@ def collect_from_folder(rootdir):
         structured numpy array which contains the metadata for one file per row
     """
 
-    logging.basicConfig(filename=os.path.join(rootdir, 'metadata.log'),
+    logging.basicConfig(filename=os.path.join(rootdir, 'python_metadata', 'metadata.log'),
                         level=logging.DEBUG)
 
     metadata_catalog = []
@@ -66,12 +66,12 @@ def collect_from_folder(rootdir):
         # read additional metadata from csv file
         filename_csv = glob.glob('{}/*.csv'.format(root))
         # TODO: default values, if there is no csv file available or it crashes for e.g saturation
-        lc2000, lc2005, lc2010, lc_insitu, climate, climate_insitu, saturation, clay_fraction, sand_fraction, \
+        lc_2000, lc_2005, lc_2010, lc_insitu, climate_KG, climate_insitu, saturation, clay_fraction, sand_fraction, \
         silt_fraction, organic_carbon = [np.nan, np.nan, np.nan, '', '', '', np.nan, np.nan, np.nan, np.nan, np.nan]
         if len(filename_csv) > 0:
             path_csv = os.path.join(root, filename_csv[0])
             try:
-                lc2000, lc2005, lc2010, lc_insitu, climate, climate_insitu, saturation, clay_fraction, sand_fraction, \
+                lc_2000, lc_2005, lc_2010, lc_insitu, climate_KG, climate_insitu, saturation, clay_fraction, sand_fraction, \
                 silt_fraction, organic_carbon = readers.get_metadata_from_csv(path_csv)
             except:
                 print('Error occured when reading metadata from csv files')
@@ -95,7 +95,7 @@ def collect_from_folder(rootdir):
                                              metadata['sensor'], metadata[
                                                  'longitude'], metadata['latitude'],
                                              metadata['elevation'], fullfilename,
-                                             lc2000, lc2005, lc2010, lc_insitu, climate, climate_insitu,
+                                             lc_2000, lc_2005, lc_2010, lc_insitu, climate_KG, climate_insitu,
                                              saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon))
 
     return np.array(metadata_catalog, dtype=np.dtype([('network', object), ('station', object), ('variable', object),
