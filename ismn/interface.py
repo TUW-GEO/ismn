@@ -53,7 +53,6 @@ class ISMNError(Exception):
 
 
 class ISMN_station(object):
-    #TODO: add fractions and saturation to attributes (they are in variables list now)
     """
     Knows everything about the station, like which variables are measured there in which depths
     and in which files the data is stored. This is not completely true for the CEOP format

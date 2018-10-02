@@ -65,7 +65,7 @@ def collect_from_folder(rootdir):
 
         # read additional metadata from csv file
         filename_csv = glob.glob('{}/*.csv'.format(root))
-        # TODO: default values, if there is no csv file available or it crashes for e.g saturation
+        # default values, if there is no csv file available or it crashes for e.g saturation
         lc_2000, lc_2005, lc_2010, lc_insitu, climate_KG, climate_insitu, saturation, clay_fraction, sand_fraction, \
         silt_fraction, organic_carbon = [np.nan, np.nan, np.nan, '', '', '', np.nan, np.nan, np.nan, np.nan, np.nan]
         if len(filename_csv) > 0:
