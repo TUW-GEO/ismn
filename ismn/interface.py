@@ -436,7 +436,7 @@ class ISMN_station(object):
 
     def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None, max_depth=None):
         """
-        goes throug the filenames associated with a station
+        goes through the filenames associated with a station
         and reads the date of the first and last observation to get
         and approximate time coverage of the station.
         This is just an overview. If holes have to be detected the

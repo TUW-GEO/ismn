@@ -540,8 +540,12 @@ def get_metadata_from_csv(filename):
 
     Returns
     -------
-    landcover: str, landcover classification for station
-    climate: str, climate classification for station
+    landcover_2000: int, cci landcover classification for station (year 2000)
+    landcover_2005: int, cci landcover classification for station (year 2005)
+    landcover_2010: int, cci landcover classification for station (year 2010)
+    landcover_insitu: str, in situ landcover classification
+    climate: str, Koeppen Geiger climate classification for station
+    climate_insitu: str, in situ climate classification for station
     saturation: nd.array, saturation for all available depths
     clay_fraction: nd.array, clay fraction for all available depths (in % weight)
     sand_fraction: nd.array, sand fraction for all available depths (in % weight)
