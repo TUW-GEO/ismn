@@ -1053,9 +1053,17 @@ class ISMN_Interface(object):
         return np.unique(self.metadata['variable'])
 
     def print_landcover_dict(self):
+        """
+        print all classes provided by the CCI Landcover Classification
+        :return: None
+        """
         for key in self.landcover.keys():
             print('{:4}: {}'.format(key, self.landcover[key]))
 
     def print_climate_dict(self):
+        """
+        print all classes provided by the Koeppen-Geiger climate Classification
+        :return: None
+        """
         for key in self.climate.keys():
             print('{:4}: {}'.format(key, self.climate[key]))
