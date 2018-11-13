@@ -38,6 +38,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import configparser
 
 
 try:
@@ -569,6 +570,14 @@ class ISMN_Interface(object):
                                     self.metadata['latitude'],
                                     setup_kdTree=False)
 
+        # read cci landcover class names and their identifiers
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read(os.path.join(os.getcwd(), 'ismn', 'classifications.ini'))
+        landcover = dict(config.items('LANDCOVER'))
+        self.landcover = dict([(int(v), k) for k, v in landcover.items()])
+        self.climate = dict(config.items('KOEPPENGEIGER'))
+
     def list_networks(self):
         """
         returns numpy.array of networks available through the interface
@@ -975,7 +984,8 @@ class ISMN_Interface(object):
         meta = self.metadata[ids]
         lc_types = np.unique(meta[landcover])
         lc_types = lc_types[~pd.isnull(lc_types)]
-        return lc_types
+        lc_types_dict = dict((k, self.landcover[k]) for k in lc_types)
+        return lc_types_dict
 
     def get_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10, climate='climate'):
         """
@@ -1026,7 +1036,10 @@ class ISMN_Interface(object):
         meta = self.metadata[ids]
         cl_types = np.unique(meta[climate])
         cl_types = cl_types[~pd.isnull(cl_types)]
-        return cl_types
+        if climate == 'climate_insitu':
+            return cl_types
+        cl_types_dict = dict((k, self.climate[k]) for k in cl_types)
+        return cl_types_dict
 
     def get_variables(self):
         """
@@ -1038,3 +1051,11 @@ class ISMN_Interface(object):
             array of variables available for the data
         """
         return np.unique(self.metadata['variable'])
+
+    def print_landcover_dict(self):
+        for key in self.landcover.keys():
+            print('{:4}: {}'.format(key, self.landcover[key]))
+
+    def print_climate_dict(self):
+        for key in self.climate.keys():
+            print('{:4}: {}'.format(key, self.climate[key]))
