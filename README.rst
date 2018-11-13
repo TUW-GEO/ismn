@@ -136,6 +136,46 @@ parameters to the corresponding integer values in the list below.
 * 210: Water,
 * 220: Permanent snow and ice,
 
+Koeppen-Geiger Climate Classification
+-------------------------------------
+The ISMN data comes with information about climate classification. To use
+this variable for filtering the data in the get_dataset_ids function, set the
+parameters to the corresponding keys in the list below.
+
+* Af: Tropical Rainforest
+* Am: Tropical Monsoon
+* As: Tropical Savanna Dry
+* Aw: Tropical Savanna Wet
+* BWk: Arid Desert Cold
+* BWh: Arid Desert Hot
+* BWn: Arid Desert With Frequent Fog
+* BSk: Arid Steppe Cold
+* BSh: Arid Steppe Hot
+* BSn: Arid Steppe With Frequent Fog
+* Csa: Temperate Dry Hot Summer
+* Csb: Temperate Dry Warm Summer
+* Csc: Temperate Dry Cold Summer
+* Cwa: Temperate Dry Winter, Hot Summer
+* Cwb: Temperate Dry Winter, Warm Summer
+* Cwc: Temperate Dry Winter, Cold Summer
+* Cfa: Temperate Without Dry Season, Hot Summer
+* Cfb: Temperate Without Dry Season, Warm Summer
+* Cfc: Temperate Without Dry Season, Cold Summer
+* Dsa: Cold Dry Summer, Hot Summer
+* Dsb: Cold Dry Summer, Warm Summer
+* Dsc: Cold Dry Summer, Cold Summer
+* Dsd: Cold Dry Summer, Very Cold Winter
+* Dwa: Cold Dry Winter, Hot Summer
+* Dwb: Cold Dry Winter, Warm Summer
+* Dwc: Cold Dry Winter, Cold Summer
+* Dwd: Cold Dry Winter, Very Cold Winter
+* Dfa: Cold Dry Without Dry Season, Hot Summer
+* Dfb: Cold Dry Without Dry Season, Warm Summer
+* Dfc: Cold Dry Without Dry Season, Cold Summer
+* Dfd: Cold Dry Without Dry Season, Very Cold Winter
+* ET: Polar Tundra
+* EF: Polar Eternal Winter
+* W: Water
 
 Contribute
 ==========
