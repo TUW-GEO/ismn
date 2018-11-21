@@ -1,4 +1,4 @@
-# Copyright (c) 2013,Vienna University of Technology, Department of Geodesy and Geoinformation
+# Copyright (c) 2018,Vienna University of Technology, Department of Geodesy and Geoinformation
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without
@@ -984,6 +984,8 @@ class ISMN_Interface(object):
         meta = self.metadata[ids]
         lc_types = np.unique(meta[landcover])
         lc_types = lc_types[~pd.isnull(lc_types)]
+        if landcover == 'landcover_insitu':
+            return lc_types
         lc_types_dict = dict((k, self.landcover[k]) for k in lc_types)
         return lc_types_dict
 
@@ -1057,6 +1059,8 @@ class ISMN_Interface(object):
         print all classes provided by the CCI Landcover Classification
         :return: None
         """
+        print('CCI Landcover Classification')
+        print('----------------------------')
         for key in self.landcover.keys():
             print('{:4}: {}'.format(key, self.landcover[key]))
 
@@ -1065,5 +1069,7 @@ class ISMN_Interface(object):
         print all classes provided by the Koeppen-Geiger climate Classification
         :return: None
         """
+        print('KOEPPEN GEIGER Climate Classification')
+        print('-------------------------------------')
         for key in self.climate.keys():
             print('{:4}: {}'.format(key, self.climate[key]))

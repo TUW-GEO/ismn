@@ -1,4 +1,4 @@
-# Copyright (c) 2013,Vienna University of Technology, Department of Geodesy and Geoinformation
+# Copyright (c) 2018,Vienna University of Technology, Department of Geodesy and Geoinformation
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without
@@ -74,9 +74,12 @@ def collect_from_folder(rootdir):
                 lc_2000, lc_2005, lc_2010, lc_insitu, climate_KG, climate_insitu, saturation, clay_fraction, sand_fraction, \
                 silt_fraction, organic_carbon = readers.get_metadata_from_csv(path_csv)
             except:
-                print('Error occured when reading metadata from csv files')
+                logging.info('Error occured while reading metadata from csv file ({})'.format(root))
         else:
-            logging.info('no csv file ({})'.format(root))
+            if len(subFolders) == 0 and root.split(os.sep)[-1] != 'python_metadata':
+                logging.info('No csv file available ({})'.format(root))
+            else:
+                continue
 
         # print root,subFolders,files
         for filename in files:

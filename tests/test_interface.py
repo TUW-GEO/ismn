@@ -1,4 +1,4 @@
-# Copyright (c) 2015,Vienna University of Technology,
+# Copyright (c) 2018,Vienna University of Technology,
 # Department of Geodesy and Geoinformation
 # All rights reserved.
 
@@ -41,6 +41,7 @@ import datetime
 import pytest
 import numpy.testing as nptest
 import ismn.metadata_collector as metadata_collector
+import numpy as np
 
 
 def test_min_max_obstime_getting():
@@ -152,30 +153,73 @@ def test_station_order():
 
 
 def test_list_landcover_types():
-
+    """
+    Test available landcover classifications for dataset
+    """
     path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
                                      'Data_seperate_files_header_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     lc = ISMN_reader.get_landcover_types()
     assert list(lc) == [130, 210]
+    lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
+    assert lc == ['']
 
     path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
                                      'Data_seperate_files_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     lc = ISMN_reader.get_landcover_types()
     assert list(lc) == [130, 210]
+    lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
+    assert lc == ['']
 
 
 def test_list_climate_types():
-
+    """
+    Test available climate classifications for dataset
+    """
     path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
                                      'Data_seperate_files_header_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    lc = ISMN_reader.get_climate_types()
-    assert list(lc) == ['Cfa', 'ET']
+    cl = ISMN_reader.get_climate_types()
+    assert list(cl) == ['Cfa', 'ET']
+    cl = ISMN_reader.get_climate_types(climate='climate_insitu')
+    assert list(cl) == []
 
     path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
                                      'Data_seperate_files_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    lc = ISMN_reader.get_climate_types()
-    assert list(lc) == ['Cfa', 'ET']
+    cl = ISMN_reader.get_climate_types()
+    assert list(cl) == ['Cfa', 'ET']
+    cl = ISMN_reader.get_climate_types(climate='climate_insitu')
+    assert list(cl) == []
+
+
+def test_get_dataset_ids():
+    """
+    Test returned indeces from filtering
+    """
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_header_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
+    assert np.array_equal(np.array([0]), ids1)
+    ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
+    assert np.array_equal(np.array([1]), ids2)
+    ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
+    assert np.array_equal(np.array([0, 1]), ids3)
+    ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
+    assert np.array_equal(np.array([0, 1]), ids4)
+
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
+    assert np.array_equal(np.array([0]), ids1)
+    ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
+    assert np.array_equal(np.array([1]), ids2)
+    ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
+    assert np.array_equal(np.array([0, 1]), ids3)
+    ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
+    assert np.array_equal(np.array([0, 1]), ids4)
+
+

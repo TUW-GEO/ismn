@@ -1,4 +1,4 @@
-# Copyright (c) 2013,Vienna University of Technology, Department of Geodesy and Geoinformation
+# Copyright (c) 2018,Vienna University of Technology, Department of Geodesy and Geoinformation
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without
@@ -562,7 +562,7 @@ def get_metadata_from_csv(filename):
         else:
             return np.nan
 
-    # some stations don't come with correct format in csv (like gnps-scgn (network PBO_H2O) --> no header)
+    # some stations don't come with correct format in csv file (missing header)
     try:
         data = pd.read_csv(filename, delimiter=";")
         data.set_index('quantity_name', inplace=True)
@@ -571,13 +571,15 @@ def get_metadata_from_csv(filename):
         logging.info('no header: {}'.format(filename))
         data = pd.read_csv(filename, delimiter=";", header=None)
         cols = list(data.columns.values)
-        cols[0:7] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]', 'value', 'description', 'quantity_source_name']
+        cols[0:7] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]',
+                     'value', 'description', 'quantity_source_name']
         data.columns = cols
         data.set_index('quantity_name', inplace=True)
 
     # read landcover classifications
     lc = data.loc[['land cover classification']][['value', 'quantity_source_name']]
-    lc_dict = {'CCI_landcover_2000': np.nan, 'CCI_landcover_2005': np.nan, 'CCI_landcover_2010': np.nan, 'insitu': ''}
+    lc_dict = {'CCI_landcover_2000': np.nan, 'CCI_landcover_2005': np.nan,
+               'CCI_landcover_2010': np.nan, 'insitu': ''}
     for key in lc_dict.keys():
         if key in lc['quantity_source_name'].values:
             if key != 'insitu':
