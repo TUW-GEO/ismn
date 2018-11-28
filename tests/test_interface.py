@@ -182,7 +182,7 @@ def test_list_climate_types():
                                      'Data_seperate_files_header_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     cl = ISMN_reader.get_climate_types()
-    assert list(cl) == ['Cfa', 'ET']
+    assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
     cl = ISMN_reader.get_climate_types(climate='climate_insitu')
     assert list(cl) == []
 
@@ -190,7 +190,7 @@ def test_list_climate_types():
                                      'Data_seperate_files_20170810_20180809')
     ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
     cl = ISMN_reader.get_climate_types()
-    assert list(cl) == ['Cfa', 'ET']
+    assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
     cl = ISMN_reader.get_climate_types(climate='climate_insitu')
     assert list(cl) == []
 

@@ -79,7 +79,8 @@ def collect_from_folder(rootdir):
             except:
                 logging.info('Error occured while reading metadata from csv file ({})'.format(root))
         else:
-            if len(subFolders) == 0 and root.split(os.sep)[-1] != 'python_metadata':
+            if (len(subFolders) == 0 or any(filename.endswith('.stm') for filename in files)) and \
+                    root.split(os.sep)[-1] != 'python_metadata':
                 logging.info('No csv file available ({})'.format(root))
             else:
                 continue
