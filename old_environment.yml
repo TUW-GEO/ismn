@@ -9,9 +9,9 @@ dependencies:
   - backports=1.0=py_2
   - backports.functools_lru_cache=1.5=py_1
   - backports_abc=0.5=py_1
+  - basemap=1.2.0=py27h50ae964_0
   - bzip2=1.0.6=h470a237_2
   - ca-certificates=2018.10.15=ha4d7672_0
-  - cairo=1.14.12=he56eebe_3
   - certifi=2018.10.15=py27_1000
   - cffi=1.11.5=py27h5e8e0c9_1
   - chardet=3.0.4=py27_1003
@@ -27,6 +27,7 @@ dependencies:
   - freetype=2.8.1=hfa320df_1
   - functools32=3.2.3.2=py_3
   - futures=3.2.0=py27_1000
+  - geos=3.6.2=hfc679d8_2
   - gettext=0.19.8.1=h5e8e0c9_1
   - glib=2.55.0=h464dc38_2
   - gst-plugins-base=1.12.5=hde13a9d_0
@@ -39,10 +40,12 @@ dependencies:
   - jpeg=9c=h470a237_1
   - kiwisolver=1.0.1=py27h2d50403_2
   - libffi=3.2.1=hfc679d8_5
+  - libgcc-ng=7.2.0=hdf63c60_3
   - libgfortran=3.0.0=1
   - libgfortran-ng=7.2.0=hdf63c60_3
   - libiconv=1.15=h470a237_3
   - libpng=1.6.34=ha92aebf_2
+  - libstdcxx-ng=7.2.0=hdf63c60_3
   - libuuid=2.32.1=h470a237_2
   - libxcb=1.13=h470a237_2
   - libxml2=2.9.8=h422b904_5
@@ -87,60 +90,36 @@ dependencies:
   - typing=3.6.6=py27_1000
   - urllib3=1.23=py27_1001
   - wheel=0.31.1=py27_1001
-  - xorg-kbproto=1.0.7=h470a237_2
-  - xorg-libice=1.0.9=h470a237_4
-  - xorg-libsm=1.2.3=h8c8a85c_0
-  - xorg-libx11=1.6.6=h470a237_0
   - xorg-libxau=1.0.8=h470a237_6
   - xorg-libxdmcp=1.1.2=h470a237_7
-  - xorg-libxext=1.3.3=h470a237_4
-  - xorg-libxrender=0.9.10=h470a237_2
-  - xorg-renderproto=0.11.1=h470a237_2
-  - xorg-xextproto=7.3.0=h470a237_2
-  - xorg-xproto=7.0.31=h470a237_7
   - xz=5.2.4=h470a237_1
   - zlib=1.2.11=h470a237_3
-  - atomicwrites=1.2.1=py27_0
-  - attrs=18.2.0=py27h28b3542_0
-  - basemap=1.2.0=py27h705c2d8_0
   - blas=1.0=mkl
-  - funcsigs=1.0.2=py27_0
-  - geos=3.6.2=heeff764_2
   - intel-openmp=2018.0.3=0
-  - libedit=3.1.20170329=h6b74fdf_2
-  - libgcc-ng=8.2.0=hdf63c60_1
-  - libstdcxx-ng=8.2.0=hdf63c60_1
   - mkl=2018.0.3=1
-  - more-itertools=4.3.0=py27_0
   - numpy=1.15.0=py27h1b885b7_0
   - numpy-base=1.15.0=py27h3dfced4_0
-  - pathlib2=2.3.2=py27_0
-  - pixman=0.34.0=hceecf20_3
-  - pluggy=0.7.1=py27h28b3542_0
-  - py=1.6.0=py27_0
-  - pycairo=1.13.3=py27hea6d626_0
-  - pytest=3.8.0=py27_0
-  - scandir=1.9.0=py27h14c3975_0
   - scikit-learn=0.19.1=py27hedc7406_0
   - scipy=1.1.0=py27hc49cb51_0
   - pip:
-    - bleach==3.0.2
+    - atomicwrites==1.1.5
+    - attrs==18.1.0
     - cftime==1.0.0
     - coverage==4.5.1
     - coveralls==1.5.1
     - cython==0.28.5
     - docopt==0.6.2
+    - funcsigs==1.0.2
+    - more-itertools==4.3.0
     - netcdf4==1.4.0
     - nose==1.3.7
-    - pkginfo==1.4.2
+    - pathlib2==2.3.2
+    - pluggy==0.7.1
+    - py==1.5.4
     - pygeogrids==0.2.5
     - pykdtree==1.3.1
+    - pytest==3.7.1
     - pytest-cov==2.5.1
     - pytest-mpl==0.9
-    - readme-renderer==24.0
-    - requests-toolbelt==0.8.0
+    - scandir==1.9.0
     - sphinx-rtd-theme==0.4.2
-    - tqdm==4.28.1
-    - twine==1.12.1
-    - webencodings==0.5.1
-
