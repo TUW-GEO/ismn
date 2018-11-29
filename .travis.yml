@@ -29,8 +29,9 @@ install:
   - conda create -n ismn python=${TRAVIS_PYTHON_VERSION}
   - source activate ismn
   - conda env update -f environment.yml
+  - conda update basemap
   - python setup.py install
-  - pip install -r test-requirements.txt
+  # - pip install -r test-requirements.txt
 
 script:
   - python setup.py test
