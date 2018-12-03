@@ -2,6 +2,7 @@ name: ismn
 channels:
   - conda-forge
 dependencies:
+  - cython
   - numpy
   - scipy
   - pandas
