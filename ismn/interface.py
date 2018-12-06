@@ -746,7 +746,10 @@ class ISMN_Interface(object):
         landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
 
         for k in kwargs.keys():
-            landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
+            if k in ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']:
+                landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
+            else:
+                print('Specified keyword \"{}\" not found in metadata!'.format(k))
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
