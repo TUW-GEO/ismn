@@ -740,16 +740,18 @@ class ISMN_Interface(object):
                 * climate
                 * climate_insitu
         """
+        lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
+
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
 
         landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
 
         for k in kwargs.keys():
-            if k in ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']:
+            if k in lc_cl:
                 landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
             else:
-                print('Specified keyword \"{}\" not found in metadata!'.format(k))
+                raise ValueError('Specified keyword \"{}\" not found in metadata! Use one of the following: {}'.format(k, lc_cl))
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
@@ -978,9 +980,13 @@ class ISMN_Interface(object):
                 return all landcover types in data as specified in CCI landcover classification 2010
             * landcover_insitu: return all landcover types in data (in situ measurements)
         """
+        lcs = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu']
 
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
+
+        if landcover not in lcs:
+            raise ValueError("{} is no valid landcover variable. Choose one of the following: {}".format(landcover, lcs))
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
@@ -1033,8 +1039,13 @@ class ISMN_Interface(object):
             * climate (default): return climate types in data from Koeppen Geiger classification
             * climate_insitu: return climate types in data from in situ classification
         """
+        cls = ['climate', 'climate_insitu']
+
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
+
+        if climate not in cls:
+            raise ValueError("{} is no valid climate variable. Choose one of the following: {}".format(climate, cls))
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
