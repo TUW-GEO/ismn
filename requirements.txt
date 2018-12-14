@@ -5,3 +5,5 @@ pygeogrids
 numpy
 pandas
 matplotlib
+configparser
+scipy

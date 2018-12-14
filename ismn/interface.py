@@ -576,7 +576,7 @@ class ISMN_Interface(object):
         # read cci landcover class names and their identifiers
         config = configparser.ConfigParser()
         config.optionxform = str
-        config.read(os.path.join(os.getcwd(), 'ismn', 'classifications.ini'))
+        config.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classifications.ini'))
         landcover = dict(config.items('LANDCOVER'))
         self.landcover = dict([(int(v), k) for k, v in landcover.items()])
         self.climate = dict(config.items('KOEPPENGEIGER'))
