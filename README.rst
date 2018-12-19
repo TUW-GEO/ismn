@@ -95,9 +95,13 @@ be fixed.
 
 Landcover Classification
 ------------------------
-The ISMN data comes with information about landcover classification. To use
-this variable for filtering the data in the get_dataset_ids function, set the
-parameters to the corresponding integer values in the list below.
+The ISMN data comes with information about landcover classification from the
+ESA CCI land cover project (years 2000, 2005 and 2010) as well as from in-situ
+measurements. To use ESA CCI land cover variables for filtering the data in the get_dataset_ids
+function, set the keyword parameters (landcover_2000, landcover_2005 or landcover_2010)
+to the corresponding integer values (e.g. 10) in the list below. To get a list of
+possible values for filtering by in-situ values (keyword parameter: "landcover_insitu"),
+call the get_landcover_types method of your ISMN_Interface object and set landcover='landcover_insitu'.
 
 * 10: Cropland, rainfed
 * 11: Cropland, rainfed / Herbaceous cover
@@ -136,11 +140,14 @@ parameters to the corresponding integer values in the list below.
 * 210: Water,
 * 220: Permanent snow and ice,
 
-Koeppen-Geiger Climate Classification
--------------------------------------
-The ISMN data comes with information about climate classification. To use
-this variable for filtering the data in the get_dataset_ids function, set the
-parameters to the corresponding keys in the list below.
+Climate Classification
+----------------------
+The ISMN data comes with information about climate classification from the Koeppen-Geiger
+Climate Classification (2007) as well as in-situ measurements. To use
+Koeppen-Geiger variable for filtering the data in the get_dataset_ids function, set the
+keyword parameter "climate" to the corresponding keys (e.g. 'Af') in the list below. To get a list of
+possible values for filtering by in-situ values (keyword parameter: "climate_insitu"), call the
+get_climate_types method of your ISMN_Interface object and set climate='climate_insitu'.
 
 * Af: Tropical Rainforest
 * Am: Tropical Monsoon

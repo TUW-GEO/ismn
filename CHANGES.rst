@@ -4,13 +4,12 @@ Changelog
 
 Version 0.x
 ===========
-- Bugfix for new pandas v0.23
 
 Version 0.3
 ===========
 
 - Update readme
-- Added information about landcover and climate to metadata
+- Added information about landcover and climate to metadata.
 
 Version 0.2
 ===========
