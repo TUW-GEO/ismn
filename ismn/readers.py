@@ -35,6 +35,7 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 import logging
+import io
 
 
 variable_lookup = {'sm': 'soil moisture',
@@ -151,7 +152,7 @@ def get_info_from_file(filename):
     filename_elements : list
         filename without path split by _
     """
-    with open(filename, 'U') as f:
+    with io.open(filename, mode='r', newline=None) as f:
         header = f.readline()
     header_elements = header.split()
 
@@ -437,7 +438,7 @@ def get_min_max_timestamp_header_values(filename):
     """
     Get minimum and maximum observation timestamp from header values format.
     """
-    with open(filename, mode='rU') as fid:
+    with io.open(filename, mode='r', newline=None) as fid:
         _ = fid.readline()
         first = fid.readline()
         last = tail(fid)[0]
@@ -451,7 +452,7 @@ def get_min_max_timestamp_ceop_sep(filename):
     """
     Get minimum and maximum observation timestamp from ceop_sep format.
     """
-    with open(filename, mode='rU') as fid:
+    with io.open(filename, mode='r', newline=None) as fid:
         first = fid.readline()
         last = tail(fid)[0]
 
@@ -464,7 +465,7 @@ def get_min_max_timestamp_ceop(filename):
     """
     Get minimum and maximum observation timestamp from ceop format.
     """
-    with open(filename, mode='rU') as fid:
+    with io.open(filename, mode='r', newline=None) as fid:
         first = fid.readline()
         last = tail(fid)[0]
 

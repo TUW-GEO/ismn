@@ -7,8 +7,7 @@ dependencies:
   - scipy
   - pandas
   - matplotlib
-  - basemap
-  - proj4
+  - cartopy
   - pip:
      - pygeogrids
      - configparser

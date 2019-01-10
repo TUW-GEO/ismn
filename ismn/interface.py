@@ -38,15 +38,10 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import configparser
-
-
-try:
-    from mpl_toolkits.basemap import Basemap
-    basemap_installed = True
-    from matplotlib.patches import Rectangle
-except ImportError:
-    basemap_installed = False
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 
 class ISMNError(Exception):
@@ -807,71 +802,56 @@ class ISMN_Interface(object):
         else:
             return ISMN_station(self.metadata[all_index])
 
-    def plot_station_locations(self, axes=None):
+    def plot_station_locations(self):
         """
         plots available stations on a world map in robinson projection
-        only available if basemap is installed
 
         Parameters
         ----------
-        axes: matplotlib.Axes, optional
-            If given then plot will be on this axes.
 
         Returns
         -------
         fig: matplotlib.Figure
             created figure instance. If axes was given this will be None.
-        axes: matplitlib.Axes
+        ax: matplitlib.Axes
             used axes instance.
-
-        Raises
-        ------
-        ISMNError
-            if basemap is not installed
         """
-        if basemap_installed:
 
-            if axes is None:
-                fig = plt.figure()
-                ax = fig.add_axes([0, 0, 0.9, 1])
-            else:
-                fig = None
-                ax = axes
-            colormap = plt.get_cmap('tab20')
+        data_crs = ccrs.PlateCarree()
 
-            ismn_map = Basemap(projection='robin', lon_0=0)
+        fig, ax = plt.subplots(1, 1)
+        ax = plt.axes(projection=ccrs.Robinson())
+        ax.coastlines(linewidth=0.5)
+        # show global map
+        ax.set_global()
+        ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor='gray')
+        ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
 
-            uniq_networks = self.list_networks()
+        colormap = plt.get_cmap('tab20')
+        uniq_networks = self.list_networks()
+        colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
+        rect = []
 
-            colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
-            rect = []
+        for j, network in enumerate(uniq_networks):
+            stations_idx = np.where(self.metadata['network'] == network)[0]
+            unique_stations, us_idx = np.unique(
+                self.metadata['station'][stations_idx], return_index=True)
 
-            for j, network in enumerate(uniq_networks):
+            netcolor = colormap(colorsteps[j])
+            rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
 
-                stations_idx = np.where(self.metadata['network'] == network)[0]
-                unique_stations, us_idx = np.unique(
-                    self.metadata['station'][stations_idx], return_index=True)
+            for i, station in enumerate(unique_stations):
+                lat, lon = self.metadata['latitude'][stations_idx[us_idx[i]]], \
+                           self.metadata['longitude'][stations_idx[us_idx[i]]]
+                ax.plot(lon, lat, color=netcolor, markersize=3, marker='s', transform=data_crs)
 
-                netcolor = colormap(colorsteps[j])
-                rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
+        ncols = int(uniq_networks.size / 4)
+        if ncols == 0:
+            ncols = 1
 
-                for i, station in enumerate(unique_stations):
-                    lat, lon = self.metadata['latitude'][stations_idx[us_idx[i]]], self.metadata[
-                        'longitude'][stations_idx[us_idx[i]]]
-                    x, y = ismn_map(lon, lat)
+        plt.legend(rect, uniq_networks.tolist(), loc='lower center', ncol=ncols)
 
-                    im = ismn_map.scatter(
-                        x, y, c=netcolor, s=10, marker='s', edgecolors='none', ax=ax)
-
-            ismn_map.drawcoastlines(linewidth=0.25)
-            ismn_map.drawcountries(linewidth=0.25)
-            ismn_map.drawstates(linewidth=0.25)
-            plt.legend(
-                rect, uniq_networks.tolist(), loc='lower center', ncol=int(uniq_networks.size / 4))
-
-            return fig, ax
-        else:
-            raise ISMNError('Basemap is not installed.')
+        return fig, ax
 
     def get_min_max_obs_timestamps(self, variable="soil moisture", min_depth=None, max_depth=None):
         """
