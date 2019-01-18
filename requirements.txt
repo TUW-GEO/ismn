@@ -5,5 +5,5 @@ pandas
 matplotlib
 configparser
 scipy
-cartopy
+# cartopy
 cython

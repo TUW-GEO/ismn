@@ -40,6 +40,12 @@ This package should be installable through pip:
 
     pip install ismn
 
+The cartopy-package needs to be installed manually by using the following command:
+
+.. code::
+
+    conda install -c conda-forge cartopy
+
 Example installation script
 ---------------------------
 
