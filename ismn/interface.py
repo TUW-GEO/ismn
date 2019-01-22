@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2018 TU Wien
+# Copyright (c) 2019 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import ismn.readers as readers
 import pygeogrids.grids as grids
 
 import os
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -825,9 +826,11 @@ class ISMN_Interface(object):
         # show global map
         ax.set_global()
         ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor='gray')
-        ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
-
-        colormap = plt.get_cmap('tab20')
+        if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
+            ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
+            colormap = plt.get_cmap('tab20')
+        else:
+            colormap = plt.get_cmap('Set1')
         uniq_networks = self.list_networks()
         colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
         rect = []

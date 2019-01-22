@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2018 TU Wien
+# Copyright (c) 2019 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import matplotlib
 matplotlib.use('Agg')
 from ismn import interface
 import os
+import sys
 import datetime
 import pytest
 import numpy.testing as nptest
@@ -119,6 +120,8 @@ def test_find_nearest_station():
     nptest.assert_almost_equal(distance, 316228.53147802927)
 
 
+@pytest.mark.skipif(sys.version_info[0] == 3 and sys.version_info[1] == 4,
+                    reason="Cartopy for python 3.4 does not support plotting of ")
 @pytest.mark.mpl_image_compare(tolerance=7)
 def test_interface_plotting():
     """
