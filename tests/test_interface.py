@@ -121,7 +121,7 @@ def test_find_nearest_station():
 
 
 @pytest.mark.skipif(sys.version_info[0] == 3 and sys.version_info[1] == 4,
-                    reason="Cartopy for python 3.4 does not support plotting of ")
+                    reason="Cartopy for python 3.4 does not support plotting of state boundaries.")
 @pytest.mark.mpl_image_compare(tolerance=7)
 def test_interface_plotting():
     """
