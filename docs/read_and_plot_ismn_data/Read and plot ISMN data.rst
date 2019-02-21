@@ -650,4 +650,51 @@ network and station to plot data from
     </div>
 
 
+Selection of ISMN stations by landcover or climate classification:
+
+.. code:: python
+
+    # Return all available landcover classifications (ESA CCI landcover 2000) for the variable soil moisture.
+    # To use ESA CCI landcover data from the year 2005 or 2010 set landcover parameter to 'landcover_2005' and
+    # 'landcover_2010', respectively.
+    lc_2000 = ISMN_reader.get_landcover_types(variable='soil moisture', landcover='landcover_2000')
+
+    # return all available landcover classifications (ESA CCI landcover 2005) for the variable soil moisture
+    # (depths from 0 to 0.1m)
+    lc_2005 = ISMN_reader.get_landcover_types(variable='soil moisture', landcover='landcover_2005'
+                                              min_depth=0, max_depth=0.1)
+    # return all available landcover classifications (ESA CCI landcover 2010) for the variable soil moisture
+    # (depths from 0.1 to 0.5m)
+    lc_2010 = ISMN_reader.get_landcover_types(variable='soil moisture', landcover='landcover_2010'
+                                              min_depth=0.1, max_depth=0.5)
+    # return all available landcover classifications (in situ) for the variable soil moisture
+    lc_insitu = ISMN_reader.get_landcover_types(variable='soil moisture', landcover='landcover_insitu')
+
+    # return all available climate classifications (Koeppen-Geiger 2007) for the variable soil moisture
+    clim = ISMN_reader.get_climate_types(variable='soil moisture', climate='climate')
+    # return all available climate classifications (in situ) for the variable soil moisture
+    clim_insitu = ISMN_reader.get_climate_types(variable='soil moisture', climate='climate_insitu')
+
+
+    # print all landcover classes covered by the ESA CCI landcover classification
+    ISMN_reader.print_landcover_dict()
+    # print all climate classes covered by the Koeppen-Geiger classification
+    ISMN_reader.print_climate_dict()
+
+
+    # Select ISMN stations where soil moisture at depths from 0 to 0.1m is available and the landcover
+    # classification is equal to 130 (Grassland). In this example the ESA CCI landcover classification
+    # for the year 2010 (landcover_2010) is used.
+    ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=0.1, landcover_2010=130)
+    # read time series from first element in the returned list
+    ts_1 = ISMN_reader.read_ts(ids1[0])
+
+    # Select ISMN stations where soil moisture at depths from 0 to 0.1m is available, the landcover
+    # class (year 2005) is equal to 130 (Grassland) and the climate class is equal to Csa (Temperate
+    # Dry Hot Summer)
+    ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1,
+                                       landcover_2005=130, climate='Csa')
+    # read time series from first element in the returned list
+    ts_2 = ISMN_reader.read_ts(ids2[0])
+
 

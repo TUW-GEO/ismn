@@ -2,10 +2,12 @@ name: ismn
 channels:
   - conda-forge
 dependencies:
+  - cython
   - numpy
   - scipy
   - pandas
   - matplotlib
-  - basemap
+  - cartopy
   - pip:
-      - pygeogrids
+     - pygeogrids
+     - configparser

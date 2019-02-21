@@ -1,46 +1,46 @@
-# Copyright (c) 2015,Vienna University of Technology,
-# Department of Geodesy and Geoinformation
-# All rights reserved.
-
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#   * Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer.
-#    * Redistributions in binary form must reproduce the above copyright
-#      notice, this list of conditions and the following disclaimer in the
-#      documentation and/or other materials provided with the distribution.
-#    * Neither the name of the Vienna University of Technology,
-#      Department of Geodesy and Geoinformation nor the
-#      names of its contributors may be used to endorse or promote products
-#      derived from this software without specific prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL VIENNA UNIVERSITY OF TECHNOLOGY,
-# DEPARTMENT OF GEODESY AND GEOINFORMATION BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# The MIT License (MIT)
+#
+# Copyright (c) 2019 TU Wien
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 '''
 tests for the ismn interface
 Created on Thu Feb 26 12:36:30 2015
 
-@author: christoph.paulik@geo.tuwien.ac.at
+@author: Christoph Paulik
+
+Updated on Dec 14, 2018
+
+@author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
 '''
 
 import matplotlib
 matplotlib.use('Agg')
 from ismn import interface
 import os
+import sys
 import datetime
 import pytest
 import numpy.testing as nptest
 import ismn.metadata_collector as metadata_collector
+import numpy as np
 
 
 def test_min_max_obstime_getting():
@@ -120,6 +120,8 @@ def test_find_nearest_station():
     nptest.assert_almost_equal(distance, 316228.53147802927)
 
 
+@pytest.mark.skipif(sys.version_info[0] == 3 and sys.version_info[1] == 4,
+                    reason="Cartopy for python 3.4 does not support plotting of state boundaries.")
 @pytest.mark.mpl_image_compare(tolerance=7)
 def test_interface_plotting():
     """
@@ -144,8 +146,81 @@ def test_station_order():
 
     filenames = []
     for m in metadata:
-        filenames.append(m[-1])
+        filenames.append(m['filename'])
 
     sorted_filenames = sorted(filenames)
 
     assert sorted_filenames == filenames
+
+
+def test_list_landcover_types():
+    """
+    Test available landcover classifications for dataset
+    """
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_header_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    lc = ISMN_reader.get_landcover_types()
+    assert list(lc) == [130, 210]
+    lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
+    assert lc == ['']
+
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    lc = ISMN_reader.get_landcover_types()
+    assert list(lc) == [130, 210]
+    lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
+    assert lc == ['']
+
+
+def test_list_climate_types():
+    """
+    Test available climate classifications for dataset
+    """
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_header_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    cl = ISMN_reader.get_climate_types()
+    assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
+    cl = ISMN_reader.get_climate_types(climate='climate_insitu')
+    assert list(cl) == []
+
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    cl = ISMN_reader.get_climate_types()
+    assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
+    cl = ISMN_reader.get_climate_types(climate='climate_insitu')
+    assert list(cl) == []
+
+
+def test_get_dataset_ids():
+    """
+    Test returned indeces from filtering
+    """
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_header_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
+    assert np.array_equal(np.array([0]), ids1)
+    ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
+    assert np.array_equal(np.array([1]), ids2)
+    ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
+    assert np.array_equal(np.array([0, 1]), ids3)
+    ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
+    assert np.array_equal(np.array([0, 1]), ids4)
+
+    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
+                                     'Data_seperate_files_20170810_20180809')
+    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+    ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
+    assert np.array_equal(np.array([0]), ids1)
+    ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
+    assert np.array_equal(np.array([1]), ids2)
+    ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
+    assert np.array_equal(np.array([0, 1]), ids3)
+    ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
+    assert np.array_equal(np.array([0, 1]), ids4)
+
+

@@ -1,33 +1,33 @@
-# Copyright (c) 2013,Vienna University of Technology, Department of Geodesy and Geoinformation
-# All rights reserved.
-
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#   * Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer.
-#    * Redistributions in binary form must reproduce the above copyright
-#      notice, this list of conditions and the following disclaimer in the
-#      documentation and/or other materials provided with the distribution.
-#    * Neither the name of the Vienna University of Technology, Department of Geodesy and Geoinformation nor the
-#      names of its contributors may be used to endorse or promote products
-#      derived from this software without specific prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL VIENNA UNIVERSITY OF TECHNOLOGY,
-# DEPARTMENT OF GEODESY AND GEOINFORMATION BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-#(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-#(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# The MIT License (MIT)
+#
+# Copyright (c) 2019 TU Wien
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 '''
 Created on Aug 5, 2013
 
-@author: Christoph Paulik Christoph.Paulik@geo.tuwien.ac.at
+@author: Christoph Paulik
+
+Updated on Dec 14, 2018
+
+@author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
 '''
 
 import ismn.metadata_collector as metadata_collector
@@ -35,17 +35,14 @@ import ismn.readers as readers
 import pygeogrids.grids as grids
 
 import os
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
-
-try:
-    from mpl_toolkits.basemap import Basemap
-    basemap_installed = True
-    from matplotlib.patches import Rectangle
-except ImportError:
-    basemap_installed = False
+from matplotlib.patches import Rectangle
+import configparser
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 
 class ISMNError(Exception):
@@ -53,7 +50,6 @@ class ISMNError(Exception):
 
 
 class ISMN_station(object):
-
     """
     Knows everything about the station, like which variables are measured there in which depths
     and in which files the data is stored. This is not completely true for the CEOP format
@@ -79,26 +75,31 @@ class ISMN_station(object):
         longitude of station
     elevation : float
         elevation of station
+    landcover: string
+        land cover classification for station
+    climate: string
+        climate classification for station
     variables : numpy.array
         variables measured at this station
         one of
+        - dynamic (time series):
                 * 'soil moisture',
                 * 'soil temperature',
                 * 'soil suction',
                 * 'precipitation',
                 * 'air temperature',
+                * 'snow depth',
+                * 'snow water equivalent',
+                * 'surface temperature',
+        - static:
                 * 'field capacity',
                 * 'permanent wilting point',
-                * 'plant available water',
                 * 'potential plant available water',
                 * 'saturation',
                 * 'silt fraction',
-                * 'snow depth',
                 * 'sand fraction',
                 * 'clay fraction',
                 * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
                 * 'surface temperature quality flag original'
     depth_from : numpy.array
         shallower depth of layer the variable with same index was measured at
@@ -135,6 +136,17 @@ class ISMN_station(object):
         self.depth_to = []
         self.sensors = []
         self.filenames = []
+        self.landcover_2000 = metadata[0]['landcover_2000']
+        self.landcover_2005 = metadata[0]['landcover_2005']
+        self.landcover_2010 = metadata[0]['landcover_2010']
+        self.landcover_insitu = metadata[0]['landcover_insitu']
+        self.climate = metadata[0]['climate']
+        self.climate_insitu = metadata[0]['climate_insitu']
+        self.saturation = metadata[0]['saturation']
+        self.clay_fraction = metadata[0]['clay_fraction']
+        self.sand_fraction = metadata[0]['sand_fraction']
+        self.silt_fraction = metadata[0]['silt_fraction']
+        self.organic_carbon = metadata[0]['organic_carbon']
 
         for dataset in metadata:
             if self.network is None:
@@ -421,7 +433,7 @@ class ISMN_station(object):
 
     def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None, max_depth=None):
         """
-        goes throug the filenames associated with a station
+        goes through the filenames associated with a station
         and reads the date of the first and last observation to get
         and approximate time coverage of the station.
         This is just an overview. If holes have to be detected the
@@ -527,9 +539,9 @@ class ISMN_Interface(object):
         """
 
         if not os.path.exists(os.path.join(path_to_data, 'python_metadata', 'metadata.npy')):
+            os.mkdir(os.path.join(path_to_data, 'python_metadata'))
             self.metadata = metadata_collector.collect_from_folder(
                 path_to_data)
-            os.mkdir(os.path.join(path_to_data, 'python_metadata'))
             np.save(
                 os.path.join(path_to_data, 'python_metadata', 'metadata.npy'), self.metadata)
             #np.savetxt(os.path.join(path_to_data,'python_metadata','metadata.npy'), self.metadata,delimiter=',')
@@ -553,6 +565,14 @@ class ISMN_Interface(object):
         self.grid = grids.BasicGrid(self.metadata['longitude'],
                                     self.metadata['latitude'],
                                     setup_kdTree=False)
+
+        # read cci landcover class names and their identifiers
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read_file(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classifications.ini')))
+        landcover = dict(config.items('LANDCOVER'))
+        self.landcover = dict([(int(v), k) for k, v in landcover.items()])
+        self.climate = dict(config.items('KOEPPENGEIGER'))
 
     def list_networks(self):
         """
@@ -667,17 +687,69 @@ class ISMN_Interface(object):
                 if variable in station.variables:
                     yield station
 
-    def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1):
+    def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
+                        **kwargs):
         """
-        returnes list of dataset_id's that can be used to read a
+        returns list of dataset_id's that can be used to read a
         dataset directly through the read_ts function
+
+        Parameters
+        ----------
+        self: type
+            description
+        variable: string, optional
+            one of
+                * 'soil moisture',
+                * 'soil temperature',
+                * 'soil suction',
+                * 'precipitation',
+                * 'air temperature',
+                * 'field capacity',
+                * 'permanent wilting point',
+                * 'plant available water',
+                * 'potential plant available water',
+                * 'saturation',
+                * 'silt fraction',
+                * 'snow depth',
+                * 'sand fraction',
+                * 'clay fraction',
+                * 'organic carbon',
+                * 'snow water equivalent',
+                * 'surface temperature',
+                * 'surface temperature quality flag original'
+        min_depth : float, optional
+            depth_from of variable has to be >= min_depth in order to be
+            included.
+        max_depth : float, optional
+            depth_to of variable has to be <= max_depth in order to be
+            included.
+        kwargs:
+            filter by landcover and/or climate classifications
+            keys:
+                * landcover_2000
+                * landcover_2005
+                * landcover_2010
+                * landcover_insitu
+                * climate
+                * climate_insitu
         """
+        lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
+
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
 
+        landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
+
+        for k in kwargs.keys():
+            if k in lc_cl:
+                landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
+            else:
+                raise ValueError('Specified keyword \"{}\" not found in metadata! Use one of the following: {}'.format(k, lc_cl))
+
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
-                       (self.metadata['depth_from'] >= min_depth))[0]
+                       (self.metadata['depth_from'] >= min_depth) &
+                       landcover_climate)[0]
 
         return ids
 
@@ -731,71 +803,58 @@ class ISMN_Interface(object):
         else:
             return ISMN_station(self.metadata[all_index])
 
-    def plot_station_locations(self, axes=None):
+    def plot_station_locations(self):
         """
         plots available stations on a world map in robinson projection
-        only available if basemap is installed
 
         Parameters
         ----------
-        axes: matplotlib.Axes, optional
-            If given then plot will be on this axes.
 
         Returns
         -------
         fig: matplotlib.Figure
             created figure instance. If axes was given this will be None.
-        axes: matplitlib.Axes
+        ax: matplitlib.Axes
             used axes instance.
-
-        Raises
-        ------
-        ISMNError
-            if basemap is not installed
         """
-        if basemap_installed:
 
-            if axes is None:
-                fig = plt.figure()
-                ax = fig.add_axes([0, 0, 0.9, 1])
-            else:
-                fig = None
-                ax = axes
-            colormap = plt.get_cmap('Set1')
+        data_crs = ccrs.PlateCarree()
 
-            ismn_map = Basemap(projection='robin', lon_0=0)
-
-            uniq_networks = self.list_networks()
-
-            colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
-            rect = []
-
-            for j, network in enumerate(uniq_networks):
-
-                stations_idx = np.where(self.metadata['network'] == network)[0]
-                unique_stations, us_idx = np.unique(
-                    self.metadata['station'][stations_idx], return_index=True)
-
-                netcolor = colormap(colorsteps[j])
-                rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
-
-                for i, station in enumerate(unique_stations):
-                    lat, lon = self.metadata['latitude'][stations_idx[us_idx[i]]], self.metadata[
-                        'longitude'][stations_idx[us_idx[i]]]
-                    x, y = ismn_map(lon, lat)
-
-                    im = ismn_map.scatter(
-                        x, y, c=netcolor, s=10, marker='s', edgecolors='none', ax=ax)
-
-            ismn_map.drawcoastlines(linewidth=0.25)
-            ismn_map.drawcountries(linewidth=0.25)
-            ismn_map.drawstates(linewidth=0.25)
-            plt.legend(
-                rect, uniq_networks.tolist(), loc='lower center', ncol=uniq_networks.size / 4)
-
-            return fig, ax
+        fig, ax = plt.subplots(1, 1)
+        ax = plt.axes(projection=ccrs.Robinson())
+        ax.coastlines(linewidth=0.5)
+        # show global map
+        ax.set_global()
+        ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor='gray')
+        if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
+            ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
+            colormap = plt.get_cmap('tab20')
         else:
-            raise ISMNError('Basemap is not installed.')
+            colormap = plt.get_cmap('Set1')
+        uniq_networks = self.list_networks()
+        colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
+        rect = []
+
+        for j, network in enumerate(uniq_networks):
+            stations_idx = np.where(self.metadata['network'] == network)[0]
+            unique_stations, us_idx = np.unique(
+                self.metadata['station'][stations_idx], return_index=True)
+
+            netcolor = colormap(colorsteps[j])
+            rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
+
+            for i, station in enumerate(unique_stations):
+                lat, lon = self.metadata['latitude'][stations_idx[us_idx[i]]], \
+                           self.metadata['longitude'][stations_idx[us_idx[i]]]
+                ax.plot(lon, lat, color=netcolor, markersize=3, marker='s', transform=data_crs)
+
+        ncols = int(uniq_networks.size / 4)
+        if ncols == 0:
+            ncols = 1
+
+        plt.legend(rect, uniq_networks.tolist(), loc='lower center', ncol=ncols)
+
+        return fig, ax
 
     def get_min_max_obs_timestamps(self, variable="soil moisture", min_depth=None, max_depth=None):
         """
@@ -859,3 +918,155 @@ class ISMN_Interface(object):
         data = pd.DataFrame({"start date": start_dates,
                              "end date": end_dates}, index=[np.array(networks), np.array(stations)])
         return data
+
+    def get_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=10, landcover='landcover_2010'):
+        """
+        returns all landcover types in data for specific variable at certain depths
+
+        Parameters
+        ----------
+        self: type
+            description
+        variable: string, optional
+            one of
+                * 'soil moisture',
+                * 'soil temperature',
+                * 'soil suction',
+                * 'precipitation',
+                * 'air temperature',
+                * 'field capacity',
+                * 'permanent wilting point',
+                * 'plant available water',
+                * 'potential plant available water',
+                * 'saturation',
+                * 'silt fraction',
+                * 'snow depth',
+                * 'sand fraction',
+                * 'clay fraction',
+                * 'organic carbon',
+                * 'snow water equivalent',
+                * 'surface temperature',
+                * 'surface temperature quality flag original'
+        min_depth : float, optional
+            depth_from of variable has to be >= min_depth in order to be
+            included.
+        max_depth : float, optional
+            depth_to of variable has to be <= max_depth in order to be
+            included.
+        landcover: string
+            * landcover_2000: return all landcover types in data as specified in CCI landcover classification 2000
+            * landcover_2005: return all landcover types in data as specified in CCI landcover classification 2005
+            * landcover_2010 (default):
+                return all landcover types in data as specified in CCI landcover classification 2010
+            * landcover_insitu: return all landcover types in data (in situ measurements)
+        """
+        lcs = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu']
+
+        if max_depth < min_depth:
+            raise ValueError("max_depth can not be less than min_depth")
+
+        if landcover not in lcs:
+            raise ValueError("{} is no valid landcover variable. Choose one of the following: {}".format(landcover, lcs))
+
+        ids = np.where((self.metadata['variable'] == variable) &
+                       (self.metadata['depth_to'] <= max_depth) &
+                       (self.metadata['depth_from'] >= min_depth) &
+                       (self.metadata[landcover] != np.nan))[0]
+
+        meta = self.metadata[ids]
+        lc_types = np.unique(meta[landcover])
+        lc_types = lc_types[~pd.isnull(lc_types)]
+        if landcover == 'landcover_insitu':
+            return lc_types
+        lc_types_dict = dict((k, self.landcover[k]) for k in lc_types)
+        return lc_types_dict
+
+    def get_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10, climate='climate'):
+        """
+        returns all climate types in data for specific variable at certain depths
+
+        Parameters
+        ----------
+        self: type
+            description
+        variable: string, optional
+            one of
+                * 'soil moisture',
+                * 'soil temperature',
+                * 'soil suction',
+                * 'precipitation',
+                * 'air temperature',
+                * 'field capacity',
+                * 'permanent wilting point',
+                * 'plant available water',
+                * 'potential plant available water',
+                * 'saturation',
+                * 'silt fraction',
+                * 'snow depth',
+                * 'sand fraction',
+                * 'clay fraction',
+                * 'organic carbon',
+                * 'snow water equivalent',
+                * 'surface temperature',
+                * 'surface temperature quality flag original'
+        min_depth : float, optional
+            depth_from of variable has to be >= min_depth in order to be
+            included.
+        max_depth : float, optional
+            depth_to of variable has to be <= max_depth in order to be
+            included.
+        climate: string
+            * climate (default): return climate types in data from Koeppen Geiger classification
+            * climate_insitu: return climate types in data from in situ classification
+        """
+        cls = ['climate', 'climate_insitu']
+
+        if max_depth < min_depth:
+            raise ValueError("max_depth can not be less than min_depth")
+
+        if climate not in cls:
+            raise ValueError("{} is no valid climate variable. Choose one of the following: {}".format(climate, cls))
+
+        ids = np.where((self.metadata['variable'] == variable) &
+                       (self.metadata['depth_to'] <= max_depth) &
+                       (self.metadata['depth_from'] >= min_depth) &
+                       (self.metadata[climate] != ''))[0]
+
+        meta = self.metadata[ids]
+        cl_types = np.unique(meta[climate])
+        cl_types = cl_types[~pd.isnull(cl_types)]
+        if climate == 'climate_insitu':
+            return cl_types
+        cl_types_dict = dict((k, self.climate[k]) for k in cl_types)
+        return cl_types_dict
+
+    def get_variables(self):
+        """
+        get a list of variables available for the data
+
+        Returns
+        -------
+        variables : numpy.array
+            array of variables available for the data
+        """
+        return np.unique(self.metadata['variable'])
+
+    def print_landcover_dict(self):
+        """
+        print all classes provided by the CCI Landcover Classification
+        :return: None
+        """
+        print('CCI Landcover Classification')
+        print('----------------------------')
+        for key in self.landcover.keys():
+            print('{:4}: {}'.format(key, self.landcover[key]))
+
+    def print_climate_dict(self):
+        """
+        print all classes provided by the Koeppen-Geiger climate Classification
+        :return: None
+        """
+        print('KOEPPEN GEIGER Climate Classification')
+        print('-------------------------------------')
+        for key in self.climate.keys():
+            print('{:4}: {}'.format(key, self.climate[key]))

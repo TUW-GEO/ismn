@@ -1,7 +1,9 @@
 # Add your requirements here like:
-# numpy
-# scipy>=0.9
 pygeogrids
 numpy
 pandas
 matplotlib
+configparser
+scipy
+# cartopy
+cython

@@ -1,0 +1,16 @@
+quantity_name;unit;depth_from[m];depth_to[m];value;description;quantity_source_name;quantity_source_description;quantity_source_provider;quantity_source_version;quantity_source_resolution;quantity_source_timerange;quantity_source_url;
+saturation;m^3*m^-3;0.00;0.30;0.55;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+clay fraction;% weight;0.00;0.30;18.00;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+organic carbon;% weight;0.00;0.30;3.08;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+sand fraction;% weight;0.00;0.30;34.00;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+silt fraction;% weight;0.00;0.30;48.00;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+saturation;m^3*m^-3;0.30;1.00;0.43;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+clay fraction;% weight;0.30;1.00;22.00;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+organic carbon;% weight;0.30;1.00;0.65;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+sand fraction;% weight;0.30;1.00;31.00;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+silt fraction;% weight;0.30;1.00;47.00;;HWSD;Harmonized World Soil Database v1.1  by IIASA;IIASA;v1.1;30";;http://webarchive.iiasa.ac.at/Research/LUC/External-World-soil-database/HTML/;
+organic carbon;% weight;-99.90;-99.90;1.60;;insitu;in situ;;;;;;
+land cover classification;;;;210;Water;CCI_landcover_2000;ESA CCI Land Cover;ESA;2000-v1.6.1;300m;1998-2002;http://www.esa-landcover-cci.org/;
+land cover classification;;;;210;Water;CCI_landcover_2005;ESA CCI Land Cover;ESA;2005-v1.6.1;300m;2003-2007;http://www.esa-landcover-cci.org/;
+land cover classification;;;;210;Water;CCI_landcover_2010;ESA CCI Land Cover;ESA;2010-v1.6.1;300m;2008-2012;http://www.esa-landcover-cci.org/;
+climate classification;;;;ET;Polar - Tundra;koeppen_geiger_2007;Koeppen-Geiger Climate Classification;;Peel2007;0.1°;;http://www.hydrol-earth-syst-sci.net/11/1633/2007/;

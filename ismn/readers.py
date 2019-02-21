@@ -1,38 +1,41 @@
-# Copyright (c) 2013,Vienna University of Technology, Department of Geodesy and Geoinformation
-# All rights reserved.
-
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#   * Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer.
-#    * Redistributions in binary form must reproduce the above copyright
-#      notice, this list of conditions and the following disclaimer in the
-#      documentation and/or other materials provided with the distribution.
-#    * Neither the name of the <organization> nor the
-#      names of its contributors may be used to endorse or promote products
-#      derived from this software without specific prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# The MIT License (MIT)
+#
+# Copyright (c) 2019 TU Wien
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 '''
 Created on Jul 31, 2013
 
-@author: Christoph Paulik christoph.paulik@geo.tuwien.ac.at
+@author: Christoph Paulik
+
+Updated on Dec 14, 2018
+
+@author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
 '''
 
 import os
 import pandas as pd
 from datetime import datetime
 import numpy as np
+import logging
+import io
 
 
 variable_lookup = {'sm': 'soil moisture',
@@ -149,7 +152,7 @@ def get_info_from_file(filename):
     filename_elements : list
         filename without path split by _
     """
-    with open(filename, 'U') as f:
+    with io.open(filename, mode='r', newline=None) as f:
         header = f.readline()
     header_elements = header.split()
 
@@ -225,6 +228,7 @@ def read_format_header_values(filename):
                        parse_dates=[[0, 1]])
 
     data.set_index('date_time', inplace=True)
+    data = data.tz_localize('UTC')
 
     metadata['data'] = data
 
@@ -299,6 +303,7 @@ def read_format_ceop_sep(filename):
                        parse_dates=[[0, 1]])
 
     data.set_index('date_time', inplace=True)
+    data = data.tz_localize('UTC')
 
     metadata['data'] = data
 
@@ -362,10 +367,11 @@ def read_format_ceop(filename):
                        na_values=['-999.99'],
                        parse_dates=[[0, 1]])
 
-    date_index = data['date_time']
+    data = data.set_index('date_time')
+    data = data.tz_localize('UTC')
+    date_index = data.index
     depth_index = data['depth_from']
 
-    del data['date_time']
     del data['depth_from']
 
     data.index = pd.MultiIndex.from_arrays([depth_index,
@@ -432,7 +438,7 @@ def get_min_max_timestamp_header_values(filename):
     """
     Get minimum and maximum observation timestamp from header values format.
     """
-    with open(filename, mode='rU') as fid:
+    with io.open(filename, mode='r', newline=None) as fid:
         _ = fid.readline()
         first = fid.readline()
         last = tail(fid)[0]
@@ -446,7 +452,7 @@ def get_min_max_timestamp_ceop_sep(filename):
     """
     Get minimum and maximum observation timestamp from ceop_sep format.
     """
-    with open(filename, mode='rU') as fid:
+    with io.open(filename, mode='r', newline=None) as fid:
         first = fid.readline()
         last = tail(fid)[0]
 
@@ -459,7 +465,7 @@ def get_min_max_timestamp_ceop(filename):
     """
     Get minimum and maximum observation timestamp from ceop format.
     """
-    with open(filename, mode='rU') as fid:
+    with io.open(filename, mode='r', newline=None) as fid:
         first = fid.readline()
         last = tail(fid)[0]
 
@@ -524,6 +530,84 @@ def read_data(filename):
     dicton = globals()
     func = dicton['read_format_' + get_format(filename)]
     return func(filename)
+
+
+def get_metadata_from_csv(filename):
+    """
+    reads ISMN metadata from csv file
+
+    Parameters
+    ----------
+    filename: str, path to csv file
+
+    Returns
+    -------
+    landcover_2000: int, cci landcover classification for station (year 2000)
+    landcover_2005: int, cci landcover classification for station (year 2005)
+    landcover_2010: int, cci landcover classification for station (year 2010)
+    landcover_insitu: str, in situ landcover classification
+    climate: str, Koeppen Geiger climate classification for station
+    climate_insitu: str, in situ climate classification for station
+    saturation: nd.array, saturation for all available depths
+    clay_fraction: nd.array, clay fraction for all available depths (in % weight)
+    sand_fraction: nd.array, sand fraction for all available depths (in % weight)
+    silt_fraction: nd.array, silt fraction for all available depths (in % weight)
+    organic_carbon: nd.array, organic carbon for all available depths (in % weight)
+    """
+    def read_field(fieldname):
+        if fieldname in data.index:
+            dt = list()
+            for i, j in zip(np.atleast_1d(data.loc[fieldname]['depth_from[m]']),
+                            np.atleast_1d(data.loc[fieldname]['depth_to[m]'])):
+                dt.append(('{}m_{}m'.format(i, j), np.float))
+            return np.array([tuple(np.atleast_1d(data.loc[fieldname]['value']))], dtype=np.dtype(dt))
+        else:
+            return np.nan
+
+    # some stations don't come with correct format in csv file (missing header)
+    try:
+        data = pd.read_csv(filename, delimiter=";")
+        data.set_index('quantity_name', inplace=True)
+    except:
+        # set columns manually
+        logging.info('no header: {}'.format(filename))
+        data = pd.read_csv(filename, delimiter=";", header=None)
+        cols = list(data.columns.values)
+        cols[0:7] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]',
+                     'value', 'description', 'quantity_source_name']
+        data.columns = cols
+        data.set_index('quantity_name', inplace=True)
+
+    # read landcover classifications
+    lc = data.loc[['land cover classification']][['value', 'quantity_source_name']]
+    lc_dict = {'CCI_landcover_2000': np.nan, 'CCI_landcover_2005': np.nan,
+               'CCI_landcover_2010': np.nan, 'insitu': ''}
+    for key in lc_dict.keys():
+        if key in lc['quantity_source_name'].values:
+            if key != 'insitu':
+                lc_dict[key] = np.int(lc.loc[lc['quantity_source_name'] == key]['value'].values[0])
+            else:
+                lc_dict[key] = lc.loc[lc['quantity_source_name'] == key]['value'].values[0]
+                logging.info('insitu land cover classification available: {}'.format(filename))
+
+    # read climate classifications
+    cl = data.loc[['climate classification']][['value', 'quantity_source_name']]
+    cl_dict = {'koeppen_geiger_2007': '', 'insitu': ''}
+    for key in cl_dict.keys():
+        if key in cl['quantity_source_name'].values:
+            cl_dict[key] = cl.loc[cl['quantity_source_name'] == key]['value'].values[0]
+            if key == 'insitu':
+                logging.info('insitu climate classification available: {}'.format(filename))
+
+    saturation = read_field('saturation')
+    clay_fraction = read_field('clay fraction')
+    sand_fraction = read_field('sand fraction')
+    silt_fraction = read_field('silt fraction')
+    organic_carbon = read_field('organic carbon')
+
+    return lc_dict['CCI_landcover_2000'], lc_dict['CCI_landcover_2005'], lc_dict['CCI_landcover_2010'], \
+           lc_dict['insitu'], cl_dict['koeppen_geiger_2007'], cl_dict['insitu'], saturation, clay_fraction, \
+           sand_fraction, silt_fraction, organic_carbon
 
 
 def get_metadata(filename):
