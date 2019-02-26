@@ -1,15 +1,13 @@
 name: ismn
 channels:
   - conda-forge
-  - defaults
 dependencies:
+  - cython
   - numpy
-  - configparser
+  - scipy
   - pandas
-  - basemap
-  - pytest
-  - pytest-cov
-  - coveralls
+  - matplotlib
+  - cartopy
   - pip:
-    - pygeogrids
-    - matplotlib
+     - pygeogrids
+     - configparser

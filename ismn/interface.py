@@ -1,34 +1,31 @@
-# Copyright (c) 2018, TU Wien, Department of Geodesy and Geoinformation
-# All rights reserved.
-
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#    * Redistributions of source code must retain the above copyright
-#      notice, this list of conditions and the following disclaimer.
-#    * Redistributions in binary form must reproduce the above copyright
-#      notice, this list of conditions and the following disclaimer in the
-#      documentation and/or other materials provided with the distribution.
-#    * Neither the name of TU Wien, Department of Geodesy and Geoinformation nor the
-#      names of its contributors may be used to endorse or promote products
-#      derived from this software without specific prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# The MIT License (MIT)
+#
+# Copyright (c) 2019 TU Wien
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 '''
 Created on Aug 5, 2013
 
 @author: Christoph Paulik
 
-Updated on Sep 23, 2018
+Updated on Dec 14, 2018
 
 @author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
 '''
@@ -38,18 +35,14 @@ import ismn.readers as readers
 import pygeogrids.grids as grids
 
 import os
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import configparser
-
-
-try:
-    from mpl_toolkits.basemap import Basemap
-    basemap_installed = True
-    from matplotlib.patches import Rectangle
-except ImportError:
-    basemap_installed = False
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 
 
 class ISMNError(Exception):
@@ -576,7 +569,7 @@ class ISMN_Interface(object):
         # read cci landcover class names and their identifiers
         config = configparser.ConfigParser()
         config.optionxform = str
-        config.read(os.path.join(os.getcwd(), 'ismn', 'classifications.ini'))
+        config.read_file(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classifications.ini')))
         landcover = dict(config.items('LANDCOVER'))
         self.landcover = dict([(int(v), k) for k, v in landcover.items()])
         self.climate = dict(config.items('KOEPPENGEIGER'))
@@ -740,13 +733,18 @@ class ISMN_Interface(object):
                 * climate
                 * climate_insitu
         """
+        lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
+
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
 
         landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
 
         for k in kwargs.keys():
-            landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
+            if k in lc_cl:
+                landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
+            else:
+                raise ValueError('Specified keyword \"{}\" not found in metadata! Use one of the following: {}'.format(k, lc_cl))
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
@@ -805,71 +803,58 @@ class ISMN_Interface(object):
         else:
             return ISMN_station(self.metadata[all_index])
 
-    def plot_station_locations(self, axes=None):
+    def plot_station_locations(self):
         """
         plots available stations on a world map in robinson projection
-        only available if basemap is installed
 
         Parameters
         ----------
-        axes: matplotlib.Axes, optional
-            If given then plot will be on this axes.
 
         Returns
         -------
         fig: matplotlib.Figure
             created figure instance. If axes was given this will be None.
-        axes: matplitlib.Axes
+        ax: matplitlib.Axes
             used axes instance.
-
-        Raises
-        ------
-        ISMNError
-            if basemap is not installed
         """
-        if basemap_installed:
 
-            if axes is None:
-                fig = plt.figure()
-                ax = fig.add_axes([0, 0, 0.9, 1])
-            else:
-                fig = None
-                ax = axes
+        data_crs = ccrs.PlateCarree()
+
+        fig, ax = plt.subplots(1, 1)
+        ax = plt.axes(projection=ccrs.Robinson())
+        ax.coastlines(linewidth=0.5)
+        # show global map
+        ax.set_global()
+        ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor='gray')
+        if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
+            ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
             colormap = plt.get_cmap('tab20')
-
-            ismn_map = Basemap(projection='robin', lon_0=0)
-
-            uniq_networks = self.list_networks()
-
-            colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
-            rect = []
-
-            for j, network in enumerate(uniq_networks):
-
-                stations_idx = np.where(self.metadata['network'] == network)[0]
-                unique_stations, us_idx = np.unique(
-                    self.metadata['station'][stations_idx], return_index=True)
-
-                netcolor = colormap(colorsteps[j])
-                rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
-
-                for i, station in enumerate(unique_stations):
-                    lat, lon = self.metadata['latitude'][stations_idx[us_idx[i]]], self.metadata[
-                        'longitude'][stations_idx[us_idx[i]]]
-                    x, y = ismn_map(lon, lat)
-
-                    im = ismn_map.scatter(
-                        x, y, c=netcolor, s=10, marker='s', edgecolors='none', ax=ax)
-
-            ismn_map.drawcoastlines(linewidth=0.25)
-            ismn_map.drawcountries(linewidth=0.25)
-            ismn_map.drawstates(linewidth=0.25)
-            plt.legend(
-                rect, uniq_networks.tolist(), loc='lower center', ncol=int(uniq_networks.size / 4))
-
-            return fig, ax
         else:
-            raise ISMNError('Basemap is not installed.')
+            colormap = plt.get_cmap('Set1')
+        uniq_networks = self.list_networks()
+        colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
+        rect = []
+
+        for j, network in enumerate(uniq_networks):
+            stations_idx = np.where(self.metadata['network'] == network)[0]
+            unique_stations, us_idx = np.unique(
+                self.metadata['station'][stations_idx], return_index=True)
+
+            netcolor = colormap(colorsteps[j])
+            rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
+
+            for i, station in enumerate(unique_stations):
+                lat, lon = self.metadata['latitude'][stations_idx[us_idx[i]]], \
+                           self.metadata['longitude'][stations_idx[us_idx[i]]]
+                ax.plot(lon, lat, color=netcolor, markersize=3, marker='s', transform=data_crs)
+
+        ncols = int(uniq_networks.size / 4)
+        if ncols == 0:
+            ncols = 1
+
+        plt.legend(rect, uniq_networks.tolist(), loc='lower center', ncol=ncols)
+
+        return fig, ax
 
     def get_min_max_obs_timestamps(self, variable="soil moisture", min_depth=None, max_depth=None):
         """
@@ -975,9 +960,13 @@ class ISMN_Interface(object):
                 return all landcover types in data as specified in CCI landcover classification 2010
             * landcover_insitu: return all landcover types in data (in situ measurements)
         """
+        lcs = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu']
 
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
+
+        if landcover not in lcs:
+            raise ValueError("{} is no valid landcover variable. Choose one of the following: {}".format(landcover, lcs))
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &
@@ -1030,8 +1019,13 @@ class ISMN_Interface(object):
             * climate (default): return climate types in data from Koeppen Geiger classification
             * climate_insitu: return climate types in data from in situ classification
         """
+        cls = ['climate', 'climate_insitu']
+
         if max_depth < min_depth:
             raise ValueError("max_depth can not be less than min_depth")
+
+        if climate not in cls:
+            raise ValueError("{} is no valid climate variable. Choose one of the following: {}".format(climate, cls))
 
         ids = np.where((self.metadata['variable'] == variable) &
                        (self.metadata['depth_to'] <= max_depth) &

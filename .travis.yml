@@ -32,6 +32,7 @@ install:
   - conda update basemap
   - python setup.py install
   # - pip install -r test-requirements.txt
+  - conda list
 
 script:
   - python setup.py test
