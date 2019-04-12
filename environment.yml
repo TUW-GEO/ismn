@@ -8,6 +8,8 @@ dependencies:
   - pandas
   - matplotlib
   - cartopy
+  - hdf5
   - pip:
      - pygeogrids
      - configparser
+     - more_itertools
