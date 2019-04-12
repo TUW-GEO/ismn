@@ -7,7 +7,6 @@ dependencies:
   - scipy
   - pandas
   - matplotlib
-  - basemap
   - sphinx
   - ipython
   - python=3.6

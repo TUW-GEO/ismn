@@ -30,6 +30,11 @@ Updated on Dec 14, 2018
 @author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
 '''
 
+import platform
+if platform.system() == 'Darwin':
+      import matplotlib
+      matplotlib.use("TkAgg")
+
 import ismn.metadata_collector as metadata_collector
 import ismn.readers as readers
 import pygeogrids.grids as grids

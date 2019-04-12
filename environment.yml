@@ -8,6 +8,7 @@ dependencies:
   - pandas
   - matplotlib
   - cartopy
+  - netCDF4
   - hdf5
   - pip:
      - pygeogrids
