@@ -1,4 +1,5 @@
 .. include:: ../README.rst
+.. include:: examples.rst
 
 Contents
 ========
@@ -6,7 +7,6 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   examples
    License <license>
    Authors <authors>
    Changelog <changes>
