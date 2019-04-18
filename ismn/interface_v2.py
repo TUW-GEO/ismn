@@ -216,7 +216,7 @@ class Network(object):
         self.name = name
         self.stations = {}
 
-    def add_station(self, name, lon, lat, elev=None, static_variables=None):
+    def add_station(self, name, lon, lat, elev, static_variables=None):
         """
         Add station to network.
 
@@ -228,8 +228,8 @@ class Network(object):
             Longitude coordinate.
         lat : float
             Latitude coordinate.
-        elev : float, optional
-            Elevation (default: None).
+        elev : float
+            Elevation.
         static_variables : list, optional
             Static variable information (default: None).
         """
@@ -357,8 +357,8 @@ class Station(object):
         filehandler : IsmnFile
             File handler.
         """
-        name = '{}_{}_{}_{}'.format(instrument, variable, depth.start,
-                                    depth.end)
+        name = '{}_{}_{:1.6f}_{:1.6f}'.format(
+            instrument, variable, depth.start, depth.end)
 
         if name not in self.sensors:
             self.sensors[name] = Sensor(name, instrument, variable,
@@ -405,7 +405,7 @@ class Station(object):
             if variable in [None, sensor.variable] and sensor.depth.enclose(d):
                 yield sensor
 
-    def n_sensor(self):
+    def n_sensors(self):
         """
         Number of sensors.
 
@@ -487,7 +487,7 @@ class Depth(object):
         flag : bool
             True if both depths are equal, False otherwise.
         """
-        if self.start == other.start & self.end == other.end:
+        if self.start == other.start and self.end == other.end:
             flag = True
         else:
             flag = False
@@ -508,7 +508,7 @@ class Depth(object):
         flag : bool
             True if other depth surrounds given depth, False otherwise.
         """
-        if (other.start <= self.start) & (other.end >= self.end):
+        if (other.start <= self.start) and (other.end >= self.end):
             flag = True
         else:
             flag = False
@@ -616,7 +616,7 @@ class IsmnFileCollection(object):
         sensors = []
 
         for f in self.files.values():
-            if ((network in [None, f.metadata['network']]) &
+            if ((network in [None, f.metadata['network']]) and
                     (station in [None, f.metadata['station']])):
 
                 name = '{}_{}_{}_{}'.format(f.metadata['sensor'],
