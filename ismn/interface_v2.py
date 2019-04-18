@@ -22,124 +22,19 @@
 
 import os
 import io
-# import glob
 import logging
 
+import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-
-
-class DataCollection(object):
-
-    def __init__(self):
-        self.networks = {}
-
-    def add_network(self, name):
-        """
-        Add network to data collection.
-
-        Parameters
-        ----------
-        name : str
-            Network name.
-        """
-        if name not in self.networks:
-            self.networks[name] = Network(name)
-
-    def add_station(self, network_name, station_name, lon, lat,
-                    elev=None, static_variables=None, landcover=None,
-                    climate_class=None):
-
-        if network_name not in self.networks:
-            self.add_network(network_name)
-
-        if station_name not in self.networks[network_name]:
-            self.networks[network_name].add_station(
-                station_name, lon, lat, elev, static_variables,
-                landcover, climate_class)
-
-    def add_sensor(self, network_name, station_name):
-        pass
-
-
-class Network(object):
-
-    def __init__(self, name):
-        self.name = name
-        self.stations = {}
-
-    def add_station(self, name, lon, lat, elev=None, static_variables=None,
-                    landcover=None, climate_class=None):
-
-        if name not in self.stations:
-            self.stations[name] = Station(
-                name, lon, lat, elev, static_variables, landcover,
-                climate_class)
-
-
-class Station(object):
-
-    def __init__(self, name, lon, lat, elev=None, static_variables=None,
-                 landcover=None, climate_class=None):
-
-        self.lon = lon
-        self.lat = lat
-        self.elev = elev
-        self.static_variables = static_variables
-        self.landcover = landcover
-        self.climate_class = climate_class
-        self.sensors = None
-
-
-class Sensor(object):
-
-    def __init__(self, variable, data, instrument,
-                 depth_from=None, depth_to=None):
-
-        self.variable = variable
-        self.data = data
-        self.instrument = instrument
-        self.depth_from = depth_from
-        self.depth_to = depth_to
-        self.filename = None
-
-
-def init_data(path):
-    """
-    Initialize ISMN data from file path.
-
-    Parameters
-    ----------
-    path : str
-        Path to downloaded ISMN data.
-    """
-    log_filename = os.path.join(path, 'python_metadata', 'metadata.log')
-    fh = logging.FileHandler(log_filename)
-    logger.addHandler(fh)
-
-    ismn_files = []
-
-    for root, sub_folders, basenames in os.walk(path):
-        sub_folders.sort()
-        basenames.sort()
-        for basename in basenames:
-            if basename.endswith('.stm'):
-                filename = os.path.join(root, basename)
-                logger.debug('Reading file {}'.format(filename))
-                ismn_files.append(IsmnFile(filename))
-
-    import pdb
-    pdb.set_trace()
-    pass
-
 
 variable_lookup = {'sm': 'soil moisture',
                    'ts': 'soil temperature',
@@ -161,6 +56,272 @@ variable_lookup = {'sm': 'soil moisture',
                    'tsfq': 'surface temperature quality flag original'}
 
 
+class NetworkCollection(object):
+
+    """
+    A hierarchically description of an IsmnFileCollection.
+
+    Attributes
+    ----------
+    file_collection : IsmnFileCollection
+        File collection.
+    networks : dict of Network
+        Networks.
+
+    """
+
+    def __init__(self, file_collection):
+
+        self.file_collection = file_collection
+        self.networks = {}
+
+        for f_id, f in self.file_collection.files.items():
+            nw_name = f.metadata['network']
+            st_name = f.metadata['station']
+            se_name = f.metadata['sensor']
+
+            if nw_name not in self.networks:
+                self.add_network(nw_name)
+
+            if st_name not in self.networks:
+                self.networks[nw_name].add_station(
+                    st_name, f.metadata['longitude'], f.metadata['latitude'],
+                    f.metadata['elevation'])
+
+            if se_name not in self.networks[nw_name].stations:
+                self.networks[nw_name].stations[st_name].add_sensor(
+                    se_name, f.metadata['variable'],
+                    f.metadata['depth_from'], f.metadata['depth_to'])
+
+    def add_network(self, name):
+        """
+        Add network to collection.
+
+        Parameters
+        ----------
+        name : str
+            Network name.
+        """
+        if name not in self.networks:
+            self.networks[name] = Network(name)
+
+    def get_sensors(self, network=None, station=None, variable=None,
+                    depth_from=None, depth_to=None):
+        """
+        Get all sensors for specific variable and/or depth.
+
+        Parameters
+        ----------
+        network : str, optional
+            Network name (default: None).
+        station : str, optional
+            Station name (default: None).
+        variable : str, optional
+            Variable name (default: None).
+        depth_from : float, optional
+            Start sensing depth (default: None).
+        depth_to : float, optional
+            End sensing depth (default: None).
+
+        Returns
+        -------
+        sensors : list of Sensor
+            List of found sensors.
+        """
+        sensors = []
+
+        for n in self.networks.values():
+            if network not in [None, n.name]:
+                continue
+            for st in n.stations.values():
+                if station not in [None, st.name]:
+                    continue
+                for se in st.sensors.values():
+                    if variable not in [None, se.variable]:
+                        continue
+                    sensors.append(se)
+
+        return sensors
+
+    def get_nearest_station(self, lon, lat, max_dist=np.inf):
+        pass
+
+
+class Network(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.stations = {}
+
+    def add_station(self, name, lon, lat, elev=None, static_variables=None,
+                    landcover=None, climate_class=None):
+
+        if name not in self.stations:
+            self.stations[name] = Station(
+                name, lon, lat, elev, static_variables, landcover,
+                climate_class)
+
+    def remove_station(self, name):
+        del self.stations[name]
+
+
+class Station(object):
+
+    def __init__(self, name, lon, lat, elev=None, static_variables=None,
+                 landcover=None, climate_class=None):
+
+        self.name = name
+        self.lon = lon
+        self.lat = lat
+        self.elev = elev
+        self.static_variables = static_variables
+        self.landcover = landcover
+        self.climate_class = climate_class
+        self.sensors = {}
+
+    def add_sensor(self, instrument, variable, depth_from, depth_to):
+
+        sensor_name = '{}_{}_{}_{}'.format(instrument, variable,
+                                           depth_from, depth_to)
+
+        if sensor_name not in self.sensors:
+            self.sensors[sensor_name] = Sensor(instrument, variable,
+                                               depth_from, depth_to)
+
+    def remove_sensor(self, name):
+        del self.sensors[name]
+
+
+class Sensor(object):
+
+    def __init__(self, instrument, variable, depth_from, depth_to):
+
+        self.name = '{}_{}_{}_{}'.format(instrument, variable,
+                                         depth_from, depth_to)
+        self.instrument = instrument
+        self.variable = variable
+        self.depth_from = depth_from
+        self.depth_to = depth_to
+
+
+class IsmnFileCollection(object):
+
+    """
+    The IsmnFileCollection class reads and organized the metadata
+    information of ISMN files.
+
+    Attributes
+    ----------
+    path : str
+        Root path of ISMN files.
+    files : list
+        List of ISMN filenames.
+
+    Methods
+    -------
+    get_networks()
+
+    get_stations()
+
+    get_sensors()
+
+    summary()
+
+    """
+
+    def __init__(self, path):
+
+        self.path = path
+        self.files = {}
+
+        i = 0
+        for root, sub_folders, basenames in os.walk(self.path):
+            sub_folders.sort()
+            basenames.sort()
+            for basename in basenames:
+                if basename.endswith('.stm'):
+                    filename = os.path.join(root, basename)
+                    logger.debug('Reading file {}'.format(filename))
+                    self.files[i] = IsmnFile(filename)
+                    i = i + 1
+
+    def get_networks(self):
+        """
+        Get networks from ISMN file collection.
+
+        Returns
+        -------
+        networks : List of Networks
+            List of networks.
+        """
+        networks = []
+
+        for f in self.files.values():
+            networks.append(Network(f.metadata['network']))
+
+        return networks
+
+    def get_stations(self, network=None):
+        """
+        Get stations from ISMN file collection.
+
+        Parameters
+        ----------
+        network : str, optional
+            Network name (default: None).
+
+        Returns
+        -------
+        stations : list
+            List of stations.
+        """
+        stations = []
+
+        for f in self.files.values():
+            if network in [None, f.metadata['network']]:
+                st = Station(f.metadata['station'], f.metadata['longitude'],
+                             f.metadata['latitude'], f.metadata['elevation'])
+                stations.append(st)
+
+        return stations
+
+    def get_sensors(self, network=None, station=None):
+        """
+        Get sensors from ISMN file collection.
+
+        Parameters
+        ----------
+        network : str, optional
+            Network name (default: None).
+        station : str, optional
+            Station name (default: None).
+
+        Returns
+        -------
+        sensors : list
+            List of sensors.
+        """
+        sensors = []
+
+        for f in self.files.values():
+            if ((network in [None, f.metadata['network']]) &
+                    (station in [None, f.metadata['station']])):
+                snr = Sensor(f.metadata['variable'], f.metadata['sensor'],
+                             f.metadata['depth_from'], f.metadata['depth_to'])
+                sensors.append(snr)
+
+        return sensors
+
+    def summary(self):
+        """
+        Print summary of ISMN file collection.
+        """
+        logger.info('Number of networks: {}'.format(len(self.get_networks())))
+        logger.info('Number of stations: {}'.format(len(self.get_stations())))
+        logger.info('Number of sensors: {}'.format(len(self.get_sensors())))
+        logger.info('Number of files: {}'.format(len(self.files)))
+
+
 class IsmnFile(object):
 
     """
@@ -176,6 +337,11 @@ class IsmnFile(object):
         Metadata information.
     data : numpy.ndarray
         Data stored in file.
+
+    Methods
+    -------
+    load_data()
+
     """
 
     def __init__(self, filename, load_data=False):
@@ -259,9 +425,9 @@ class IsmnFile(object):
             sensor = filename_elements[6]
 
         if filename_elements[3] in variable_lookup:
-            variable = [variable_lookup[filename_elements[3]]]
+            variable = variable_lookup[filename_elements[3]]
         else:
-            variable = [filename_elements[3]]
+            variable = filename_elements[3]
 
         metadata = {'network': filename_elements[1],
                     'station': filename_elements[2],
@@ -376,7 +542,7 @@ class IsmnFile(object):
         names : list, optional
             List of column names to use.
         usecols : list, optional
-            Return a subset of the columns. 
+            Return a subset of the columns.
 
         Returns
         -------
@@ -390,12 +556,45 @@ class IsmnFile(object):
         return data.set_index('date_time', inplace=True)
 
 
+def init_data(path):
+    """
+    Initialize ISMN data from file path.
+
+    Parameters
+    ----------
+    path : str
+        Path to downloaded ISMN data.
+    """
+    log_filename = os.path.join(path, 'python_metadata', 'metadata.log')
+    fh = logging.FileHandler(log_filename)
+    logger.addHandler(fh)
+
+    fc = IsmnFileCollection(path)
+    # print(fc.get_networks())
+    # print(fc.get_stations())
+    # print(fc.get_sensors())
+    fc.summary()
+    # st = fc.get_stations('SMOSMANIA')
+    sen = fc.get_sensors(station='Narbonne')
+    print(len(sen))
+
+    nwc = NetworkCollection(fc)
+    # print(nwc.networks['SMOSMANIA'].stations)
+    # sen = nwc.get_sensors()
+    # print(len(sen))
+    # sen = nwc.get_sensors(station='Narbonne')
+    # for s in sen:
+    #     print(s.variable)
+    print(len(nwc.get_sensors(station='Narbonne', variable='soil moisture')))
+    print(len(nwc.get_sensors(station='Narbonne', variable='soil temperature')))
+
+
 def main():
     """
     Main routine.
     """
     path = os.path.join('/data2', 'shahn', 'datapool', 'ismn')
-    ismn_data = init_data(path)
+    init_data(path)
 
 
 if __name__ == '__main__':
