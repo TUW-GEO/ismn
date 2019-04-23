@@ -563,13 +563,15 @@ class IsmnFileCollection(object):
 
         Returns
         -------
-        networks : List of Networks
-            List of networks.
+        networks : Dict of Networks
+            Dict of networks.
         """
-        networks = []
+        networks = {}
 
         for f in self.files.values():
-            networks.append(Network(f.metadata['network']))
+            if f.metadata['network'] not in networks:
+                networks[f.metadata['network']] = Network(
+                    f.metadata['network'])
 
         return networks
 
@@ -584,16 +586,17 @@ class IsmnFileCollection(object):
 
         Returns
         -------
-        stations : list
-            List of stations.
+        stations : dict
+            Dict of stations.
         """
-        stations = []
+        stations = {}
 
         for f in self.files.values():
             if network in [None, f.metadata['network']]:
-                st = Station(f.metadata['station'], f.metadata['longitude'],
-                             f.metadata['latitude'], f.metadata['elevation'])
-                stations.append(st)
+                if f.metadata['station'] not in stations:
+                    st = Station(f.metadata['station'], f.metadata['longitude'],
+                                 f.metadata['latitude'], f.metadata['elevation'])
+                    stations[f.metadata['station']] = st
 
         return stations
 
@@ -610,10 +613,10 @@ class IsmnFileCollection(object):
 
         Returns
         -------
-        sensors : list
-            List of sensors.
+        sensors : dict
+            Dict of sensors.
         """
-        sensors = []
+        sensors = {}
 
         for f in self.files.values():
             if ((network in [None, f.metadata['network']]) and
@@ -624,13 +627,14 @@ class IsmnFileCollection(object):
                                             f.metadata['depth'].start,
                                             f.metadata['depth'].end)
 
-                snr = Sensor(name, f.metadata['variable'],
-                             f.metadata['sensor'], f.metadata['depth'])
-                sensors.append(snr)
+                if name not in sensors:
+                    snr = Sensor(name, f.metadata['variable'],
+                                 f.metadata['sensor'], f.metadata['depth'])
+                    sensors[name] = snr
 
         return sensors
 
-    def summary(self):
+    def __repr__(self):
         """
         Print summary of ISMN file collection.
         """
@@ -663,6 +667,10 @@ class IsmnFile(object):
     """
 
     def __init__(self, filename, load_data=False):
+
+        if not os.path.isfile(filename):
+            raise IOError('File does not exist: {}'.format(filename))
+
         self.filename = filename
         self.file_type = 'undefined'
         self.metadata = {}
@@ -705,8 +713,8 @@ class IsmnFile(object):
         header_elements, filename_elements = self._get_metadata_from_file()
 
         if len(filename_elements) == 5 and len(header_elements) == 16:
-            self.metadata = self._get_metadata_ceop()
             self.file_type = 'ceop'
+            raise RuntimeError('CEOP format not supported')
         elif len(header_elements) == 15 and len(filename_elements) >= 9:
             self.metadata = self._get_metadata_ceop_sep()
             self.file_type = 'ceop_sep'
@@ -715,28 +723,6 @@ class IsmnFile(object):
             self.file_type = 'header_values'
         else:
             logger.warning("Unknown file type: {}".format(self.filename))
-
-    def _get_metadata_ceop(self):
-        """
-        Get metadata in the file format called CEOP Reference Data Format.
-
-        Returns
-        -------
-        metadata : dict
-            Metadata information.
-        """
-        header_elements, filename_elements = self._get_metadata_from_file()
-
-        metadata = {'network': filename_elements[1],
-                    'station': header_elements[6],
-                    'variable': ['ts', 'sm'],
-                    'sensor': 'n.s',
-                    'depth': Depth(None, None),
-                    'latitude': float(header_elements[7]),
-                    'longitude': float(header_elements[8]),
-                    'elevation': float(header_elements[9])}
-
-        return metadata
 
     def _get_metadata_ceop_sep(self):
         """
@@ -780,7 +766,7 @@ class IsmnFile(object):
         metadata : dict
             Metadata information.
         """
-        header_elements, filename_elements = self._get_info_from_file()
+        header_elements, filename_elements = self._get_metadata_from_file()
 
         if len(filename_elements) > 9:
             sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
@@ -788,9 +774,9 @@ class IsmnFile(object):
             sensor = filename_elements[6]
 
         if filename_elements[3] in variable_lookup:
-            variable = [variable_lookup[filename_elements[3]]]
+            variable = variable_lookup[filename_elements[3]]
         else:
-            variable = [filename_elements[3]]
+            variable = filename_elements[3]
 
         metadata = {'network': header_elements[1],
                     'station': header_elements[2],
@@ -831,19 +817,6 @@ class IsmnFile(object):
 
         return header_elements, file_basename_elements
 
-    def _read_format_ceop(self):
-        """
-        """
-        names = ['date', 'time', 'depth_from',
-                 self.metadata['variable'],
-                 self.metadata['variable'] + '_flag',
-                 self.metadata['variable'],
-                 self.metadata['variable'] + '_flag'],
-        usecols = [0, 1, 11, 12, 13, 14, 15]
-
-        # data needs to be converted, multi-index?
-        self.data = self._read_csv(names, usecols)
-
     def _read_format_ceop_sep(self):
         """
         """
@@ -861,9 +834,9 @@ class IsmnFile(object):
                  self.metadata['variable'] + '_flag',
                  self.metadata['variable'] + '_orig_flag']
 
-        self.data = self._read_csv(names)
+        self.data = self._read_csv(names, skiprows=1)
 
-    def _read_csv(self, names=None, usecols=None):
+    def _read_csv(self, names=None, usecols=None, skiprows=0):
         """
         Read data.
 
@@ -879,7 +852,7 @@ class IsmnFile(object):
         data : pandas.DataFrame
             Time series.
         """
-        data = pd.read_csv(self.filename, skiprows=1, usecols=usecols,
+        data = pd.read_csv(self.filename, skiprows=skiprows, usecols=usecols,
                            names=names, delim_whitespace=True,
                            parse_dates=[[0, 1]])
 
@@ -890,7 +863,7 @@ class IsmnFile(object):
 
 def create_network_collection(path, load_data=False):
     """
-    Create network collection.
+    Create a network collection for given file path.
 
     Parameters
     ----------
@@ -898,51 +871,18 @@ def create_network_collection(path, load_data=False):
         Path to data.
     load_data : bool, optional
         Load data while reading metadata (default: False)
-        Can be slow if many files are in the path.
+        Attention: Can be slow for a large number of files.
 
     Returns
     -------
     nwc : NetworkCollection
         Metadata and data (if loaded) from in situ data.
     """
-    fc = IsmnFileCollection(path, load_data)
-    nwc = NetworkCollection(fc)
-
-    return nwc
-
-
-def init_data(path):
-    """
-    Initialize ISMN data from file path.
-
-    Parameters
-    ----------
-    path : str
-        Path to downloaded ISMN data.
-    """
     log_filename = os.path.join(path, 'python_metadata', 'metadata.log')
     fh = logging.FileHandler(log_filename)
     logger.addHandler(fh)
 
-    nwc = create_network_collection(path)
+    fc = IsmnFileCollection(path, load_data)
+    nwc = NetworkCollection(fc)
 
-    st, dist = nwc.get_nearest_station(4, 44, 1)
-    print(st, dist)
-    # print(st.lon, st.lat, dist)
-
-    # for sensor in st.get_sensors('soil_moisture', [0, 0.1]):
-    #     ts = sensor.filehandler.read_data()
-    #     print(ts['soil_moisture'].head())
-    #     print(sensor.variable, sensor.depth.start, sensor.depth.end)
-
-
-def main():
-    """
-    Main routine.
-    """
-    path = os.path.join('/data2', 'shahn', 'datapool', 'ismn')
-    init_data(path)
-
-
-if __name__ == '__main__':
-    main()
+    return nwc
