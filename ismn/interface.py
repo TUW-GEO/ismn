@@ -552,7 +552,8 @@ class ISMN_Interface(object):
             #np.savetxt(os.path.join(path_to_data,'python_metadata','metadata.npy'), self.metadata,delimiter=',')
         else:
             self.metadata = np.load(
-                os.path.join(path_to_data, 'python_metadata', 'metadata.npy'))
+                  os.path.join(path_to_data, 'python_metadata', 'metadata.npy'),
+                  allow_pickle=True)
 
         if network is not None:
             if type(network) is not list:
