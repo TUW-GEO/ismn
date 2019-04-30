@@ -6,7 +6,7 @@ dependencies:
   - numpy
   - scipy
   - pandas
-  - matplotlib
+  - matplotlib>3
   - cartopy
   - netCDF4
   - hdf5
