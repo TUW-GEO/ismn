@@ -198,6 +198,18 @@ class NetworkCollectionTest(unittest.TestCase):
         """
         assert len(self.nwc.networks) == 1
 
+    def test_get_sensors(self):
+        """
+        Test accessing sensor metadata and data.
+        """
+        pass
+
+    def test_get_nearest_station(self):
+        """
+        Test nearest station method.
+        """
+        pass
+
 
 class IsmnFileTest(unittest.TestCase):
 
