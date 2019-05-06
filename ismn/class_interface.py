@@ -61,7 +61,13 @@ variable_lookup = {'sm': 'soil_moisture',
 class NetworkCollection(object):
 
     """
-    A hierarchical description of an IsmnFileCollection.
+    A hierarchical description of Networks, Stations and Sensors
+    derived from an IsmnFileCollection.
+
+    Parameters
+    ----------
+    file_collection : IsmnFileCollection
+        Collection of ISMN files described as IsmnFileCollection.
 
     Attributes
     ----------
@@ -71,6 +77,18 @@ class NetworkCollection(object):
         Networks.
     grid : pygeogrids.BasicGrid
         Latitude/longitude coordinates of stations.
+    grid_lut : numpy.ndarray
+        Look-up table between grid point indices and file index.
+
+    Methods
+    -------
+    add_network(name)
+        Add network to collection.
+    get_sensors(network=None, station=None, variable=None, depth=None)
+        Get all sensors for a specific network and/or station and/or
+        variable and/or depth.
+    get_nearest_station(lon, lat, max_dist=np.inf)
+        Get nearest station for given longitude/latitude coordinates.
     """
 
     def __init__(self, file_collection):
@@ -122,7 +140,7 @@ class NetworkCollection(object):
     def get_sensors(self, network=None, station=None, variable=None,
                     depth=None):
         """
-        Get all sensors for a specific network and/or station and/or
+        Yield all sensors for a specific network and/or station and/or
         variable and/or depth.
 
         Parameters
@@ -170,7 +188,7 @@ class NetworkCollection(object):
         lat : float
             Latitude coordinate.
         max_dist : float, optional
-            Maximum search distance (default: numpy.inf)
+            Maximum search distance (default: numpy.inf).
 
         Returns
         -------
@@ -197,6 +215,11 @@ class Network(object):
     A network is described by a distinct name and can be composed of
     multiple stations.
 
+    Parameters
+    ----------
+    name : str
+        Network name.
+
     Attributes
     ----------
     name : str
@@ -206,10 +229,15 @@ class Network(object):
 
     Methods
     -------
-    add_station()
-    remove_station()
-    get_stations()
+    add_station(name, lon, lat, elev, static_variables=None)
+        Add station to network.
+    remove_station(name)
+        Remove station from network.
+    get_stations(variable=None, depth=None)
+        Get all stations having at least one sensor observing
+        a specific variable and/or sensing depth.
     n_stations()
+        Number of stations.
     """
 
     def __init__(self, name):
@@ -315,6 +343,19 @@ class Station(object):
     A station is described by a distinct name and location.
     Multiple sensors at various depths can be part of a station.
 
+    Parameters
+    ----------
+    name : str
+        Station name.
+    lon : float
+        Longitude coordinate.
+    lat : float
+        Latitude coordinate.
+    elev : float
+        Elevation information.
+    static_variables : list, optional
+        Static variable information (default: None).
+
     Attributes
     ----------
     name : str
@@ -330,8 +371,14 @@ class Station(object):
 
     Methods
     -------
-    add_sensor()
-    remove_sensor()
+    add_sensor(instrument, variable, depth, filehandler)
+        Add sensor to station.
+    remove_sensor(name)
+        Remove sensor from station.
+    get_sensors(variable=None, depth=None)
+        Get all sensors for variable and/or depth information.
+    n_sensors()
+        Number of sensors.
     """
 
     def __init__(self, name, lon, lat, elev, static_variables=None):
@@ -420,7 +467,20 @@ class Station(object):
 class Sensor(object):
 
     """
-    A Sensor represents
+    A Sensor with ground observations.
+
+    Parameters
+    ----------
+    name : str
+        Name of the sensor.
+    instrument : str
+        Instrument name.
+    variable : str
+        Observed variable.
+    depth : Depth
+        Sensing depth.
+    filehandler : IsmnFile, optional
+        File handler (default: None).
 
     Attributes
     ----------
@@ -448,19 +508,28 @@ class Sensor(object):
 class Depth(object):
 
     """
-    Depth
+    A class representing a depth (0=surface).
+
+    Parameters
+    ----------
+    start : float
+        Depth start.
+    end : float
+        Depth end.
 
     Attributes
     ----------
     start : float
-        Depth start (0 means ground).
+        Depth start.
     end : float
         Depth end.
 
     Methods
     -------
-    is_profile()
-
+    __eq__(other)
+        Test if two Depth are equal.
+    enclose(other)
+        Test if other Depth encloses given Depth.
     """
 
     def __init__(self, start, end):
@@ -522,6 +591,13 @@ class IsmnFileCollection(object):
     The IsmnFileCollection class reads and organized the metadata
     information of ISMN files.
 
+    Parameters
+    ----------
+    path : str
+        Root path of ISMN files.
+    load_data : bool, optional
+        If True data will be loaded during metadata reading.
+
     Attributes
     ----------
     path : str
@@ -532,13 +608,11 @@ class IsmnFileCollection(object):
     Methods
     -------
     get_networks()
-
-    get_stations()
-
-    get_sensors()
-
-    summary()
-
+        Get networks from ISMN file collection.
+    get_stations(network=None)
+        Get stations from ISMN file collection.
+    get_sensors(self, network=None, station=None)
+        Get sensors from ISMN file collection.
     """
 
     def __init__(self, path, load_data=False):
@@ -649,6 +723,13 @@ class IsmnFile(object):
     """
     IsmnFile class represents a single ISMN file.
 
+    Parameters
+    ----------
+    filename : str
+        Filename.
+    load_data : bool, optional
+        If True data will be loaded during metadata reading.
+
     Attributes
     ----------
     filename : str
@@ -663,7 +744,25 @@ class IsmnFile(object):
     Methods
     -------
     load_data()
-
+        Load data from file.
+    read_data()
+        Read data in file.
+    _read_metadata()
+        Read metadata from file name and first line of file.
+    _get_metadata_ceop_sep()
+        Get metadata in the file format called CEOP in separate files.
+    _get_metadata_header_values()
+        Get metadata file in the format called Header Values.
+    _get_metadata_from_file(delim='_')
+        Read first line of file and split filename.
+        Information is used to collect metadata information for all
+        ISMN formats.
+    _read_format_ceop_sep()
+        Read data in the file format called CEOP in separate files.
+    _read_format_header_values()
+        Read data file in the format called Header Values.
+    _read_csv(names=None, usecols=None, skiprows=0)
+        Read data.
     """
 
     def __init__(self, filename, load_data=False):
@@ -759,7 +858,7 @@ class IsmnFile(object):
 
     def _get_metadata_header_values(self):
         """
-        Get metadata file in the format called ?.
+        Get metadata file in the format called Header Values.
 
         Returns
         -------
@@ -819,6 +918,7 @@ class IsmnFile(object):
 
     def _read_format_ceop_sep(self):
         """
+        Read data in the file format called CEOP in separate files.
         """
         names = ['date', 'time', self.metadata['variable'],
                  self.metadata['variable'] + '_flag',
@@ -829,6 +929,7 @@ class IsmnFile(object):
 
     def _read_format_header_values(self):
         """
+        Read data file in the format called Header Values.
         """
         names = ['date', 'time', self.metadata['variable'],
                  self.metadata['variable'] + '_flag',

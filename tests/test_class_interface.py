@@ -30,9 +30,9 @@ import unittest
 
 import numpy as np
 
-from ismn.interface_v2 import IsmnFile, IsmnFileCollection
-from ismn.interface_v2 import Network, Station, Sensor, Depth
-from ismn.interface_v2 import create_network_collection
+from ismn.class_interface import IsmnFile, IsmnFileCollection
+from ismn.class_interface import Network, Station, Sensor, Depth
+from ismn.class_interface import create_network_collection
 
 rpath = os.path.join(os.path.dirname(__file__), 'test_data')
 
