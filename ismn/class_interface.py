@@ -30,7 +30,6 @@ import pandas as pd
 from pygeogrids.grids import BasicGrid
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
@@ -979,10 +978,6 @@ def create_network_collection(path, load_data=False):
     nwc : NetworkCollection
         Metadata and data (if loaded) from in situ data.
     """
-    log_filename = os.path.join(path, 'python_metadata', 'metadata.log')
-    fh = logging.FileHandler(log_filename)
-    logger.addHandler(fh)
-
     fc = IsmnFileCollection(path, load_data)
     nwc = NetworkCollection(fc)
 

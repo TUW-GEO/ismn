@@ -202,13 +202,17 @@ class NetworkCollectionTest(unittest.TestCase):
         """
         Test accessing sensor metadata and data.
         """
-        pass
+        for sensor in self.nwc.get_sensors():
+            assert sensor.instrument == 'Cosmic-ray-Probe'
 
     def test_get_nearest_station(self):
         """
         Test nearest station method.
         """
-        pass
+        station, dist = self.nwc.get_nearest_station(-97, 36)
+        np.testing.assert_almost_equal(station.lon, -97.4878, 4)
+        np.testing.assert_almost_equal(station.lat, 36.6054, 4)
+        np.testing.assert_almost_equal(dist, 80201.85, 2)
 
 
 class IsmnFileTest(unittest.TestCase):
