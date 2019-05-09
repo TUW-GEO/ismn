@@ -2,7 +2,7 @@
 pygeogrids
 numpy
 pandas
-matplotlib
+matplotlib>3
 configparser
 scipy
 # cartopy
