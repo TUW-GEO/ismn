@@ -2,8 +2,9 @@
 Changelog
 =========
 
-Version 0.x
+Version 0.3.1
 ===========
+- Set allow_pickle to True when loading metadata
 
 Version 0.3
 ===========
