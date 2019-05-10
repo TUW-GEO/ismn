@@ -190,6 +190,10 @@ get_climate_types method of your ISMN_Interface object and set climate='climate_
 * EF: Polar Eternal Winter
 * W: Water
 
+Documentation
+-------------
+https://ismn.readthedocs.io
+
 Contribute
 ==========
 
