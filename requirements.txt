@@ -1,9 +1,9 @@
-# Add your requirements here like:
+# install cartopy via conda first
 pygeogrids
 numpy
 pandas
-matplotlib>3
+matplotlib
 configparser
 scipy
-# cartopy
 cython
+more_itertools
