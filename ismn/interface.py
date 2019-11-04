@@ -541,21 +541,16 @@ class ISMN_Interface(object):
         in numpy file in folder path_to_data/python_metadata/
         First initialization can take a minute or so if all ISMN
         data is present in path_to_data
+
+        Parameters
+        ---------
+        path_to_data : str
+            Path to the downloaded ISMN data
+        network : list or str, optional (default: None)
+            Name of a network in the initialised path or multiple networks as
+            a list of strings that are activated and loaded.
         """
-
-        if not os.path.exists(os.path.join(path_to_data, 'python_metadata', 'metadata.npy')):
-            os.mkdir(os.path.join(path_to_data, 'python_metadata'))
-            self.metadata = metadata_collector.collect_from_folder(
-                path_to_data)
-            np.save(
-                os.path.join(path_to_data, 'python_metadata', 'metadata.npy'), self.metadata)
-            #np.savetxt(os.path.join(path_to_data,'python_metadata','metadata.npy'), self.metadata,delimiter=',')
-        else:
-            self.metadata = np.load(
-                  os.path.join(path_to_data, 'python_metadata', 'metadata.npy'),
-                  allow_pickle=True)
-
-        self._init_network(network)
+        self.path_to_data = path_to_data
 
         # read cci landcover class names and their identifiers
         config = configparser.ConfigParser()
@@ -565,7 +560,30 @@ class ISMN_Interface(object):
         self.landcover = dict([(int(v), k) for k, v in landcover.items()])
         self.climate = dict(config.items('KOEPPENGEIGER'))
 
-    def _init_network(self, network):
+        self.activate_network(network)
+
+    def activate_network(self, network):
+        """
+        Load or update metadata for reading one or multiple networks.
+
+        Parameters
+        ---------
+        network : list or str
+            Name of a network in the initialised path or multiple networks as
+            a list of strings that are loaded.
+        """
+        if not os.path.exists(os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy')):
+            os.mkdir(os.path.join(self.path_to_data, 'python_metadata'))
+            self.metadata = metadata_collector.collect_from_folder(
+                self.path_to_data)
+            np.save(
+                os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy'), self.metadata)
+            #np.savetxt(os.path.join(path_to_data,'python_metadata','metadata.npy'), self.metadata,delimiter=',')
+        else:
+            self.metadata = np.load(
+                  os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy'),
+                  allow_pickle=True)
+
         if network is not None:
             if type(network) is not list:
                 network = [network]
