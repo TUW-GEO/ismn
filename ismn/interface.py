@@ -555,6 +555,17 @@ class ISMN_Interface(object):
                   os.path.join(path_to_data, 'python_metadata', 'metadata.npy'),
                   allow_pickle=True)
 
+        self._init_network(network)
+
+        # read cci landcover class names and their identifiers
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read_file(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classifications.ini')))
+        landcover = dict(config.items('LANDCOVER'))
+        self.landcover = dict([(int(v), k) for k, v in landcover.items()])
+        self.climate = dict(config.items('KOEPPENGEIGER'))
+
+    def _init_network(self, network):
         if network is not None:
             if type(network) is not list:
                 network = [network]
@@ -571,14 +582,6 @@ class ISMN_Interface(object):
         self.grid = grids.BasicGrid(self.metadata['longitude'],
                                     self.metadata['latitude'],
                                     setup_kdTree=False)
-
-        # read cci landcover class names and their identifiers
-        config = configparser.ConfigParser()
-        config.optionxform = str
-        config.read_file(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classifications.ini')))
-        landcover = dict(config.items('LANDCOVER'))
-        self.landcover = dict([(int(v), k) for k, v in landcover.items()])
-        self.climate = dict(config.items('KOEPPENGEIGER'))
 
     def list_networks(self):
         """
