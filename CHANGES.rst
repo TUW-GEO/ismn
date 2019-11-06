@@ -6,8 +6,13 @@ Unreleased
 ==========
 -
 
+Version 0.3.2
+=============
+
+- Add function to initialise different network
+
 Version 0.3.1
-===========
+=============
 - Set allow_pickle to True when loading metadata
 
 Version 0.3
