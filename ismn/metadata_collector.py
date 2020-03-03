@@ -34,19 +34,20 @@ Updated on Dec 14, 2018
 import os
 import glob
 import ismn.readers as readers
+import ismn.zip_reader as zip_reader
 import numpy as np
 import logging
+import zipfile
 
-
-def collect_from_folder(rootdir):
+def collect_from_folder(data_path):
     """
-    function walks the rootdir directory and looks for network
+    function walks the data_path directory and looks for network
     folders and ISMN datafiles. It collects metadata for every
     file found and returns a numpy.ndarray of metadata
 
     Parameters
     ----------
-    rootdir : string
+    data_path : string
         root directory on filesystem where the ISMN data was unzipped to
 
     Returns
@@ -55,14 +56,34 @@ def collect_from_folder(rootdir):
         structured numpy array which contains the metadata for one file per row
     """
 
-    logging.basicConfig(filename=os.path.join(rootdir, 'python_metadata', 'metadata.log'),
+    logging.basicConfig(filename=os.path.join(zip_reader.zip_folder(data_path), 'python_metadata', 'metadata.log'),
                         level=logging.DEBUG)
 
     metadata_catalog = []
-    for root, subFolders, files in os.walk(rootdir):
-        subFolders.sort()
-        files.sort()
 
+    def get_metadata_from_files(root, files, zip_subpath=None):
+        """
+        function walks the data_path directory and looks for network
+        folders and ISMN datafiles. It collects metadata for every
+        file found and returns a numpy.ndarray of metadata
+
+        Parameters
+        ----------
+        root : string
+            directory where ISMN data was unpacked
+
+        files : string
+            base filename of files from ISMN data-subfolder (without file-path)
+
+        zip_subpath : string
+            directory of sub_folder within zipped archive
+
+        Returns
+        -------
+        metadata_catalog : list of tuples
+            list contains the metadata info one sensor per row
+        """
+        metadata_entries = []
         # read additional metadata from csv file
         filename_csv = glob.glob('{}/*.csv'.format(root))
         # default values, if there is no csv file available or it crashes for e.g saturation
@@ -79,27 +100,48 @@ def collect_from_folder(rootdir):
             if any(filename.endswith('.stm') for filename in files):
                 logging.info('No csv file available ({})'.format(root))
             else:
-                continue
+                pass #TODO: replace with continue
 
         # print root,subFolders,files
         for filename in files:
             if filename.endswith('.stm'):
-                fullfilename = os.path.join(root, filename)
+                full_filename = os.path.join(root, filename)
                 try:
-                    metadata = readers.get_metadata(fullfilename)
+                    metadata = readers.get_metadata(full_filename)
                 except (readers.ReaderException, IOError) as e:
                     continue
 
                 for i, variable in enumerate(metadata['variable']):
-
-                    metadata_catalog.append((metadata['network'], metadata['station'],
+                    if zip_subpath:
+                        path_in_zip = os.path.join(*zip_subpath.split('/')[-2:])
+                        full_filename = os.path.join(path_in_zip, filename)
+                        zip_path = data_path
+                    else:
+                        zip_path = None
+                    metadata_entries.append((metadata['network'], metadata['station'],
                                              variable, metadata['depth_from'][
                                                  i], metadata['depth_to'][i],
                                              metadata['sensor'], metadata[
                                                  'longitude'], metadata['latitude'],
-                                             metadata['elevation'], fullfilename,
+                                             metadata['elevation'], full_filename,
                                              lc_2000, lc_2005, lc_2010, lc_insitu, climate_KG, climate_insitu,
-                                             saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon))
+                                             saturation, clay_fraction, sand_fraction, silt_fraction, organic_carbon
+                                             , zip_path))
+
+        return metadata_entries
+
+    if data_path.endswith('.zip'):
+        metadata_catalog = zip_reader.take_walk(data_path, get_metadata_from_files)
+
+    else:
+        for root, subFolders, files in os.walk(data_path):
+            subFolders.sort()
+            files.sort()
+            metadata = get_metadata_from_files(root, files)
+            if len(metadata):
+                metadata_catalog.extend(metadata)
+
+
 
     return np.array(metadata_catalog, dtype=np.dtype([('network', object), ('station', object), ('variable', object),
                                                       ('depth_from', np.float), ('depth_to', np.float),
@@ -111,4 +153,5 @@ def collect_from_folder(rootdir):
                                                       ('climate', object), ('climate_insitu', object),
                                                       ('saturation', object),
                                                       ('clay_fraction', object), ('sand_fraction', object),
-                                                      ('silt_fraction', object), ('organic_carbon', object)]))
+                                                      ('silt_fraction', object), ('organic_carbon', object),
+                                                      ('zip_path', object)]))
