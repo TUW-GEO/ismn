@@ -135,92 +135,96 @@ def test_interface_plotting():
     return fig
 
 
-def test_station_order():
-    """
-    Test the station order returned by the metadata collector
-    """
-    path_header_values = os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'multinetwork', 'header_values')
-
-    metadata = metadata_collector.collect_from_folder(path_header_values)
-
-    filenames = []
-    for m in metadata:
-        filenames.append(m['filename'])
-
-    sorted_filenames = sorted(filenames)
-
-    assert sorted_filenames == filenames
-
 
 def test_list_landcover_types():
     """
     Test available landcover classifications for dataset
     """
-    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
-                                     'Data_seperate_files_header_20170810_20180809')
-    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    lc = ISMN_reader.get_landcover_types()
-    assert list(lc) == [130, 210]
-    lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
-    assert lc == ['']
+    paths_to_ismn_data = [os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'Data_seperate_files_header_20170810_20180809'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'Data_seperate_files_20170810_20180809'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'zip_archives', 'header', 'Data_seperate_files_header_20170810_20180809.zip')]
 
-    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
-                                     'Data_seperate_files_20170810_20180809')
-    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    lc = ISMN_reader.get_landcover_types()
-    assert list(lc) == [130, 210]
-    lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
-    assert lc == ['']
+    for path_to_ismn_data in paths_to_ismn_data:
+        ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+        lc = ISMN_reader.get_landcover_types()
+        assert list(lc) == [130, 210]
+        lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
+        assert lc == ['']
+
 
 
 def test_list_climate_types():
     """
     Test available climate classifications for dataset
     """
-    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
-                                     'Data_seperate_files_header_20170810_20180809')
-    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    cl = ISMN_reader.get_climate_types()
-    assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
-    cl = ISMN_reader.get_climate_types(climate='climate_insitu')
-    assert list(cl) == []
+    paths_to_ismn_data = [os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'Data_seperate_files_header_20170810_20180809'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'Data_seperate_files_20170810_20180809'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'zip_archives', 'header', 'Data_seperate_files_header_20170810_20180809.zip')]
 
-    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
-                                     'Data_seperate_files_20170810_20180809')
-    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    cl = ISMN_reader.get_climate_types()
-    assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
-    cl = ISMN_reader.get_climate_types(climate='climate_insitu')
-    assert list(cl) == []
+    for path_to_ismn_data in paths_to_ismn_data:
+        ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+        cl = ISMN_reader.get_climate_types()
+        assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
+        cl = ISMN_reader.get_climate_types(climate='climate_insitu')
+        assert list(cl) == []
 
 
 def test_get_dataset_ids():
     """
     Test returned indeces from filtering
     """
-    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
-                                     'Data_seperate_files_header_20170810_20180809')
-    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
-    assert np.array_equal(np.array([0]), ids1)
-    ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
-    assert np.array_equal(np.array([1]), ids2)
-    ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
-    assert np.array_equal(np.array([0, 1]), ids3)
-    ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
-    assert np.array_equal(np.array([0, 1]), ids4)
-
-    path_to_ismn_data = os.path.join(os.path.dirname(__file__), 'test_data',
-                                     'Data_seperate_files_20170810_20180809')
-    ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-    ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
-    assert np.array_equal(np.array([0]), ids1)
-    ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
-    assert np.array_equal(np.array([1]), ids2)
-    ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
-    assert np.array_equal(np.array([0, 1]), ids3)
-    ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
-    assert np.array_equal(np.array([0, 1]), ids4)
+    paths_to_ismn_data = [os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'Data_seperate_files_header_20170810_20180809'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'Data_seperate_files_20170810_20180809'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip'),
+                          os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'zip_archives', 'header', 'Data_seperate_files_header_20170810_20180809.zip')]
 
 
+    for path_to_ismn_data in paths_to_ismn_data:
+        ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
+        ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
+        assert np.array_equal(np.array([0]), ids1)
+        ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
+        assert np.array_equal(np.array([1]), ids2)
+        ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
+        assert np.array_equal(np.array([0, 1]), ids3)
+        ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
+        assert np.array_equal(np.array([0, 1]), ids4)
+
+
+def test_station_order():
+    """
+    Test the station order returned by the metadata collector
+    """
+
+    paths_header_values = [os.path.join(os.path.dirname(__file__),
+                                      'test_data', 'multinetwork', 'header_values'),
+                           os.path.join(os.path.dirname(__file__), 'test_data',
+                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip')]
+
+    for path_header_values in paths_header_values:
+        _ = interface.ISMN_Interface(path_header_values)
+
+        metadata = metadata_collector.collect_from_folder(path_header_values)
+
+        filenames = []
+        for m in metadata:
+            print(f"{path_header_values}  - fn: {m}")
+            filenames.append(m['filename'])
+
+        sorted_filenames = sorted(filenames)
+
+        assert sorted_filenames == filenames

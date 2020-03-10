@@ -36,9 +36,7 @@ from datetime import datetime
 import numpy as np
 import logging
 import io
-import tempfile
-import zipfile
-import shutil
+
 
 variable_lookup = {'sm': 'soil moisture',
                    'ts': 'soil temperature',

@@ -37,7 +37,7 @@ import ismn.readers as readers
 import ismn.zip_reader as zip_reader
 import numpy as np
 import logging
-import zipfile
+
 
 def collect_from_folder(data_path):
     """
@@ -99,8 +99,6 @@ def collect_from_folder(data_path):
         else:
             if any(filename.endswith('.stm') for filename in files):
                 logging.info('No csv file available ({})'.format(root))
-            else:
-                pass #TODO: replace with continue
 
         # print root,subFolders,files
         for filename in files:
@@ -132,6 +130,8 @@ def collect_from_folder(data_path):
 
     if data_path.endswith('.zip'):
         metadata_catalog = zip_reader.take_walk(data_path, get_metadata_from_files)
+        metadata_catalog.sort()
+
 
     else:
         for root, subFolders, files in os.walk(data_path):

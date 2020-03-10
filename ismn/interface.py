@@ -539,7 +539,7 @@ class ISMN_Interface(object):
         find nearest station for given coordinates
     """
 
-    def __init__(self, data_path, network=None, custom_metadata_path=None):
+    def __init__(self, data_path, network=None):
         """
         collects metadata from all files in data_path and saves metadata information
         in numpy file in folder data_path/python_metadata/
@@ -555,7 +555,6 @@ class ISMN_Interface(object):
             a list of strings that are activated and loaded.
         """
         self.data_path = data_path
-        self.custom_metadata_path = custom_metadata_path
         # read cci landcover class names and their identifiers
         config = configparser.ConfigParser()
         config.optionxform = str
@@ -563,12 +562,10 @@ class ISMN_Interface(object):
         landcover = dict(config.items('LANDCOVER'))
         self.landcover = dict([(int(v), k) for k, v in landcover.items()])
         self.climate = dict(config.items('KOEPPENGEIGER'))
-        if self.custom_metadata_path:
-            self.activate_network(network, self.custom_metadata_path)
-        else:
-            self.activate_network(network)
 
-    def activate_network(self, network, custom_metadata_path=None):
+        self.activate_network(network)
+
+    def activate_network(self, network):
         """
         Load or update metadata for reading one or multiple networks.
 
@@ -581,10 +578,7 @@ class ISMN_Interface(object):
             location where to save metadata
 
         """
-        if custom_metadata_path:
-            metadata_directory = custom_metadata_path
-        else:
-            metadata_directory = zip_reader.zip_folder(self.data_path)
+        metadata_directory = zip_reader.zip_folder(self.data_path)
 
         if not os.path.exists(os.path.join(metadata_directory, 'python_metadata', 'metadata.npy')):
             os.mkdir(os.path.join(metadata_directory, 'python_metadata'))
@@ -1114,3 +1108,4 @@ class ISMN_Interface(object):
         print('-------------------------------------')
         for key in self.climate.keys():
             print('{:4}: {}'.format(key, self.climate[key]))
+

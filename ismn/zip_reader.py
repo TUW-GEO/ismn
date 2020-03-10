@@ -80,7 +80,6 @@ def read_from_zip(fun, filename, zip_path=None):
         result : return of ISMN Interface get_function
 
     """
-    print(filename)
     if zip_path is not None and zip_path.endswith('.zip'):
         tmp_directory, filename = unzip_file(filename, zip_path)
         result = fun(filename)
@@ -157,7 +156,7 @@ def take_walk(zip_path, fun):
     tmp_directory = tempfile.mkdtemp()
     metadata_catalog = walk(zip_path, fun, tmp_directory)
     shutil.rmtree(tmp_directory)
-    return metadata_catalog[::-1]
+    return metadata_catalog
 
 
 
