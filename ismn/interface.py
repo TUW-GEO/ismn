@@ -586,28 +586,26 @@ class ISMN_Interface(object):
             np.save(os.path.join(metadata_directory, 'python_metadata', 'metadata.npy'), self.metadata)
         else:
             self.metadata = np.load(
-                os.path.join(metadata_directory, 'python_metadata' ,'metadata.npy'),
+                os.path.join(metadata_directory, 'python_metadata','metadata.npy'),
                 allow_pickle=True)
 
 
+        if network is not None:
+            if type(network) is not list:
+                network = [network]
+            # initialize binary mask the size of metadata
+            mask = np.zeros(self.metadata.shape[0], dtype=np.bool)
+            for net in network:
+                if net in self.metadata['network']:
+                    mask = mask | (self.metadata['network'] == net)
+                else:
+                    raise ISMNError("Network {} not found".format(net))
+            self.metadata = self.metadata[mask]
 
-            if network is not None:
-                if type(network) is not list:
-                    network = [network]
-                # initialize binary mask the size of metadata
-                mask = np.zeros(self.metadata.shape[0], dtype=np.bool)
-                for net in network:
-                    if net in self.metadata['network']:
-                        mask = mask | (self.metadata['network'] == net)
-                    else:
-                        raise ISMNError("Network {} not found".format(net))
-                self.metadata = self.metadata[mask]
-
-            # initialize grid object for all stations
-            self.grid = grids.BasicGrid(self.metadata['longitude'],
-                                        self.metadata['latitude'],
-                                        setup_kdTree=False)
-
+        # initialize grid object for all stations
+        self.grid = grids.BasicGrid(self.metadata['longitude'],
+                                    self.metadata['latitude'],
+                                    setup_kdTree=False)
 
 
     def list_networks(self):

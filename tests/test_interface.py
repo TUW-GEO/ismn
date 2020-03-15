@@ -29,6 +29,10 @@ Created on Thu Feb 26 12:36:30 2015
 Updated on Dec 14, 2018
 
 @author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
+
+Updated on Mar 15, 2020
+
+@author: Daniel Aberer daberer@geo.tuwien.ac.at
 '''
 
 import matplotlib
@@ -49,23 +53,26 @@ def test_min_max_obstime_getting():
     of a station
     """
 
-    path_header_values = os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'format_header_values', 'SMOSMANIA')
-    hv_interface = interface.ISMN_Interface(path_header_values)
+    paths_header_values = [os.path.join(os.path.dirname(__file__),
+                                      'test_data', 'format_header_values', 'SMOSMANIA'),
+                           os.path.join(os.path.dirname(__file__),
+                                       'test_data', 'zip_archives', 'format_header_values', 'Data_SMOSMANIA.zip')]
+    for path_header_values in paths_header_values:
+        hv_interface = interface.ISMN_Interface(path_header_values)
 
-    station = hv_interface.get_station('Narbonne')
-    startd, endd = station.get_min_max_obs_timestamp()
-    assert startd == datetime.datetime(2007, 1, 1, 1)
-    assert endd == datetime.datetime(2007, 1, 31, 23)
+        station = hv_interface.get_station('Narbonne')
+        startd, endd = station.get_min_max_obs_timestamp()
+        assert startd == datetime.datetime(2007, 1, 1, 1)
+        assert endd == datetime.datetime(2007, 1, 31, 23)
 
-    path_ceop_sep = os.path.join(os.path.dirname(__file__),
-                                 'test_data', 'format_ceop_sep', 'SMOSMANIA')
-    ceop_sep_interface = interface.ISMN_Interface(path_ceop_sep)
+        path_ceop_sep = os.path.join(os.path.dirname(__file__),
+                                     'test_data', 'format_ceop_sep', 'SMOSMANIA')
+        ceop_sep_interface = interface.ISMN_Interface(path_ceop_sep)
 
-    station = ceop_sep_interface.get_station('Narbonne')
-    startd, endd = station.get_min_max_obs_timestamp()
-    assert startd == datetime.datetime(2007, 1, 1, 1)
-    assert endd == datetime.datetime(2007, 1, 31, 23)
+        station = ceop_sep_interface.get_station('Narbonne')
+        startd, endd = station.get_min_max_obs_timestamp()
+        assert startd == datetime.datetime(2007, 1, 1, 1)
+        assert endd == datetime.datetime(2007, 1, 31, 23)
 
 
 def test_min_max_obstime_networks():
@@ -74,20 +81,23 @@ def test_min_max_obstime_networks():
     of several networks
     """
 
-    path_header_values = os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'multinetwork', 'header_values')
-    hv_interface = interface.ISMN_Interface(path_header_values)
-    data = hv_interface.get_min_max_obs_timestamps(min_depth=0, max_depth=0.1)
-    assert data.loc['MAQU']['end date'][
-        0] == datetime.datetime(2010, 7, 31, 23)
-    assert data.loc['MAQU']['end date'][
-        1] == datetime.datetime(2010, 7, 31, 23)
-    assert data.loc['MAQU']['start date'][
-        1] == datetime.datetime(2008, 7, 1, 0)
-    assert data.loc['SCAN']['start date'][
-        1] == datetime.datetime(2007, 1, 1, 0)
-    assert data.loc['SOILSCAPE']['start date'][
-        1] == datetime.datetime(2012, 12, 14, 19)
+    paths_header_values = [os.path.join(os.path.dirname(__file__),
+                                        'test_data', 'multinetwork', 'header_values'),
+                           os.path.join(os.path.dirname(__file__),
+                                        'test_data', 'zip_archives', 'multinetwork', 'header_values', 'Data_header_values.zip')]
+    for path_header_values in paths_header_values:
+        hv_interface = interface.ISMN_Interface(path_header_values)
+        data = hv_interface.get_min_max_obs_timestamps(min_depth=0, max_depth=0.1)
+        assert data.loc['MAQU']['end date'][
+            0] == datetime.datetime(2010, 7, 31, 23)
+        assert data.loc['MAQU']['end date'][
+            1] == datetime.datetime(2010, 7, 31, 23)
+        assert data.loc['MAQU']['start date'][
+            1] == datetime.datetime(2008, 7, 1, 0)
+        assert data.loc['SCAN']['start date'][
+            1] == datetime.datetime(2007, 1, 1, 0)
+        assert data.loc['SOILSCAPE']['start date'][
+            1] == datetime.datetime(2012, 12, 14, 19)
 
 
 def test_interface_network_init():
@@ -95,29 +105,35 @@ def test_interface_network_init():
     test limitation of interface to certain networks
     """
 
-    path_header_values = os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'multinetwork', 'header_values')
-    hv_interface = interface.ISMN_Interface(
-        path_header_values, network=['SCAN'])
-    assert hv_interface.list_networks().size == 1
-    assert hv_interface.list_networks()[0] == 'SCAN'
-    hv_interface = interface.ISMN_Interface(
-        path_header_values, network=['SCAN', 'MAQU'])
-    assert hv_interface.list_networks().size == 2
+    paths_header_values = [os.path.join(os.path.dirname(__file__),
+                                        'test_data', 'multinetwork', 'header_values'),
+                           os.path.join(os.path.dirname(__file__),
+                                        'test_data', 'zip_archives', 'multinetwork', 'header_values', 'Data_header_values.zip')]
+    for path_header_values in paths_header_values:
+        hv_interface = interface.ISMN_Interface(
+            path_header_values, network=['SCAN'])
+        assert hv_interface.list_networks().size == 1
+        assert hv_interface.list_networks()[0] == 'SCAN'
+        hv_interface = interface.ISMN_Interface(
+            path_header_values, network=['SCAN', 'MAQU'])
+        assert hv_interface.list_networks().size == 2
 
 
 def test_find_nearest_station():
     """
     Test nearest neighbor search
     """
-    path_header_values = os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'multinetwork', 'header_values')
-    hv_interface = interface.ISMN_Interface(
-        path_header_values, network=['SCAN'])
-    station, distance = hv_interface.find_nearest_station(-90, 35, True)
-    assert station.station == "AAMU-jtg"
-    assert station.network == "SCAN"
-    nptest.assert_almost_equal(distance, 316228.53147802927)
+    paths_header_values = [os.path.join(os.path.dirname(__file__),
+                                        'test_data', 'multinetwork', 'header_values'),
+                           os.path.join(os.path.dirname(__file__),
+                                        'test_data', 'zip_archives', 'multinetwork', 'header_values', 'Data_header_values.zip')]
+    for path_header_values in paths_header_values:
+        hv_interface = interface.ISMN_Interface(
+            path_header_values, network=['SCAN'])
+        station, distance = hv_interface.find_nearest_station(-90, 35, True)
+        assert station.station == "AAMU-jtg"
+        assert station.network == "SCAN"
+        nptest.assert_almost_equal(distance, 316228.53147802927)
 
 
 @pytest.mark.skipif(sys.version_info[0] == 3 and sys.version_info[1] == 4,
@@ -222,7 +238,6 @@ def test_station_order():
 
         filenames = []
         for m in metadata:
-            print(f"{path_header_values}  - fn: {m}")
             filenames.append(m['filename'])
 
         sorted_filenames = sorted(filenames)
