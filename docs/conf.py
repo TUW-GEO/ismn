@@ -82,7 +82,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'ismn'
-copyright = u'2020, Wolfgang Preimesberger'
+copyright = u'2020, TU Wien'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -236,7 +236,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'user_guide.tex', u'ismn Documentation',
-   u'Wolfgang Preimesberger', 'manual'),
+   u'TU Wien', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
