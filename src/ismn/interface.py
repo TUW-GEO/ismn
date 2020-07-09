@@ -790,7 +790,8 @@ class ISMN_Interface(object):
 
     def read(self, *args, **kwargs):
         """
-        Same as read_ts()
+        Alias for read_ts. This is included so that the reader is in line with
+        other, pynetcf based readers.
 
         Parameters
         ----------
@@ -803,7 +804,7 @@ class ISMN_Interface(object):
         timeseries : pandas.DataFrame
             of the read data
         """
-        self.read_ts(*args, **kwargs)
+        return self.read_ts(*args, **kwargs)
 
     def find_nearest_station(self, lon, lat, return_distance=False):
         """
