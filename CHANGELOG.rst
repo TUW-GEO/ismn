@@ -4,7 +4,11 @@ Changelog
 
 Unreleased
 ==========
--
+
+- Update package pyscaffold package structure
+- Drop python 2 support
+- Add read function to ISMN_Interface
+- Add travis pypi deployment
 
 Version 0.3.2
 =============
