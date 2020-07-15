@@ -5,10 +5,16 @@ Changelog
 Unreleased
 ==========
 
+-
+
+Version 0.4
+===========
+
 - Update package pyscaffold package structure
 - Drop python 2 support
 - Add read function to ISMN_Interface
 - Add travis pypi deployment
+- Fix get_min_max_timestamp_header_values
 
 Version 0.3.2
 =============
