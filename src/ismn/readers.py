@@ -441,6 +441,8 @@ def get_min_max_timestamp_header_values(filename):
     with io.open(filename, mode='r', newline=None) as fid:
         _ = fid.readline()
         first = fid.readline()
+        if first.isspace():
+            first = fid.readline()
         last = tail(fid)[0]
 
     min_date = datetime.strptime(first[:16], '%Y/%m/%d %H:%M')
