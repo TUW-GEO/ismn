@@ -1,6 +1,6 @@
-==========
-Developers
-==========
+============
+Contributors
+============
 
 * Christoph Paulik <christoph.paulik@geo.tuwien.ac.at>
 * Irene Himmelbauer <irene.himmelbauer@geo.tuwien.ac.at>

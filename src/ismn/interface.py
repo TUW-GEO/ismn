@@ -20,16 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''
-Created on Aug 5, 2013
-
-@author: Christoph Paulik
-
-Updated on Dec 14, 2018
-
-@author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
-'''
-
 import platform
 if platform.system() == 'Darwin':
       import matplotlib
@@ -797,6 +787,24 @@ class ISMN_Interface(object):
         """
         ts = readers.read_data(self.metadata['filename'][idx])
         return ts.data
+
+    def read(self, *args, **kwargs):
+        """
+        Alias for read_ts. This is included so that the reader is in line with
+        other, pynetcf based readers.
+
+        Parameters
+        ----------
+        idx : int
+            id into self.metadata, best one of those returned
+            from get_dataset_ids()
+
+        Returns
+        -------
+        timeseries : pandas.DataFrame
+            of the read data
+        """
+        return self.read_ts(*args, **kwargs)
 
     def find_nearest_station(self, lon, lat, return_distance=False):
         """
