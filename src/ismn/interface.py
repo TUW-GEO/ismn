@@ -751,9 +751,9 @@ class ISMN_Interface(object):
                 * climate_insitu
         """
         lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
-
-        if max_depth < min_depth:
-            raise ValueError("max_depth can not be less than min_depth")
+        if max_depth:
+            if max_depth < min_depth:
+                raise ValueError("min_depth can not be more than max_depth (default value 0.1)")
 
         landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
 
@@ -763,10 +763,15 @@ class ISMN_Interface(object):
             else:
                 raise ValueError('Specified keyword \"{}\" not found in metadata! Use one of the following: {}'.format(k, lc_cl))
 
-        ids = np.where((self.metadata['variable'] == variable) &
-                       (self.metadata['depth_to'] <= max_depth) &
-                       (self.metadata['depth_from'] >= min_depth) &
-                       landcover_climate)[0]
+        if not max_depth:
+            ids = np.where((self.metadata['variable'] == variable) &
+                           (self.metadata['depth_from'] >= min_depth) &
+                           landcover_climate)[0]
+        else:
+            ids = np.where((self.metadata['variable'] == variable) &
+                           (self.metadata['depth_to'] <= max_depth) &
+                           (self.metadata['depth_from'] >= min_depth) &
+                           landcover_climate)[0]
 
         return ids
 
