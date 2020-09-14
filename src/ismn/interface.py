@@ -737,9 +737,9 @@ class ISMN_Interface(object):
         min_depth : float, optional
             depth_from of variable has to be >= min_depth in order to be
             included.
-        max_depth : float, optional
+        max_depth : float and None, optional (default: 0.1)
             depth_to of variable has to be <= max_depth in order to be
-            included.
+            included. When set to None, there is no upper limit for depth_to of variable.
         kwargs:
             filter by landcover and/or climate classifications
             keys:
@@ -753,7 +753,7 @@ class ISMN_Interface(object):
         lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
         if max_depth:
             if max_depth < min_depth:
-                raise ValueError("min_depth can not be more than max_depth (default value 0.1)")
+                raise ValueError("min_depth can not be more than max_depth. min_depth: {}, max_depth: {})".format(min_depth, max_depth))
 
         landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
 
