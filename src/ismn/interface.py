@@ -705,7 +705,7 @@ class ISMN_Interface(object):
                     yield station
 
     def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
-                        **kwargs):
+                        check_only_depth_from=False, **kwargs):
         """
         returns list of dataset_id's that can be used to read a
         dataset directly through the read_ts function
@@ -734,12 +734,17 @@ class ISMN_Interface(object):
                 * 'snow water equivalent',
                 * 'surface temperature',
                 * 'surface temperature quality flag original'
-        min_depth : float, optional
+        min_depth : float or None, optional (default: 0.)
             depth_from of variable has to be >= min_depth in order to be
             included.
         max_depth : float and None, optional (default: 0.1)
             depth_to of variable has to be <= max_depth in order to be
             included. When set to None, there is no upper limit for depth_to of variable.
+        check_only_depth_from : bool, optional (default: False)
+            If this is active, then only the sensors depth_from attribute is
+            compared to the passed (min_depth, max_depth) range. If the sensor
+            starts withing the passed range, its id is returned. If not, it is
+            excluded.
         kwargs:
             filter by landcover and/or climate classifications
             keys:
@@ -751,7 +756,7 @@ class ISMN_Interface(object):
                 * climate_insitu
         """
         lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
-        if max_depth:
+        if (max_depth is not None) and (min_depth is not None):
             if max_depth < min_depth:
                 raise ValueError("min_depth can not be more than max_depth. min_depth: {}, max_depth: {})".format(min_depth, max_depth))
 
@@ -763,15 +768,22 @@ class ISMN_Interface(object):
             else:
                 raise ValueError('Specified keyword \"{}\" not found in metadata! Use one of the following: {}'.format(k, lc_cl))
 
-        if not max_depth:
-            ids = np.where((self.metadata['variable'] == variable) &
-                           (self.metadata['depth_from'] >= min_depth) &
-                           landcover_climate)[0]
+        if min_depth is None:
+            min_depth_cond = np.repeat(True, len(self.metadata['depth_from']))
         else:
-            ids = np.where((self.metadata['variable'] == variable) &
-                           (self.metadata['depth_to'] <= max_depth) &
-                           (self.metadata['depth_from'] >= min_depth) &
-                           landcover_climate)[0]
+            min_depth_cond = (self.metadata['depth_from'] >= min_depth)
+
+        if max_depth is None:
+            max_depth_cond = np.repeat(True, len(self.metadata['depth_to']))
+        else:
+            if check_only_depth_from:
+                # check if depth_from is also lower than max_depth, ignore depth_to
+                max_depth_cond = (self.metadata['depth_from'] <= max_depth)
+            else:
+                max_depth_cond = (self.metadata['depth_to'] <= max_depth)
+
+        ids = np.where((self.metadata['variable'] == variable) &
+                        min_depth_cond & max_depth_cond & landcover_climate)[0]
 
         return ids
 
