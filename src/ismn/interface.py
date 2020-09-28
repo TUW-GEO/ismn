@@ -27,6 +27,7 @@ if platform.system() == 'Darwin':
 
 import ismn.metadata_collector as metadata_collector
 import ismn.readers as readers
+import ismn.zip_reader as zip_reader
 import pygeogrids.grids as grids
 
 import os
@@ -142,6 +143,7 @@ class ISMN_station(object):
         self.sand_fraction = metadata[0]['sand_fraction']
         self.silt_fraction = metadata[0]['silt_fraction']
         self.organic_carbon = metadata[0]['organic_carbon']
+        self.zip_path = metadata[0]['zip_path']
 
         for dataset in metadata:
             if self.network is None:
@@ -367,7 +369,7 @@ class ISMN_station(object):
             raise ISMNError("There is no data for this combination of variable, depth_from, "
                             "depth_to and sensor. Please check.")
         else:
-            return readers.read_data(self.filenames[index_filename[0]])
+            return zip_reader.read_from_zip(readers.read_data, self.filenames[index_filename[0]], self.zip_path)
 
     def data_for_variable(self, variable, min_depth=None, max_depth=None):
         """
@@ -424,7 +426,7 @@ class ISMN_station(object):
             if ((d1 >= min_depth) &
                     (d2 <= max_depth)):
 
-                yield readers.read_data(filename)
+                yield zip_reader.read_from_zip(readers.read_data, filename, self.zip_path)
 
     def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None, max_depth=None):
         """
@@ -480,7 +482,7 @@ class ISMN_station(object):
         for var, d1, d2, filename in zip(self.variables, self.depth_from, self.depth_to, self.filenames):
 
             if var == variable and ((d1 >= min_depth) & (d2 <= max_depth)):
-                sdate, edate = readers.get_min_max_timestamp(filename)
+                sdate, edate = zip_reader.read_from_zip(readers.get_min_max_timestamp, filename, self.zip_path)
                 if start_date is None or start_date > sdate:
                     start_date = sdate
                 if end_date is None or end_date < edate:
@@ -495,22 +497,24 @@ class ISMN_Interface(object):
     class provides interface to ISMN data downloaded from the ISMN website
 
     upon initialization it collects metadata from all files in
-    path_to_data and saves metadata information
-    in numpy file in folder path_to_data/python_metadata/
+    data_path and saves metadata information
+    in numpy file in folder data_path/python_metadata/
     First initialization can take a minute or so if all ISMN
-    data is present in path_to_data
+    data is present in data_path
 
     Parameters
     ----------
-    path_to_data : string
+    data_path : string
         filepath to unzipped ISMN data containing the Network folders
     network : string or list, optional
         provide name of network to only load the given network
+    custom_metadata_path : string
+        filepath to path containing metadata.npy
 
     Raises
     ------
     ISMNError
-        if given network was not found in path_to_data
+        if given network was not found in data_path
 
     Attributes
     ----------
@@ -525,23 +529,22 @@ class ISMN_Interface(object):
         find nearest station for given coordinates
     """
 
-    def __init__(self, path_to_data, network=None):
+    def __init__(self, data_path, network=None):
         """
-        collects metadata from all files in path_to_data and saves metadata information
-        in numpy file in folder path_to_data/python_metadata/
+        collects metadata from all files in data_path and saves metadata information
+        in numpy file in folder data_path/python_metadata/
         First initialization can take a minute or so if all ISMN
-        data is present in path_to_data
+        data is present in data_path
 
         Parameters
         ---------
-        path_to_data : str
+        data_path : str
             Path to the downloaded ISMN data
         network : list or str, optional (default: None)
             Name of a network in the initialised path or multiple networks as
             a list of strings that are activated and loaded.
         """
-        self.path_to_data = path_to_data
-
+        self.data_path = data_path
         # read cci landcover class names and their identifiers
         config = configparser.ConfigParser()
         config.optionxform = str
@@ -561,18 +564,21 @@ class ISMN_Interface(object):
         network : list or str
             Name of a network in the initialised path or multiple networks as
             a list of strings that are loaded.
+        custom_metadata_path : str
+            location where to save metadata
+
         """
-        if not os.path.exists(os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy')):
-            os.mkdir(os.path.join(self.path_to_data, 'python_metadata'))
-            self.metadata = metadata_collector.collect_from_folder(
-                self.path_to_data)
-            np.save(
-                os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy'), self.metadata)
-            #np.savetxt(os.path.join(path_to_data,'python_metadata','metadata.npy'), self.metadata,delimiter=',')
+        metadata_directory = zip_reader.zip_folder(self.data_path)
+
+        if not os.path.exists(os.path.join(metadata_directory, 'python_metadata', 'metadata.npy')):
+            os.mkdir(os.path.join(metadata_directory, 'python_metadata'))
+            self.metadata = metadata_collector.collect_from_folder(self.data_path)
+            np.save(os.path.join(metadata_directory, 'python_metadata', 'metadata.npy'), self.metadata)
         else:
             self.metadata = np.load(
-                  os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy'),
-                  allow_pickle=True)
+                os.path.join(metadata_directory, 'python_metadata','metadata.npy'),
+                allow_pickle=True)
+
 
         if network is not None:
             if type(network) is not list:
@@ -590,6 +596,7 @@ class ISMN_Interface(object):
         self.grid = grids.BasicGrid(self.metadata['longitude'],
                                     self.metadata['latitude'],
                                     setup_kdTree=False)
+
 
     def list_networks(self):
         """
@@ -775,6 +782,7 @@ class ISMN_Interface(object):
 
         return ids
 
+
     def read_ts(self, idx):
         """
         read a time series directly by the id
@@ -790,7 +798,8 @@ class ISMN_Interface(object):
         timeseries : pandas.DataFrame
             of the read data
         """
-        ts = readers.read_data(self.metadata['filename'][idx])
+        zip_path = self.metadata['zip_path'][idx]
+        ts = zip_reader.read_from_zip(readers.read_data, self.metadata['filename'][idx], zip_path)
         return ts.data
 
     def read(self, *args, **kwargs):
@@ -1110,3 +1119,4 @@ class ISMN_Interface(object):
         print('-------------------------------------')
         for key in self.climate.keys():
             print('{:4}: {}'.format(key, self.climate[key]))
+
