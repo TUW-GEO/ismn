@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2019 TU Wien
+# Copyright (c) 2020 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''
-Created on Jul 31, 2013
-
-@author: Christoph Paulik
-
-Updated on Dec 14, 2018
-
-@author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
-'''
-
 import os
 import pandas as pd
 from datetime import datetime
 import numpy as np
 import logging
 import io
+from collections import OrderedDict
 
 
 variable_lookup = {'sm': 'soil moisture',
@@ -534,7 +525,7 @@ def read_data(filename):
     return func(filename)
 
 
-def get_metadata_from_csv(filename):
+def get_metadata_from_csv(filename, as_dict=False):
     """
     reads ISMN metadata from csv file
 
@@ -607,9 +598,32 @@ def get_metadata_from_csv(filename):
     silt_fraction = read_field('silt fraction')
     organic_carbon = read_field('organic carbon')
 
-    return lc_dict['CCI_landcover_2000'], lc_dict['CCI_landcover_2005'], lc_dict['CCI_landcover_2010'], \
-           lc_dict['insitu'], cl_dict['koeppen_geiger_2007'], cl_dict['insitu'], saturation, clay_fraction, \
-           sand_fraction, silt_fraction, organic_carbon
+    if as_dict:
+        return OrderedDict([
+            ('lc_2000', lc_dict['CCI_landcover_2000']),
+            ('lc_2005', lc_dict['CCI_landcover_2005']),
+            ('lc_2010', lc_dict['CCI_landcover_2010']),
+            ('lc_insitu', lc_dict['insitu']),
+            ('climate_KG', cl_dict['koeppen_geiger_2007']),
+            ('climate_insitu', cl_dict['insitu']),
+            ('saturation', saturation),
+            ('clay_fraction', clay_fraction),
+            ('sand_fraction', sand_fraction),
+            ('silt_fraction', silt_fraction),
+            ('organic_carbon', organic_carbon),
+        ])
+    else:
+        return lc_dict['CCI_landcover_2000'], \
+               lc_dict['CCI_landcover_2005'], \
+               lc_dict['CCI_landcover_2010'], \
+               lc_dict['insitu'], \
+               cl_dict['koeppen_geiger_2007'], \
+               cl_dict['insitu'], \
+               saturation, \
+               clay_fraction, \
+               sand_fraction, \
+               silt_fraction, \
+               organic_carbon
 
 
 def get_metadata(filename):

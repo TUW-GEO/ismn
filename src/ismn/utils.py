@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2019 TU Wien
+# Copyright (c) 2020 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,25 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''
-Created on Jul 31, 2013
-
-@author: Christoph Paulik
-
-Updated on Dec 14, 2018
-
-@author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
-
-Updated on Jan 22, 2020
-
-@author: Daniel aberer daniel.aberer@geo.tuwien.ac.at
-'''
-
 import zipfile
 import tempfile
 import shutil
 import os
 import numpy as np
+
+def extract_subdir(zip, subdir, out_path):
+    """
+    Extract all files in a zip file under the passed subdir
+
+    Parameters
+    ----------
+    zip : str
+        Path to ismn zipfile
+    subdir : str
+        No leading /!
+        Subdir to extract
+    """
+    with zipfile.ZipFile(zip) as zi:
+        filelist = zi.namelist()
+        for file in filelist:
+            if os.path.split(os.path.commonpath([file, subdir]))\
+                    == os.path.split(subdir):
+                zi.extract(file, out_path)
 
 
 def unzip_file(path_in_zipfile, path_to_zipfile):

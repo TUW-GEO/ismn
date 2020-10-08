@@ -25,9 +25,9 @@ if platform.system() == 'Darwin':
       import matplotlib
       matplotlib.use("TkAgg")
 
-import ismn.metadata_collector as metadata_collector
+from ismn.metadata_collector import MetaCollector
 import ismn.readers as readers
-import ismn.zip_reader as zip_reader
+from ismn import src_path
 import pygeogrids.grids as grids
 
 import os
@@ -39,6 +39,8 @@ from matplotlib.patches import Rectangle
 import configparser
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import zipfile
+from tempfile import gettempdir
 
 
 class ISMNError(Exception):
@@ -56,7 +58,7 @@ class ISMN_station(object):
         Parameters
     ----------
     metadata : numpy.array
-        part of the structured array from metadata_collector.collect_from_folder()
+        part of the structured array from MetaCollector.collect_from_archive()
         which contains only fields for one station
 
     Attributes
@@ -479,7 +481,8 @@ class ISMN_station(object):
         if max_depth is None:
             max_depth = np.max(self.depth_to)
 
-        for var, d1, d2, filename in zip(self.variables, self.depth_from, self.depth_to, self.filenames):
+        for var, d1, d2, filename in zip(self.variables, self.depth_from,
+                                         self.depth_to, self.filenames):
 
             if var == variable and ((d1 >= min_depth) & (d2 <= max_depth)):
                 sdate, edate = zip_reader.read_from_zip(readers.get_min_max_timestamp, filename, self.zip_path)
@@ -529,7 +532,7 @@ class ISMN_Interface(object):
         find nearest station for given coordinates
     """
 
-    def __init__(self, data_path, network=None):
+    def __init__(self, data_path, network=None, metadata_path=None, temp_root=gettempdir()):
         """
         collects metadata from all files in data_path and saves metadata information
         in numpy file in folder data_path/python_metadata/
@@ -539,21 +542,52 @@ class ISMN_Interface(object):
         Parameters
         ---------
         data_path : str
-            Path to the downloaded ISMN data
+            Path to the downloaded ISMN data, either to the directory that
+            contains the extracted networks folder from the downloaded zip file,
+            or the path to the downloade zip file directly.
         network : list or str, optional (default: None)
             Name of a network in the initialised path or multiple networks as
             a list of strings that are activated and loaded.
+        metadata_path : str, optional (default: None)
+            Specific directory where the ismn metadata will be stored.
+            If the directly does not exist, it is created. If None is passed,
+            metadata will be stored in the data_path.
         """
         self.data_path = data_path
         # read cci landcover class names and their identifiers
         config = configparser.ConfigParser()
         config.optionxform = str
-        config.read_file(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classifications.ini')))
+        config.read_file(open(os.path.join(src_path, 'ismn', 'classifications.ini')))
         landcover = dict(config.items('LANDCOVER'))
         self.landcover = dict([(int(v), k) for k, v in landcover.items()])
         self.climate = dict(config.items('KOEPPENGEIGER'))
 
+        self.meta_path = metadata_path
+        self.temp_root = temp_root
+
+        self._setup_meta()
         self.activate_network(network)
+
+    def _setup_meta(self):
+        """ Check if metadata directory exists, create it if necessary """
+
+        self.from_zip = zipfile.is_zipfile(self.data_path)
+
+        if self.meta_path is None:
+            if self.from_zip:
+                self.meta_path = os.path.join(os.path.dirname(self.data_path),
+                                              'python_metadata')
+            else:
+                self.meta_path = os.path.join(self.data_path, 'python_metadata')
+
+        collector = MetaCollector(self.data_path, self.meta_path, self.temp_root)
+
+        if not os.path.exists(os.path.join(self.meta_path, 'metadata.npy')):
+            self.metadata = collector.collect_from_archive()
+            np.save(os.path.join(self.meta_path, 'metadata.npy'), self.metadata)
+        else:
+            self.metadata = np.load(os.path.join(self.meta_path, 'metadata.npy'),
+                                    allow_pickle=True)
 
     def activate_network(self, network):
         """
@@ -568,18 +602,6 @@ class ISMN_Interface(object):
             location where to save metadata
 
         """
-        metadata_directory = zip_reader.zip_folder(self.data_path)
-
-        if not os.path.exists(os.path.join(metadata_directory, 'python_metadata', 'metadata.npy')):
-            os.mkdir(os.path.join(metadata_directory, 'python_metadata'))
-            self.metadata = metadata_collector.collect_from_folder(self.data_path)
-            np.save(os.path.join(metadata_directory, 'python_metadata', 'metadata.npy'), self.metadata)
-        else:
-            self.metadata = np.load(
-                os.path.join(metadata_directory, 'python_metadata','metadata.npy'),
-                allow_pickle=True)
-
-
         if network is not None:
             if type(network) is not list:
                 network = [network]
@@ -596,7 +618,6 @@ class ISMN_Interface(object):
         self.grid = grids.BasicGrid(self.metadata['longitude'],
                                     self.metadata['latitude'],
                                     setup_kdTree=False)
-
 
     def list_networks(self):
         """
@@ -757,18 +778,23 @@ class ISMN_Interface(object):
                 * climate
                 * climate_insitu
         """
-        lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
+        lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010',
+                 'landcover_insitu', 'climate', 'climate_insitu']
+
         if max_depth:
             if max_depth < min_depth:
-                raise ValueError("min_depth can not be more than max_depth. min_depth: {}, max_depth: {})".format(min_depth, max_depth))
+                raise ValueError("min_depth can not be more than max_depth. "
+                                 "min_depth: {}, max_depth: {})".format(min_depth, max_depth))
 
         landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
 
         for k in kwargs.keys():
             if k in lc_cl:
-                landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
+                landcover_climate = \
+                    np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
             else:
-                raise ValueError('Specified keyword \"{}\" not found in metadata! Use one of the following: {}'.format(k, lc_cl))
+                raise ValueError('Specified keyword \"{}\" not found in metadata! '
+                                 'Use one of the following: {}'.format(k, lc_cl))
 
         if not max_depth:
             ids = np.where((self.metadata['variable'] == variable) &
@@ -798,8 +824,7 @@ class ISMN_Interface(object):
         timeseries : pandas.DataFrame
             of the read data
         """
-        zip_path = self.metadata['zip_path'][idx]
-        ts = zip_reader.read_from_zip(readers.read_data, self.metadata['filename'][idx], zip_path)
+        ts = readers.read_data(self.metadata['filename'][idx])
         return ts.data
 
     def read(self, *args, **kwargs):
@@ -1120,3 +1145,7 @@ class ISMN_Interface(object):
         for key in self.climate.keys():
             print('{:4}: {}'.format(key, self.climate[key]))
 
+
+if __name__ == '__main__':
+    data = r"C:\Temp\delete_me\hawaii\Data_separate_files_20100101_20201008_5712_q2h0_20201008.zip"
+    ds = ISMN_Interface(data)
