@@ -68,30 +68,7 @@ def unzip_file(path_in_zipfile, path_to_zipfile):
         zi.extract(path_in_zipfile, tmp_directory)
     return tmp_directory, os.path.join(tmp_directory, path_in_zipfile)
 
-def read_from_zip(fun, filename, zip_path=None):
-    """
-    function calls unzip_file function and deletes the temporary folder.
 
-    Parameters
-    ----------
-    fun : function to be executed
-    filename : string
-        relative path (inside zip structure)
-    zip_path : string
-        path of zip-file of downloaded ISMN data
-
-    Returns
-        -------
-        result : return of ISMN Interface get_function
-
-    """
-    if zip_path is not None and zip_path.endswith('.zip'):
-        tmp_directory, filename = unzip_file(filename, zip_path)
-        result = fun(filename)
-        shutil.rmtree(tmp_directory)
-    else:
-        result = fun(filename)
-    return result
 
 
 def zip_folder(zip_path):

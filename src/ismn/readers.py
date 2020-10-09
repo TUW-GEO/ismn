@@ -27,7 +27,7 @@ import numpy as np
 import logging
 import io
 from collections import OrderedDict
-
+import zipfile
 
 variable_lookup = {'sm': 'soil moisture',
                    'ts': 'soil temperature',
@@ -49,6 +49,27 @@ variable_lookup = {'sm': 'soil moisture',
                    'tsfq': 'surface temperature quality flag original'
                    }
 
+def extract_from_archive(zip, subdir, out_path):
+    """
+    Extract all files in a zip file under the passed subdir
+
+    Parameters
+    ----------
+    zip : str
+        Path to ismn zipfile
+    subdir : str
+        No leading /!
+        Subdir to extract, or a single file in the zip archive to extract
+    out_path : str
+        Path where the extracted file(s) is/are stored
+    """
+    with zipfile.ZipFile(zip) as zi:
+        filelist = np.array(zi.namelist())
+        if subdir in filelist: # single file was passed
+            zi.extract(member=subdir, path=out_path)
+        else: # subdir was passed
+            filterlist = filter(lambda x: x.startswith(subdir), filelist)
+            zi.extractall(members=list(filterlist), path=out_path)
 
 class ReaderException(Exception):
     pass
@@ -124,6 +145,31 @@ class ISMNTimeSeries(object):
         else:
             raise ISMNTSError("data attribute is not a pandas.DataFrame")
 
+
+def read_from_zip(fun, filename, zip_path=None):
+    """
+    function calls unzip_file function and deletes the temporary folder.
+
+    Parameters
+    ----------
+    fun : function to be executed
+    filename : string
+        relative path (inside zip structure)
+    zip_path : string
+        path of zip-file of downloaded ISMN data
+
+    Returns
+        -------
+        result : return of ISMN Interface get_function
+
+    """
+    if zip_path is not None and zip_path.endswith('.zip'):
+        tmp_directory, filename = unzip_file(filename, zip_path)
+        result = fun(filename)
+        shutil.rmtree(tmp_directory)
+    else:
+        result = fun(filename)
+    return result
 
 def get_info_from_file(filename):
     """
@@ -507,7 +553,6 @@ def get_format(filename):
     raise ReaderException(
         "This does not seem to be a valid ISMN filetype %s" % filename)
 
-
 def read_data(filename):
     """
     reads ISMN data in any format
@@ -523,7 +568,6 @@ def read_data(filename):
     dicton = globals()
     func = dicton['read_format_' + get_format(filename)]
     return func(filename)
-
 
 def get_metadata_from_csv(filename, as_dict=False):
     """

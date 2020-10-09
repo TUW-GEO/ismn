@@ -28,7 +28,7 @@ import glob
 import ismn.readers as readers
 import numpy as np
 import logging
-from ismn.utils import extract_subdir
+from ismn.readers import extract_from_archive
 from collections import OrderedDict
 from functools import lru_cache
 from tempfile import gettempdir
@@ -280,7 +280,7 @@ class MetaCollector(object):
                 print(station_dir)
                 if self.from_zip:
                     with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
-                        extract_subdir(self.data_path, station_dir, tempdir)
+                        extract_from_archive(self.data_path, station_dir, tempdir)
                         station_path = os.path.normpath(os.path.join(tempdir, station_dir))
                         station_meta = self.get_station_meta(station_path)
                         metadata_catalog += station_meta

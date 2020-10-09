@@ -371,7 +371,9 @@ class ISMN_station(object):
             raise ISMNError("There is no data for this combination of variable, depth_from, "
                             "depth_to and sensor. Please check.")
         else:
-            return zip_reader.read_from_zip(readers.read_data, self.filenames[index_filename[0]], self.zip_path)
+            # todo:
+            return readers.read_data(self.filenames[index_filename[0]])
+            #return zip_reader.read_from_zip(readers.read_data, self.filenames[index_filename[0]], self.zip_path)
 
     def data_for_variable(self, variable, min_depth=None, max_depth=None):
         """
@@ -427,8 +429,9 @@ class ISMN_station(object):
 
             if ((d1 >= min_depth) &
                     (d2 <= max_depth)):
-
-                yield zip_reader.read_from_zip(readers.read_data, filename, self.zip_path)
+                #todo:
+                #yield zip_reader.read_from_zip(readers.read_data, filename, self.zip_path)
+                yield readers.read_data(filename)
 
     def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None, max_depth=None):
         """
@@ -485,7 +488,9 @@ class ISMN_station(object):
                                          self.depth_to, self.filenames):
 
             if var == variable and ((d1 >= min_depth) & (d2 <= max_depth)):
-                sdate, edate = zip_reader.read_from_zip(readers.get_min_max_timestamp, filename, self.zip_path)
+                # todo:
+                sdate, edate = readers.get_min_max_timestamp(filename)
+                #sdate, edate = zip_reader.read_from_zip(readers.get_min_max_timestamp, filename, self.zip_path)
                 if start_date is None or start_date > sdate:
                     start_date = sdate
                 if end_date is None or end_date < edate:
