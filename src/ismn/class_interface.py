@@ -36,6 +36,9 @@ ch.setLevel(logging.INFO)
 formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
+from ismn.metadata_collector import MetaCollector
+import zipfile
+from tempfile import gettempdir
 
 variable_lookup = {'sm': 'soil_moisture',
                    'ts': 'soil_temperature',
@@ -599,7 +602,7 @@ class IsmnFileCollection(object):
 
     Attributes
     ----------
-    path : str
+    data_path : str
         Root path of ISMN files.
     files : list
         List of ISMN filenames.
@@ -614,10 +617,13 @@ class IsmnFileCollection(object):
         Get sensors from ISMN file collection.
     """
 
-    def __init__(self, path, load_data=False):
+    def __init__(self, data_path, metadata_path=None, temp_root=gettempdir(),
+                 load_data=False):
 
-        self.path = path
+        self.data_path = data_path
         self.files = {}
+
+        self._setup_meta()
 
         i = 0
         for root, sub_folders, basenames in os.walk(self.path):
@@ -629,6 +635,27 @@ class IsmnFileCollection(object):
                     logger.debug('Reading file {}'.format(filename))
                     self.files[i] = IsmnFile(filename, load_data)
                     i = i + 1
+
+    def _setup_meta(self):
+        """ Check if metadata directory exists, create it if necessary """
+
+        self.from_zip = zipfile.is_zipfile(self.data_path)
+
+        if self.meta_path is None:
+            if self.from_zip:
+                self.meta_path = os.path.join(os.path.dirname(self.data_path),
+                                              'python_metadata')
+            else:
+                self.meta_path = os.path.join(self.data_path, 'python_metadata')
+
+        collector = MetaCollector(self.data_path, self.meta_path, self.temp_root)
+
+        if not os.path.exists(os.path.join(self.meta_path, 'metadata.npy')):
+            self.metadata = collector.collect_from_archive()
+            np.save(os.path.join(self.meta_path, 'metadata.npy'), self.metadata)
+        else:
+            self.metadata = np.load(os.path.join(self.meta_path, 'metadata.npy'),
+                                    allow_pickle=True)
 
     def get_networks(self):
         """
@@ -784,7 +811,8 @@ class IsmnFile(object):
         """
         if self.data is None:
             if self.file_type == 'ceop':
-                self._read_format_ceop()
+                # self._read_format_ceop()
+                raise NotImplementedError
             elif self.file_type == 'ceop_sep':
                 self._read_format_ceop_sep()
             elif self.file_type == 'header_values':
@@ -982,3 +1010,9 @@ def create_network_collection(path, load_data=False):
     nwc = NetworkCollection(fc)
 
     return nwc
+
+if __name__ == '__main__':
+    coll = IsmnFileCollection(r"C:\Temp\delete_me\ismn\testdata_ceop")
+    coll.get_networks()
+    coll.get_stations('FMI')
+    coll.get_sensors('FMI', 'SOD021')

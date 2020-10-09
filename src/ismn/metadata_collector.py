@@ -33,6 +33,8 @@ from collections import OrderedDict
 from functools import lru_cache
 from tempfile import gettempdir
 from shutil import rmtree
+from ismn.readers import get_format
+import pandas as pd
 
 # @lru_cache(1)
 def scan_archive(ismn_data_path, station_subdirs=True):
@@ -196,7 +198,7 @@ class MetaCollector(object):
             list contains the metadata info one sensor per row
         """
         try:
-            csv_meta = readers.get_metadata_from_csv(filepath, as_dict=True)
+            csv_meta = get_metadata_from_csv(filepath, as_dict=True)
         except:
             logging.info(f"Error occured while reading metadata from csv file "
                          f"({filepath})")
@@ -226,7 +228,7 @@ class MetaCollector(object):
 
         metadata_entries = []
 
-        metadata = readers.get_metadata(filepath)
+        metadata = get_metadata(filepath)
         metadata_keys = None
 
         for i, variable in enumerate(metadata['variable']):
@@ -274,6 +276,7 @@ class MetaCollector(object):
         metadata_catalog = []
 
         archive = scan_archive(self.data_path)
+
         for network_dir, station_dirs in archive.items():
             print(network_dir)
             for station_dir in station_dirs:
@@ -291,10 +294,127 @@ class MetaCollector(object):
 
         return np.array(metadata_catalog, dtype=dtype)
 
+def get_metadata_from_csv(filename, as_dict=False):
+    """
+    reads ISMN metadata from csv file
+
+    Parameters
+    ----------
+    filename: str, path to csv file
+
+    Returns
+    -------
+    landcover_2000: int, cci landcover classification for station (year 2000)
+    landcover_2005: int, cci landcover classification for station (year 2005)
+    landcover_2010: int, cci landcover classification for station (year 2010)
+    landcover_insitu: str, in situ landcover classification
+    climate: str, Koeppen Geiger climate classification for station
+    climate_insitu: str, in situ climate classification for station
+    saturation: nd.array, saturation for all available depths
+    clay_fraction: nd.array, clay fraction for all available depths (in % weight)
+    sand_fraction: nd.array, sand fraction for all available depths (in % weight)
+    silt_fraction: nd.array, silt fraction for all available depths (in % weight)
+    organic_carbon: nd.array, organic carbon for all available depths (in % weight)
+    """
+    def read_field(fieldname):
+        if fieldname in data.index:
+            dt = list()
+            for i, j in zip(np.atleast_1d(data.loc[fieldname]['depth_from[m]']),
+                            np.atleast_1d(data.loc[fieldname]['depth_to[m]'])):
+                dt.append(('{}m_{}m'.format(i, j), np.float))
+            return np.array([tuple(np.atleast_1d(data.loc[fieldname]['value']))], dtype=np.dtype(dt))
+        else:
+            return np.nan
+
+    # some stations don't come with correct format in csv file (missing header)
+    try:
+        data = pd.read_csv(filename, delimiter=";")
+        data.set_index('quantity_name', inplace=True)
+    except:
+        # set columns manually
+        logging.info('no header: {}'.format(filename))
+        data = pd.read_csv(filename, delimiter=";", header=None)
+        cols = list(data.columns.values)
+        cols[0:7] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]',
+                     'value', 'description', 'quantity_source_name']
+        data.columns = cols
+        data.set_index('quantity_name', inplace=True)
+
+    # read landcover classifications
+    lc = data.loc[['land cover classification']][['value', 'quantity_source_name']]
+    lc_dict = {'CCI_landcover_2000': np.nan, 'CCI_landcover_2005': np.nan,
+               'CCI_landcover_2010': np.nan, 'insitu': ''}
+    for key in lc_dict.keys():
+        if key in lc['quantity_source_name'].values:
+            if key != 'insitu':
+                lc_dict[key] = np.int(lc.loc[lc['quantity_source_name'] == key]['value'].values[0])
+            else:
+                lc_dict[key] = lc.loc[lc['quantity_source_name'] == key]['value'].values[0]
+                logging.info('insitu land cover classification available: {}'.format(filename))
+
+    # read climate classifications
+    cl = data.loc[['climate classification']][['value', 'quantity_source_name']]
+    cl_dict = {'koeppen_geiger_2007': '', 'insitu': ''}
+    for key in cl_dict.keys():
+        if key in cl['quantity_source_name'].values:
+            cl_dict[key] = cl.loc[cl['quantity_source_name'] == key]['value'].values[0]
+            if key == 'insitu':
+                logging.info('insitu climate classification available: {}'.format(filename))
+
+    saturation = read_field('saturation')
+    clay_fraction = read_field('clay fraction')
+    sand_fraction = read_field('sand fraction')
+    silt_fraction = read_field('silt fraction')
+    organic_carbon = read_field('organic carbon')
+
+    if as_dict:
+        return OrderedDict([
+            ('lc_2000', lc_dict['CCI_landcover_2000']),
+            ('lc_2005', lc_dict['CCI_landcover_2005']),
+            ('lc_2010', lc_dict['CCI_landcover_2010']),
+            ('lc_insitu', lc_dict['insitu']),
+            ('climate_KG', cl_dict['koeppen_geiger_2007']),
+            ('climate_insitu', cl_dict['insitu']),
+            ('saturation', saturation),
+            ('clay_fraction', clay_fraction),
+            ('sand_fraction', sand_fraction),
+            ('silt_fraction', silt_fraction),
+            ('organic_carbon', organic_carbon),
+        ])
+    else:
+        return lc_dict['CCI_landcover_2000'], \
+               lc_dict['CCI_landcover_2005'], \
+               lc_dict['CCI_landcover_2010'], \
+               lc_dict['insitu'], \
+               cl_dict['koeppen_geiger_2007'], \
+               cl_dict['insitu'], \
+               saturation, \
+               clay_fraction, \
+               sand_fraction, \
+               silt_fraction, \
+               organic_carbon
+
+
+def get_metadata(filename):
+    """
+    reads ISMN metadata from any format
+
+    Parameters
+    ----------
+    filename: string
+
+    Returns
+    -------
+    metadata: dict
+    """
+    dicton = globals()
+    func = dicton['get_metadata_' + get_format(filename)]
+    return func(filename)
+
 if __name__ == '__main__':
-    data = r"C:\Temp\delete_me\hawaii\Data_separate_files_20100101_20201008_5712_q2h0_20201008.zip"
-    col = MetaCollector(data, meta_path=r"C:\Temp\delete_me\hawaii\meta")
+    data = r"C:\Temp\delete_me\ismn\testdata_ceop"
+    meta_path = os.path.join(data, 'python_metadata')
+    col = MetaCollector(data, meta_path)
     meta = col.collect_from_archive()
-    print(meta)
 
     #col.get_station_meta(os.path.join('FMI', 'SOD140'))
