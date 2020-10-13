@@ -20,14 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-import io
 import logging
-
 import numpy as np
-import pandas as pd
-
 from pygeogrids.grids import BasicGrid
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +32,8 @@ ch.setLevel(logging.INFO)
 formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-from ismn.metadata_collector import MetaCollector
-import zipfile
-from tempfile import gettempdir
+
+
 
 variable_lookup = {'sm': 'soil_moisture',
                    'ts': 'soil_temperature',
@@ -124,6 +119,27 @@ class NetworkCollection(object):
 
         self.grid = BasicGrid(lon, lat)
         self.grid_lut = np.array(idx)
+
+    @classmethod
+    def from_archive(cls, data_path, load_data=False):
+        """
+        Create a network collection for given file path.
+
+        Parameters
+        ----------
+        data_path : str
+            Path to data.
+        load_data : bool, optional
+            Load data while reading metadata (default: False)
+            Attention: Can be slow for a large number of files.
+
+        Returns
+        -------
+        nwc : NetworkCollection
+            Metadata and data (if loaded) from in situ data.
+        """
+        fc = IsmnFileCollection(data_path, load_data)
+        return cls(fc)
 
     def add_network(self, name):
         """
@@ -585,434 +601,3 @@ class Depth(object):
             flag = False
 
         return flag
-
-
-class IsmnFileCollection(object):
-
-    """
-    The IsmnFileCollection class reads and organized the metadata
-    information of ISMN files.
-
-    Parameters
-    ----------
-    path : str
-        Root path of ISMN files.
-    load_data : bool, optional
-        If True data will be loaded during metadata reading.
-
-    Attributes
-    ----------
-    data_path : str
-        Root path of ISMN files.
-    files : list
-        List of ISMN filenames.
-
-    Methods
-    -------
-    get_networks()
-        Get networks from ISMN file collection.
-    get_stations(network=None)
-        Get stations from ISMN file collection.
-    get_sensors(self, network=None, station=None)
-        Get sensors from ISMN file collection.
-    """
-
-    def __init__(self, data_path, metadata_path=None, temp_root=gettempdir(),
-                 load_data=False):
-
-        self.data_path = data_path
-        self.files = {}
-
-        self._setup_meta()
-
-        i = 0
-        for root, sub_folders, basenames in os.walk(self.path):
-            sub_folders.sort()
-            basenames.sort()
-            for basename in basenames:
-                if basename.endswith('.stm'):
-                    filename = os.path.join(root, basename)
-                    logger.debug('Reading file {}'.format(filename))
-                    self.files[i] = IsmnFile(filename, load_data)
-                    i = i + 1
-
-    def _setup_meta(self):
-        """ Check if metadata directory exists, create it if necessary """
-
-        self.from_zip = zipfile.is_zipfile(self.data_path)
-
-        if self.meta_path is None:
-            if self.from_zip:
-                self.meta_path = os.path.join(os.path.dirname(self.data_path),
-                                              'python_metadata')
-            else:
-                self.meta_path = os.path.join(self.data_path, 'python_metadata')
-
-        collector = MetaCollector(self.data_path, self.meta_path, self.temp_root)
-
-        if not os.path.exists(os.path.join(self.meta_path, 'metadata.npy')):
-            self.metadata = collector.collect_from_archive()
-            np.save(os.path.join(self.meta_path, 'metadata.npy'), self.metadata)
-        else:
-            self.metadata = np.load(os.path.join(self.meta_path, 'metadata.npy'),
-                                    allow_pickle=True)
-
-    def get_networks(self):
-        """
-        Get networks from ISMN file collection.
-
-        Returns
-        -------
-        networks : Dict of Networks
-            Dict of networks.
-        """
-        networks = {}
-
-        for f in self.files.values():
-            if f.metadata['network'] not in networks:
-                networks[f.metadata['network']] = Network(
-                    f.metadata['network'])
-
-        return networks
-
-    def get_stations(self, network=None):
-        """
-        Get stations from ISMN file collection.
-
-        Parameters
-        ----------
-        network : str, optional
-            Network name (default: None).
-
-        Returns
-        -------
-        stations : dict
-            Dict of stations.
-        """
-        stations = {}
-
-        for f in self.files.values():
-            if network in [None, f.metadata['network']]:
-                if f.metadata['station'] not in stations:
-                    st = Station(f.metadata['station'], f.metadata['longitude'],
-                                 f.metadata['latitude'], f.metadata['elevation'])
-                    stations[f.metadata['station']] = st
-
-        return stations
-
-    def get_sensors(self, network=None, station=None):
-        """
-        Get sensors from ISMN file collection.
-
-        Parameters
-        ----------
-        network : str, optional
-            Network name (default: None).
-        station : str, optional
-            Station name (default: None).
-
-        Returns
-        -------
-        sensors : dict
-            Dict of sensors.
-        """
-        sensors = {}
-
-        for f in self.files.values():
-            if ((network in [None, f.metadata['network']]) and
-                    (station in [None, f.metadata['station']])):
-
-                name = '{}_{}_{}_{}'.format(f.metadata['sensor'],
-                                            f.metadata['variable'],
-                                            f.metadata['depth'].start,
-                                            f.metadata['depth'].end)
-
-                if name not in sensors:
-                    snr = Sensor(name, f.metadata['variable'],
-                                 f.metadata['sensor'], f.metadata['depth'])
-                    sensors[name] = snr
-
-        return sensors
-
-    def __repr__(self):
-        """
-        Print summary of ISMN file collection.
-        """
-        logger.info('Number of networks: {}'.format(len(self.get_networks())))
-        logger.info('Number of stations: {}'.format(len(self.get_stations())))
-        logger.info('Number of sensors: {}'.format(len(self.get_sensors())))
-        logger.info('Number of files: {}'.format(len(self.files)))
-
-
-class IsmnFile(object):
-
-    """
-    IsmnFile class represents a single ISMN file.
-
-    Parameters
-    ----------
-    filename : str
-        Filename.
-    load_data : bool, optional
-        If True data will be loaded during metadata reading.
-
-    Attributes
-    ----------
-    filename : str
-        Filename.
-    file_type : str
-        File type information (e.g. ceop).
-    metadata : dict
-        Metadata information.
-    data : numpy.ndarray
-        Data stored in file.
-
-    Methods
-    -------
-    load_data()
-        Load data from file.
-    read_data()
-        Read data in file.
-    _read_metadata()
-        Read metadata from file name and first line of file.
-    _get_metadata_ceop_sep()
-        Get metadata in the file format called CEOP in separate files.
-    _get_metadata_header_values()
-        Get metadata file in the format called Header Values.
-    _get_metadata_from_file(delim='_')
-        Read first line of file and split filename.
-        Information is used to collect metadata information for all
-        ISMN formats.
-    _read_format_ceop_sep()
-        Read data in the file format called CEOP in separate files.
-    _read_format_header_values()
-        Read data file in the format called Header Values.
-    _read_csv(names=None, usecols=None, skiprows=0)
-        Read data.
-    """
-
-    def __init__(self, filename, load_data=False):
-
-        if not os.path.isfile(filename):
-            raise IOError('File does not exist: {}'.format(filename))
-
-        self.filename = filename
-        self.file_type = 'undefined'
-        self.metadata = {}
-        self.data = None
-        self._read_metadata()
-
-        if load_data:
-            self.load_data()
-
-    def load_data(self):
-        """
-        Load data from file.
-        """
-        if self.data is None:
-            if self.file_type == 'ceop':
-                # self._read_format_ceop()
-                raise NotImplementedError
-            elif self.file_type == 'ceop_sep':
-                self._read_format_ceop_sep()
-            elif self.file_type == 'header_values':
-                self._read_format_header_values()
-            else:
-                logger.warning("Unknown file type: {}".format(self.filename))
-
-    def read_data(self):
-        """
-        Read data in file.
-
-        Returns
-        -------
-        data : pandas.DataFrame
-            File content.
-        """
-        self.load_data()
-        return self.data
-
-    def _read_metadata(self):
-        """
-        Read metadata from file name and first line of file.
-        """
-        header_elements, filename_elements = self._get_metadata_from_file()
-
-        if len(filename_elements) == 5 and len(header_elements) == 16:
-            self.file_type = 'ceop'
-            raise RuntimeError('CEOP format not supported')
-        elif len(header_elements) == 15 and len(filename_elements) >= 9:
-            self.metadata = self._get_metadata_ceop_sep()
-            self.file_type = 'ceop_sep'
-        elif len(header_elements) < 14 and len(filename_elements) >= 9:
-            self.metadata = self._get_metadata_header_values()
-            self.file_type = 'header_values'
-        else:
-            logger.warning("Unknown file type: {}".format(self.filename))
-
-    def _get_metadata_ceop_sep(self):
-        """
-        Get metadata in the file format called CEOP in separate files.
-
-        Returns
-        -------
-        metadata : dict
-            Metadata information.
-        """
-        header_elements, filename_elements = self._get_metadata_from_file()
-
-        if len(filename_elements) > 9:
-            sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
-        else:
-            sensor = filename_elements[6]
-
-        if filename_elements[3] in variable_lookup:
-            variable = variable_lookup[filename_elements[3]]
-        else:
-            variable = filename_elements[3]
-
-        metadata = {'network': filename_elements[1],
-                    'station': filename_elements[2],
-                    'variable': variable,
-                    'depth': Depth(float(filename_elements[4]),
-                                   float(filename_elements[5])),
-                    'sensor': sensor,
-                    'latitude': float(header_elements[7]),
-                    'longitude': float(header_elements[8]),
-                    'elevation': float(header_elements[9])}
-
-        return metadata
-
-    def _get_metadata_header_values(self):
-        """
-        Get metadata file in the format called Header Values.
-
-        Returns
-        -------
-        metadata : dict
-            Metadata information.
-        """
-        header_elements, filename_elements = self._get_metadata_from_file()
-
-        if len(filename_elements) > 9:
-            sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
-        else:
-            sensor = filename_elements[6]
-
-        if filename_elements[3] in variable_lookup:
-            variable = variable_lookup[filename_elements[3]]
-        else:
-            variable = filename_elements[3]
-
-        metadata = {'network': header_elements[1],
-                    'station': header_elements[2],
-                    'latitude': float(header_elements[3]),
-                    'longitude': float(header_elements[4]),
-                    'elevation': float(header_elements[5]),
-                    'depth': Depth(float(header_elements[6]),
-                                   float(header_elements[7])),
-                    'variable': variable,
-                    'sensor': sensor}
-
-        return metadata
-
-    def _get_metadata_from_file(self, delim='_'):
-        """
-        Read first line of file and split filename.
-        Information is used to collect metadata information for all
-        ISMN formats.
-
-        Parameters
-        ----------
-        delim : str, optional
-            File basename delimiter.
-
-        Returns
-        -------
-        header_elements : list
-            First line of file split into list
-        file_basename_elements : list
-            File basename without path split by 'delim'
-        """
-        with io.open(self.filename, mode='r', newline=None) as f:
-            header = f.readline()
-
-        header_elements = header.split()
-        path, basename = os.path.split(self.filename)
-        file_basename_elements = basename.split(delim)
-
-        return header_elements, file_basename_elements
-
-    def _read_format_ceop_sep(self):
-        """
-        Read data in the file format called CEOP in separate files.
-        """
-        names = ['date', 'time', self.metadata['variable'],
-                 self.metadata['variable'] + '_flag',
-                 self.metadata['variable'] + '_orig_flag']
-        usecols = [0, 1, 12, 13, 14]
-
-        self.data = self._read_csv(names, usecols)
-
-    def _read_format_header_values(self):
-        """
-        Read data file in the format called Header Values.
-        """
-        names = ['date', 'time', self.metadata['variable'],
-                 self.metadata['variable'] + '_flag',
-                 self.metadata['variable'] + '_orig_flag']
-
-        self.data = self._read_csv(names, skiprows=1)
-
-    def _read_csv(self, names=None, usecols=None, skiprows=0):
-        """
-        Read data.
-
-        Parameters
-        ----------
-        names : list, optional
-            List of column names to use.
-        usecols : list, optional
-            Return a subset of the columns.
-
-        Returns
-        -------
-        data : pandas.DataFrame
-            Time series.
-        """
-        data = pd.read_csv(self.filename, skiprows=skiprows, usecols=usecols,
-                           names=names, delim_whitespace=True,
-                           parse_dates=[[0, 1]])
-
-        data.set_index('date_time', inplace=True)
-
-        return data
-
-
-def create_network_collection(path, load_data=False):
-    """
-    Create a network collection for given file path.
-
-    Parameters
-    ----------
-    path : str
-        Path to data.
-    load_data : bool, optional
-        Load data while reading metadata (default: False)
-        Attention: Can be slow for a large number of files.
-
-    Returns
-    -------
-    nwc : NetworkCollection
-        Metadata and data (if loaded) from in situ data.
-    """
-    fc = IsmnFileCollection(path, load_data)
-    nwc = NetworkCollection(fc)
-
-    return nwc
-
-if __name__ == '__main__':
-    coll = IsmnFileCollection(r"C:\Temp\delete_me\ismn\testdata_ceop")
-    coll.get_networks()
-    coll.get_stations('FMI')
-    coll.get_sensors('FMI', 'SOD021')

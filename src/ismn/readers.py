@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2020 TU Wien
+# Copyright (c) 2019 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,526 +21,595 @@
 # SOFTWARE.
 
 import os
-import pandas as pd
-from datetime import datetime
-import numpy as np
-import logging
 import io
+import logging
+import glob
+
+import numpy as np
+import pandas as pd
+
 from collections import OrderedDict
-import zipfile
+from ismn.archives import ISMNArchive, ISMNZipArchive
+from ismn.components import *
 
-variable_lookup = {'sm': 'soil moisture',
-                   'ts': 'soil temperature',
-                   'su': 'soil suction',
-                   'p': 'precipitation',
-                   'ta': 'air temperature',
-                   'fc': 'field capacity',
-                   'wp': 'permanent wilting point',
-                   'paw': 'plant available water',
-                   'ppaw': 'potential plant available water',
-                   'sat': 'saturation',
-                   'si_h': 'silt fraction',
-                   'sd': 'snow depth',
-                   'sa_h': 'sand fraction',
-                   'cl_h': 'clay fraction',
-                   'oc_h': 'organic carbon',
-                   'sweq': 'snow water equivalent',
-                   'tsf': 'surface temperature',
-                   'tsfq': 'surface temperature quality flag original'
-                   }
+from tempfile import gettempdir, TemporaryDirectory
 
-def extract_from_archive(zip, subdir, out_path):
+import zipfile as zf
+
+class IsmnFileCollection(object):
+
     """
-    Extract all files in a zip file under the passed subdir
+    The IsmnFileCollection class reads and organized the metadata
+    information of ISMN files.
 
     Parameters
     ----------
-    zip : str
-        Path to ismn zipfile
-    subdir : str
-        No leading /!
-        Subdir to extract, or a single file in the zip archive to extract
-    out_path : str
-        Path where the extracted file(s) is/are stored
-    """
-    with zipfile.ZipFile(zip) as zi:
-        filelist = np.array(zi.namelist())
-        if subdir in filelist: # single file was passed
-            zi.extract(member=subdir, path=out_path)
-        else: # subdir was passed
-            filterlist = filter(lambda x: x.startswith(subdir), filelist)
-            zi.extractall(members=list(filterlist), path=out_path)
-
-class ReaderException(Exception):
-    pass
-
-
-class ISMNTSError(Exception):
-    pass
-
-
-class ISMNTimeSeries(object):
-    """
-    class that contains a time series of ISMN data read from one text file
+    path : str
+        Root path of ISMN files.
+    load_data : bool, optional
+        If True data will be loaded during metadata reading.
 
     Attributes
     ----------
-    network : string
-        network the time series belongs to
-    station : string
-        station name the time series belongs to
-    latitude : float
-        latitude of station
-    longitude : float
-        longitude of station
-    elevation : float
-        elevation of station
-    variable : list
-        variable measured
-    depth_from : list
-        shallower depth of layer the variable was measured at
-    depth_to : list
-        deeper depth of layer the variable was measured at
-    sensor : string
-        sensor name
-    data : pandas.DataFrame
-        data of the time series
+    data_path : str
+        Root path of ISMN files.
+    files : list
+        List of ISMN filenames.
+
+    Methods
+    -------
+    get_networks()
+        Get networks from ISMN file collection.
+    get_stations(network=None)
+        Get stations from ISMN file collection.
+    get_sensors(self, network=None, station=None)
+        Get sensors from ISMN file collection.
     """
 
-    def __init__(self, data):
+    def __init__(self, data_path, load_data=False):
 
-        for key in data:
-            setattr(self, key, data[key])
+        self.data_path = data_path
+        self.files = {}
+        self._build_filelist(load_data)
 
-    def __repr__(self):
 
-        return '%s %s %.2f m - %.2f m %s measured with %s ' % (
-            self.network,
-            self.station,
-            self.depth_from[0],
-            self.depth_to[0],
-            self.variable[0],
-            self.sensor)
-
-    def plot(self, *args, **kwargs):
+    def _build_filelist(self, load_data):
         """
-        wrapper for pandas.DataFrame.plot which adds title to plot
-        and drops NaN values for plotting
+        Scan ismn archive and build file object list.
+        Reuse static metadata if possible
+        """
+
+        archive = scan_archive(self.data_path)
+
+        for net_dir, stat_dirs in archive.items():
+            for stat_dir in stat_dirs:
+                root = os.path.join(self.data_path, stat_dir)
+                static_meta = None
+
+                for filename in glob.glob(os.path.join(root, '*.stm')):
+                    f = IsmnFile(filename, load_data, static_meta)
+                    static_meta = f.static_meta
+
+                    if f['network'] not in self.files.keys():
+                        self.files[f['network']] = {}
+                    if f['station'] not in self.files[f['network']]:
+                        self.files[f['network']][f['station']] = []
+
+                    self.files[f['network']][f['station']].append(f)
+
+
+    def get_networks(self):
+        """
+        Get networks from ISMN file collection.
+
         Returns
         -------
-        ax : axes
-            matplotlib axes of the plot
-
-        Raises
-        ------
-        ISMNTSError
-            if data attribute is not a pandas.DataFrame
+        networks : dict of empty networks
+            Dict of networks.
         """
-        if type(self.data) is pd.DataFrame:
-            tempdata = self.data.dropna()
-            tempdata = tempdata[tempdata.columns[0]]
-            ax = tempdata.plot(*args, figsize=(15, 5), **kwargs)
-            ax.set_title(self.__repr__())
-            return ax
+        networks = {}
+
+        for n in self.files.keys():
+            networks[n] = Network(n)
+
+        return networks
+
+    def get_stations(self, network=None):
+        """
+        Get stations from ISMN file collection.
+
+        Parameters
+        ----------
+        network : str, optional
+            Network name (default: None).
+
+        Returns
+        -------
+        stations : dict
+            Dict of stations.
+        """
+        stations = {}
+
+        for net, stats in self.files.items():
+            if network in [None, net]:
+                for stat, files in stats.items():
+                    for f in files:
+                        if f['station'] not in stations:
+                            stations[f['station']] = Station(f['station'],
+                                                             f['longitude'],
+                                                             f['latitude'],
+                                                             f['elevation'])
+
+        return stations
+
+    def get_sensors(self, network=None, station=None):
+        """
+        Get sensors from ISMN file collection.
+
+        Parameters
+        ----------
+        network : str, optional
+            Network name (default: None).
+        station : str, optional
+            Station name (default: None).
+
+        Returns
+        -------
+        sensors : dict
+            Dict of sensors.
+        """
+        sensors = {}
+
+        for net, stats in self.files.items():
+            if network in [None, net]:
+                for stat, files in stats.items():
+                    if stat in [None, station]:
+                        for f in files:
+                            name = '{}_{}_{}_{}'.format(f['sensor'],
+                                                        f['variable'],
+                                                        f['depth'].start,
+                                                        f['depth'].end)
+
+                            if name not in sensors:
+                                snr = Sensor(name, f['variable'],
+                                             f['sensor'], f['depth'])
+                                sensors[name] = snr
+
+        return sensors
+
+    def __repr__(self):
+        """
+        Print summary of ISMN file collection.
+        """
+        logger.info('Number of networks: {}'.format(len(self.get_networks())))
+        logger.info('Number of stations: {}'.format(len(self.get_stations())))
+        logger.info('Number of sensors: {}'.format(len(self.get_sensors())))
+        logger.info('Number of files: {}'.format(len(self.files)))
+
+
+class StaticMetaFile(object):
+
+    """
+    Represents a csv file containing site specific static variables.
+    These attributes shall be assigned to all sensors at that site.
+    """
+
+    def __init__(self, archive, subpath, filename='*.csv'):
+
+        if not os.path.isfile(filename):
+            raise IOError('File does not exist: {}'.format(filename))
+
+        root, ext = os.path.splitext(filename)
+
+        if ext.lower() != '.csv':
+            raise IOError(f'CSV file expected. Got {ext}.')
+
+        self.filename = filename
+
+    def _read_field(self, fieldname):
+        """
+        Extract a field from the loaded csv metadata
+        """
+        if fieldname in self.data.index:
+            dt = list()
+            for i, j in zip(np.atleast_1d(self.data.loc[fieldname]['depth_from[m]']),
+                            np.atleast_1d(self.data.loc[fieldname]['depth_to[m]'])):
+                dt.append(('{}m_{}m'.format(i, j), np.float))
+            return np.array([tuple(np.atleast_1d(self.data.loc[fieldname]['value']))],
+                            dtype=np.dtype(dt))
         else:
-            raise ISMNTSError("data attribute is not a pandas.DataFrame")
+            return np.nan
 
-def get_info_from_file(filename):
-    """
-    reads first line of file and splits filename
-    this can be used to construct necessary metadata information
-    for all ISMN formats
+    def read_csv(self):
+        """
+        Read csv file containing static variables into data frame.
+        """
 
-    Parameters
-    ----------
-    filename : string
-        filename including path
-
-    Returns
-    -------
-    header_elements : list
-        first line of file split into list
-    filename_elements : list
-        filename without path split by _
-    """
-    with io.open(filename, mode='r', newline=None) as f:
-        header = f.readline()
-    header_elements = header.split()
-
-    path, filen = os.path.split(filename)
-    filename_elements = filen.split('_')
-
-    return header_elements, filename_elements
-
-
-def get_metadata_header_values(filename):
-    """
-    get metadata from ISMN textfiles in the format called
-    Variables stored in separate files (CEOP formatted)
-
-    Parameters
-    ----------
-    filename : string
-        path and name of file
-
-    Returns
-    -------
-    metadata : dict
-        dictionary of metadata information
-    """
-
-    header_elements, filename_elements = get_info_from_file(filename)
-
-    if len(filename_elements) > 9:
-        sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
-    else:
-        sensor = filename_elements[6]
-
-    if filename_elements[3] in variable_lookup:
-        variable = [variable_lookup[filename_elements[3]]]
-    else:
-        variable = [filename_elements[3]]
-
-    metadata = {'network': header_elements[1],
-                'station': header_elements[2],
-                'latitude': float(header_elements[3]),
-                'longitude': float(header_elements[4]),
-                'elevation': float(header_elements[5]),
-                'depth_from': [float(header_elements[6])],
-                'depth_to': [float(header_elements[7])],
-                'variable': variable,
-                'sensor': sensor}
-
-    return metadata
-
-
-def read_format_header_values(filename):
-    """
-    Reads ISMN textfiles in the format called
-    Variables stored in separate files (Header + values)
-
-    Parameters
-    ----------
-    filename : string
-        path and name of file
-
-    Returns
-    -------
-    time_series : ISMNTimeSeries
-        ISMNTimeSeries object initialized with metadata and data from file
-    """
-
-    metadata = get_metadata_header_values(filename)
-
-    data = pd.read_csv(filename, skiprows=1, delim_whitespace=True,
-                       names=['date', 'time', metadata['variable'][0],
-                              metadata['variable'][0] + '_flag',
-                              metadata['variable'][0] + '_orig_flag'],
-                       parse_dates=[[0, 1]])
-
-    data.set_index('date_time', inplace=True)
-    data = data.tz_localize('UTC')
-
-    metadata['data'] = data
-
-    return ISMNTimeSeries(metadata)
-
-
-def get_metadata_ceop_sep(filename):
-    """
-    get metadata from ISMN textfiles in the format called
-    Variables stored in separate files (CEOP formatted)
-
-    Parameters
-    ----------
-    filename : string
-        path and name of file
-
-    Returns
-    -------
-    metadata : dict
-        dictionary of metadata information
-    """
-
-    header_elements, filename_elements = get_info_from_file(filename)
-
-    if len(filename_elements) > 9:
-        sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
-    else:
-        sensor = filename_elements[6]
-
-    if filename_elements[3] in variable_lookup:
-        variable = [variable_lookup[filename_elements[3]]]
-    else:
-        variable = [filename_elements[3]]
-
-    metadata = {'network': filename_elements[1],
-                'station': filename_elements[2],
-                'variable': variable,
-                'depth_from': [float(filename_elements[4])],
-                'depth_to': [float(filename_elements[5])],
-                'sensor': sensor,
-                'latitude': float(header_elements[7]),
-                'longitude': float(header_elements[8]),
-                'elevation': float(header_elements[9])
-                }
-
-    return metadata
-
-
-def read_format_ceop_sep(filename):
-    """
-    Reads ISMN textfiles in the format called
-    Variables stored in separate files (CEOP formatted)
-
-    Parameters
-    ----------
-    filename : string
-        path and name of file
-
-    Returns
-    -------
-    time_series : ISMNTimeSeries
-        ISMNTimeSeries object initialized with metadata and data from file
-    """
-
-    metadata = get_metadata_ceop_sep(filename)
-
-    data = pd.read_csv(filename, delim_whitespace=True, usecols=[0, 1, 12, 13, 14],
-                       names=['date', 'time',
-                              metadata['variable'][0],
-                              metadata['variable'][0] + '_flag',
-                              metadata['variable'][0] + '_orig_flag'],
-                       parse_dates=[[0, 1]])
-
-    data.set_index('date_time', inplace=True)
-    data = data.tz_localize('UTC')
-
-    metadata['data'] = data
-
-    return ISMNTimeSeries(metadata)
-
-
-def get_metadata_ceop(filename):
-    """
-    get metadata from ISMN textfiles in the format called
-    CEOP Reference Data Format
-
-    Parameters
-    ----------
-    filename : string
-        path and name of file
-
-    Returns
-    -------
-    metadata : dict
-        dictionary of metadata information
-    """
-
-    header_elements, filename_elements = get_info_from_file(filename)
-
-    metadata = {'network': filename_elements[1],
-                'station': header_elements[6],
-                'variable': ['ts', 'sm'],
-                'sensor': 'n.s',
-                'depth_from': ['multiple'],
-                'depth_to': ['multiple'],
-                'latitude': float(header_elements[7]),
-                'longitude': float(header_elements[8]),
-                'elevation': float(header_elements[9])
-                }
-
-    return metadata
-
-
-def read_format_ceop(filename):
-    """
-    Reads ISMN textfiles in the format called
-    CEOP Reference Data Format
-
-    Parameters
-    ----------
-    filename : string
-        path and name of file
-
-    Returns
-    -------
-    time_series : ISMNTimeSeries
-        ISMNTimeSeries object initialized with metadata and data from file
-    """
-    metadata = get_metadata_ceop(filename)
-    data = pd.read_csv(filename, delim_whitespace=True, usecols=[0, 1, 11, 12, 13, 14, 15],
-                       names=['date', 'time', 'depth_from',
-                              metadata['variable'][0],
-                              metadata['variable'][0] + '_flag',
-                              metadata['variable'][1],
-                              metadata['variable'][1] + '_flag'],
-                       na_values=['-999.99'],
-                       parse_dates=[[0, 1]])
-
-    data = data.set_index('date_time')
-    data = data.tz_localize('UTC')
-    date_index = data.index
-    depth_index = data['depth_from']
-
-    del data['depth_from']
-
-    data.index = pd.MultiIndex.from_arrays([depth_index,
-                                            depth_index.rename('depth_to'),
-                                            date_index])
-    data.index.names = ['depth_from', 'depth_to', 'date']
-
-    data = data.sort_index(level=0)
-
-    metadata['depth_from'] = np.unique(
-        data.index.get_level_values(0).values).tolist()
-    metadata['depth_to'] = np.unique(
-        data.index.get_level_values(1).values).tolist()
-    metadata['data'] = data
-
-    return ISMNTimeSeries(metadata)
-
-
-def tail(f, lines=1, _buffer=4098):
-    """Tail a file and get X lines from the end
-
-    Parameters
-    ----------
-    f: file like object
-    lines: int
-       lines from the end of the file to read
-    _buffer: int
-       buffer to use to step backwards in the file.
-
-    References
-    ----------
-    Found at http://stackoverflow.com/a/13790289/1314882
-    """
-    # place holder for the lines found
-    lines_found = []
-
-    # block counter will be multiplied by buffer
-    # to get the block size from the end
-    block_counter = -1
-
-    # loop until we find X lines
-    while len(lines_found) < lines:
         try:
-            f.seek(block_counter * _buffer, os.SEEK_END)
-        except IOError:  # either file is too small, or too many lines requested
-            f.seek(0)
-            lines_found = f.readlines()
-            break
+            data = pd.read_csv(self.filename, delimiter=";")
+            data.set_index('quantity_name', inplace=True)
+        except:
+            # set columns manually
+            logging.info('no header: {}'.format(self.filename))
+            data = pd.read_csv(self.filename, delimiter=";", header=None)
+            cols = list(data.columns.values)
+            cols[0:7] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]',
+                         'value', 'description', 'quantity_source_name']
+            data.columns = cols
+            data.set_index('quantity_name', inplace=True)
 
-        lines_found = f.readlines()
+        self.data = data
 
-        # we found enough lines, get out
-        if len(lines_found) > lines:
-            break
+        # read landcover classifications
+        lc = self.data.loc[['land cover classification']][['value', 'quantity_source_name']]
 
-        # decrement the block counter to get the
-        # next X bytes
-        block_counter -= 1
+        lc_dict = {'CCI_landcover_2000': np.nan,
+                   'CCI_landcover_2005': np.nan,
+                   'CCI_landcover_2010': np.nan,
+                   'insitu': ''}
 
-    return lines_found[-lines:]
+        for key in lc_dict.keys():
+            if key in lc['quantity_source_name'].values:
+                if key != 'insitu':
+                    lc_dict[key] = np.int(lc.loc[lc['quantity_source_name']
+                                                 == key]['value'].values[0])
+                else:
+                    lc_dict[key] = lc.loc[lc['quantity_source_name']
+                                          == key]['value'].values[0]
+                    logging.info(f'insitu land cover classification available: {self.filename}')
 
+        # read climate classifications
+        cl = data.loc[['climate classification']][['value', 'quantity_source_name']]
+        cl_dict = {'koeppen_geiger_2007': '', 'insitu': ''}
+        for key in cl_dict.keys():
+            if key in cl['quantity_source_name'].values:
+                cl_dict[key] = cl.loc[cl['quantity_source_name'] == key]['value'].values[0]
+                if key == 'insitu':
+                    logging.info(f'insitu climate classification available: {self.filename}')
 
-def get_min_max_timestamp_header_values(filename):
-    """
-    Get minimum and maximum observation timestamp from header values format.
-    """
-    with io.open(filename, mode='r', newline=None) as fid:
-        _ = fid.readline()
-        first = fid.readline()
-        if first.isspace():
-            first = fid.readline()
-        last = tail(fid)[0]
+        saturation = self._read_field('saturation')
+        clay_fraction = self._read_field('clay fraction')
+        sand_fraction = self._read_field('sand fraction')
+        silt_fraction = self._read_field('silt fraction')
+        organic_carbon = self._read_field('organic carbon')
 
-    min_date = datetime.strptime(first[:16], '%Y/%m/%d %H:%M')
-    max_date = datetime.strptime(last[:16], '%Y/%m/%d %H:%M')
-    return min_date, max_date
-
-
-def get_min_max_timestamp_ceop_sep(filename):
-    """
-    Get minimum and maximum observation timestamp from ceop_sep format.
-    """
-    with io.open(filename, mode='r', newline=None) as fid:
-        first = fid.readline()
-        last = tail(fid)[0]
-
-    min_date = datetime.strptime(first[:16], '%Y/%m/%d %H:%M')
-    max_date = datetime.strptime(last[:16], '%Y/%m/%d %H:%M')
-    return min_date, max_date
-
-
-def get_min_max_timestamp_ceop(filename):
-    """
-    Get minimum and maximum observation timestamp from ceop format.
-    """
-    with io.open(filename, mode='r', newline=None) as fid:
-        first = fid.readline()
-        last = tail(fid)[0]
-
-    min_date = datetime.strptime(first[:16], '%Y/%m/%d %H:%M')
-    max_date = datetime.strptime(last[:16], '%Y/%m/%d %H:%M')
-    return min_date, max_date
+        return OrderedDict([
+            ('lc_2000', lc_dict['CCI_landcover_2000']),
+            ('lc_2005', lc_dict['CCI_landcover_2005']),
+            ('lc_2010', lc_dict['CCI_landcover_2010']),
+            ('lc_insitu', lc_dict['insitu']),
+            ('climate_KG', cl_dict['koeppen_geiger_2007']),
+            ('climate_insitu', cl_dict['insitu']),
+            ('saturation', saturation),
+            ('clay_fraction', clay_fraction),
+            ('sand_fraction', sand_fraction),
+            ('silt_fraction', silt_fraction),
+            ('organic_carbon', organic_carbon),
+        ])
 
 
-def get_min_max_timestamp(filename):
-    """
-    Determine the file type and get the minimum and maximum observation
-    timestamp
+class IsmnFile(object):
 
     """
-    dicton = globals()
-    func = dicton['get_min_max_timestamp_' + get_format(filename)]
-    return func(filename)
-
-
-def get_format(filename):
-    """
-    get's the file format from the length of
-    the header and filename information
+    IsmnFile class represents a single ISMN file. This represents only DATA files
+    not metadata csv files.
 
     Parameters
     ----------
-    filename : string
+    archive : ISMNArchive
+        Archive to the downloaded data.
+    file_path : str
+        Path in the archive to the ismn file.
+    load_data : bool, optional
+        If True data will be loaded during metadata reading.
 
-    Returns
-    -------
-    methodname : string
-        name of method used to read the detected format
-
-    Raises
-    ------
-    ReaderException
-        if filename or header parts do not fit one of the formats
-    """
-    header_elements, filename_elements = get_info_from_file(filename)
-    if len(filename_elements) == 5 and len(header_elements) == 16:
-        return 'ceop'
-    if len(header_elements) == 15 and len(filename_elements) >= 9:
-        return 'ceop_sep'
-    if len(header_elements) < 14 and len(filename_elements) >= 9:
-        return 'header_values'
-    raise ReaderException(
-        "This does not seem to be a valid ISMN filetype %s" % filename)
-
-def read_data(filename):
-    """
-    reads ISMN data in any format
-
-    Parameters
+    Attributes
     ----------
-    filename: string
+    filename : str
+        Filename.
+    file_type : str
+        File type information (e.g. ceop).
+    metadata : dict
+        Metadata information.
+    data : numpy.ndarray
+        Data stored in file.
 
-    Returns
+    Methods
     -------
-    timeseries: IMSNTimeSeries
+    load_data()
+        Load data from file.
+    read_data()
+        Read data in file.
+    _read_metadata()
+        Read metadata from file name and first line of file.
+    _get_metadata_ceop_sep()
+        Get metadata in the file format called CEOP in separate files.
+    _get_metadata_header_values()
+        Get metadata file in the format called Header Values.
+    _get_metadata_from_file(delim='_')
+        Read first line of file and split filename.
+        Information is used to collect metadata information for all
+        ISMN formats.
+    _read_format_ceop_sep()
+        Read data in the file format called CEOP in separate files.
+    _read_format_header_values()
+        Read data file in the format called Header Values.
+    _read_csv(names=None, usecols=None, skiprows=0)
+        Read data.
     """
-    dicton = globals()
-    func = dicton['read_format_' + get_format(filename)]
-    return func(filename)
+
+    def __init__(self, archive, file_path, load_data=False, static_meta=None,
+                 temp_root=gettempdir()):
+
+        self.archive = archive
+
+        self.file_path = file_path
+
+        if not file_path not in self.archive:
+            raise IOError(f'Archive does not contain file: {self.file_path}')
+
+        if not os.path.exists(temp_root):
+            os.makedirs(temp_root, exist_ok=True)
+
+        self.zip = True if isinstance(self.archive, ISMNZipArchive) else False
+        self.temp_root = temp_root
+
+        self.file_type = 'undefined'
+        self.metadata = {}
+        self.data = None
+
+        self.static_meta = static_meta
+
+        self._read_metadata()
+
+        if load_data:
+            self.load_data()
 
 
+    def __getitem__(self, item):
+        return self.metadata[item]
+
+    def load_data(self):
+        """
+        Load data from file.
+        """
+        if self.data is None:
+            if self.file_type == 'ceop':
+                # self._read_format_ceop()
+                raise NotImplementedError
+            elif self.file_type == 'ceop_sep':
+                self._read_format_ceop_sep()
+            elif self.file_type == 'header_values':
+                self._read_format_header_values()
+            else:
+                logger.warning("Unknown file type: {}".format(self.filename))
+
+    def read_data(self):
+        """
+        Read data in file.
+
+        Returns
+        -------
+        data : pandas.DataFrame
+            File content.
+        """
+        self.load_data()
+        return self.data
+
+    def _read_metadata(self):
+        """
+        Read metadata from file name and first line of file.
+        """
+        header_elements, filename_elements = self._get_metadata_from_file()
+
+        if len(filename_elements) == 5 and len(header_elements) == 16:
+            self.file_type = 'ceop'
+            raise RuntimeError('CEOP format not supported')
+        elif len(header_elements) == 15 and len(filename_elements) >= 9:
+            self.metadata = self._get_metadata_ceop_sep()
+            self.file_type = 'ceop_sep'
+        elif len(header_elements) < 14 and len(filename_elements) >= 9:
+            self.metadata = self._get_metadata_header_values()
+            self.file_type = 'header_values'
+        else:
+            logger.warning(f"Unknown file type: {self.subpath} in {self.archive}")
+
+        if self.static_meta is None:
+            self.static_meta = self._get_static_metadata_from_csv()
+
+        self.metadata.update(self.static_meta)
+
+
+    def _get_static_metadata_from_csv(self):
+        """
+        Read static metadata from csv file in the same directory as the ismn
+        data file.
+
+        Returns
+        -------
+        static_meta : OrderedDict
+            Dictionary of static metadata
+        """
+        with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
+            filename = extract_from_archive(self.archive, s, tempdir)
+
+            with io.open(filename, mode='r', newline=None) as f:
+                header = f.readline()
+        csv_path = glob.glob(os.path.join(os.path.dirname(self.filename), '*.csv'))
+        assert len(csv_path) == 1, "More than 1 csv file found in path"
+        return StaticMetaFile(csv_path[0]).read_csv()
+
+    def _get_metadata_ceop_sep(self):
+        """
+        Get metadata in the file format called CEOP in separate files.
+
+        Returns
+        -------
+        metadata : dict
+            Metadata information.
+        """
+        header_elements, filename_elements = self._get_metadata_from_file()
+
+        if len(filename_elements) > 9:
+            sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
+        else:
+            sensor = filename_elements[6]
+
+        if filename_elements[3] in variable_lookup:
+            variable = variable_lookup[filename_elements[3]]
+        else:
+            variable = filename_elements[3]
+
+        metadata = {'network': filename_elements[1],
+                    'station': filename_elements[2],
+                    'variable': variable,
+                    'depth': Depth(float(filename_elements[4]),
+                                   float(filename_elements[5])),
+                    'sensor': sensor,
+                    'latitude': float(header_elements[7]),
+                    'longitude': float(header_elements[8]),
+                    'elevation': float(header_elements[9])}
+
+        return metadata
+
+    def _get_metadata_header_values(self):
+        """
+        Get metadata file in the format called Header Values.
+
+        Returns
+        -------
+        metadata : dict
+            Metadata information.
+        """
+        header_elements, filename_elements = self._get_metadata_from_file()
+
+        if len(filename_elements) > 9:
+            sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
+        else:
+            sensor = filename_elements[6]
+
+        if filename_elements[3] in variable_lookup:
+            variable = variable_lookup[filename_elements[3]]
+        else:
+            variable = filename_elements[3]
+
+        metadata = {'network': header_elements[1],
+                    'station': header_elements[2],
+                    'latitude': float(header_elements[3]),
+                    'longitude': float(header_elements[4]),
+                    'elevation': float(header_elements[5]),
+                    'depth': Depth(float(header_elements[6]),
+                                   float(header_elements[7])),
+                    'variable': variable,
+                    'sensor': sensor}
+
+        return metadata
+
+
+    def _get_metadata_from_file(self, delim='_'):
+        """
+        Read first line of file and split filename.
+        Information is used to collect metadata information for all
+        ISMN formats.
+
+        Parameters
+        ----------
+        delim : str, optional
+            File basename delimiter.
+
+        Returns
+        -------
+        header_elements : list
+            First line of file split into list
+        file_basename_elements : list
+            File basename without path split by 'delim'
+        """
+        if self.zip:
+            with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
+                filename = extract_from_archive(
+                    self.archive, os.path.join(self.subpath, self.filename), tempdir)
+
+                assert len(filename) == 0, "Too many files extracted"
+
+                with io.open(filename[0], mode='r', newline=None) as f:
+                    header = f.readline()
+        else:
+            filename = os.path.join(self.archive, self.subpath, self.filename)
+
+            with io.open(filename, mode='r', newline=None) as f:
+                header = f.readline()
+
+        header_elements = header.split()
+        path, basename = os.path.split(filename)
+        file_basename_elements = basename.split(delim)
+
+        return header_elements, file_basename_elements
+
+    def _read_format_ceop_sep(self):
+        """
+        Read data in the file format called CEOP in separate files.
+        """
+        names = ['date', 'time', self.metadata['variable'],
+                 self.metadata['variable'] + '_flag',
+                 self.metadata['variable'] + '_orig_flag']
+        usecols = [0, 1, 12, 13, 14]
+
+        self.data = self._read_csv(names, usecols)
+
+    def _read_format_header_values(self):
+        """
+        Read data file in the format called Header Values.
+        """
+        names = ['date', 'time', self.metadata['variable'],
+                 self.metadata['variable'] + '_flag',
+                 self.metadata['variable'] + '_orig_flag']
+
+        self.data = self._read_csv(names, skiprows=1)
+
+    def _read_csv(self, names=None, usecols=None, skiprows=0):
+        """
+        Read data.
+
+        Parameters
+        ----------
+        names : list, optional
+            List of column names to use.
+        usecols : list, optional
+            Return a subset of the columns.
+
+        Returns
+        -------
+        data : pandas.DataFrame
+            Time series.
+        """
+        data = pd.read_csv(self.filename, skiprows=skiprows, usecols=usecols,
+                           names=names, delim_whitespace=True,
+                           parse_dates=[[0, 1]])
+
+        data.set_index('date_time', inplace=True)
+
+        return data
+
+
+def usecase_file():
+    path = "/media/wolfgang/Windows/temp/ismndata/testdata_ceop/FMI/SAA111/FMI_FMI_SAA111_sm_0.050000_0.050000_5TE_20101001_20201005.stm"
+    nodat = IsmnFile(path, load_data=False)
+    dat = IsmnFile(path, load_data=True)
+    d2 = nodat.load_data()
+    d1 = dat.load_data()
+
+def usecase_coll():
+    path = "/media/wolfgang/Windows/temp/ismndata/testdata_ceop"
+    coll = IsmnFileCollection(path, load_data=False)
+    nets = coll.get_networks()
+    stats = coll.get_stations(None)
+    sens = coll.get_sensors(nets[0], stats[0])
+
+
+if __name__ == '__main__':
+    usecase_coll()
+
+    coll = IsmnFileCollection(r"C:\Temp\delete_me\ismn\testdata_ceop")
+    coll.get_networks()
+    coll.get_stations('FMI')
+    coll.get_sensors('FMI', 'SOD021')

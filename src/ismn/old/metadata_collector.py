@@ -36,41 +36,7 @@ from shutil import rmtree
 from ismn.readers import get_format
 import pandas as pd
 
-# @lru_cache(1)
-def scan_archive(ismn_data_path, station_subdirs=True):
-    """ Go through an ismn archive (extracted or zipped) and group
-     station folders in archive by network folders
-     """
-    cont = {}
-    if zipfile.is_zipfile(ismn_data_path):
-        with zipfile.ZipFile(ismn_data_path) as zi:
-            file_list = zi.namelist()
-            for f in file_list:
-                relpath = os.path.split(f)[0]
-                if relpath == '': continue
-                net, stat = os.path.split(relpath)
-                if station_subdirs:
-                    stat = relpath
-                if net not in cont.keys():
-                    cont[net] = np.array([])
-                if not np.isin([stat], cont[net])[0]:
-                    cont[net] = np.append(cont[net], stat)
-    else:
-        for f in os.scandir(ismn_data_path):
-            if f.is_dir():
-                if f.path == ismn_data_path:continue
-                net = os.path.relpath(f.path, ismn_data_path)
-                if net == '': continue
-                for stat in os.scandir(f.path):
-                    if stat.is_dir():
-                        if net not in cont.keys():
-                            cont[net] = np.array([])
-                        if station_subdirs:
-                            cont[net] = np.append(cont[net], os.path.join(net, stat.name))
-                        else:
-                            cont[net] = np.append(cont[net], stat.name)
 
-    return OrderedDict(sorted(cont.items()))
 
 class MetaCollector(object):
     """ Read metadata for files downloaded from the ISMN """
@@ -416,5 +382,4 @@ if __name__ == '__main__':
     meta_path = os.path.join(data, 'python_metadata')
     col = MetaCollector(data, meta_path)
     meta = col.collect_from_archive()
-
     #col.get_station_meta(os.path.join('FMI', 'SOD140'))
