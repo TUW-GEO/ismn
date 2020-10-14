@@ -1,33 +1,36 @@
 # -*- coding: utf-8 -*-
-
-
 import os
 import numpy as np
 import zipfile
 from collections import OrderedDict
 import glob
 import fnmatch
-from pathlib import Path
+import warnings
+from pathlib import Path, PurePosixPath
+from typing import Union
 
 def _zip(func):
     def wrapper(cls, *args, **kwargs):
         if not cls.zip:
-            raise IOError("Zip archive expected")
+            raise IOError("Zip archive expected, use @_dir functions instead.")
         return func(cls, *args, **kwargs)
     return wrapper
 
 def _dir(func):
     def wrapper(cls, *args, **kwargs):
         if cls.zip:
-            raise IOError("Unzipped archive expected")
+            raise IOError("Unzipped archive expected, use @_zip functions instead.")
         return func(cls, *args, **kwargs)
     return wrapper
 
 
-class ISMNArchive():
+class IsmnArchive():
 
     def __init__(self, path):
         """
+        Connection to the pure zip/extracted zip file archive downloaded from the
+        ismn website. This class only handles file access requests made by the
+        readers.
 
         Parameters
         ----------
@@ -47,22 +50,31 @@ class ISMNArchive():
 
         self.__cont = None
 
+    def __repr__(self):
+        return f"{'Zip' if self.zip else 'Extracted'} Archive: {str(self.path)}"
+
     def __contains__(self, filepath):
         """ Check if files exists in archive """
         if self.zip:
-            return filepath in self.zip.filelist()
+            return str(PurePosixPath(filepath)) in self.zip.namelist()
         else:
             path = self.path / filepath
             return path.exists()
 
-    def _check_subpath(self, subpath):
-        """ Check if subpath is a valid path """
+    def _clean_subpath(self, subpath) -> Union[Path, PurePosixPath]:
+        """ Check if subpath is a valid path and adapt to archive format and os """
+        subpath = Path(subpath)
+        if subpath.parts[0] in ['/', '\\']:
+            warnings.warn("Remove leading (back)slash in passed subpath.")
+            subpath = Path(*subpath.parts[1:])
+
         if self.zip:
-            assert subpath[0] != '/', "No leading / in subpath!"
-            assert "\\" not in subpath , "Backslash not allowed in zip"
+            subpath = PurePosixPath(subpath)
         else:
             assert (self.path / Path(subpath)).exists(), \
             "Subpath does not exist in archive"
+
+        return subpath
 
     @property
     def cont(self):
@@ -114,7 +126,8 @@ class ISMNArchive():
                         if net not in cont.keys():
                             cont[net] = np.array([])
                         if station_subdirs:
-                            cont[net] = np.append(cont[net], os.path.join(net, stat.name))
+                            cont[net] = np.append(cont[net],
+                                                  os.path.join(net, stat.name))
                         else:
                             cont[net] = np.append(cont[net], stat.name)
 
@@ -131,7 +144,7 @@ class ISMNArchive():
         if subpath is None:
             subpath = '**'
 
-        self._check_subpath(subpath)
+        subpath = self._clean_subpath(subpath)
 
         filenames = glob.glob(str(self.path / subpath / fn_templ))
 
@@ -145,10 +158,9 @@ class ISMNArchive():
         if subpath is None:
             subpath = '**'
 
-        self._check_subpath(subpath)
+        subpath = self._clean_subpath(subpath)
 
         all_files = np.array(self.zip.namelist())
-
 
         filterlist = \
             list(filter(lambda f: fnmatch.fnmatch(f, f"{subpath}/{fn_templ}"),
@@ -192,7 +204,7 @@ class ISMNArchive():
 
         Returns
         -------
-        files : list
+        files : list[str]
             Found files that match the passed template.
         """
 
@@ -202,35 +214,35 @@ class ISMNArchive():
             return self._find_files_dir(subpath, fn_templ)
 
     @_zip
-    def extract_file(self, path_in_archive, out_path):
+    def extract_file(self, file_in_archive, out_path):
         """
         Extract a file from the zip archive
 
         Parameters
         ----------
-        path_in_archive : str
+        file_in_archive : Path or str
             Use linux slashes /, no leading / to define a subpath
             Relative path in the archive (network/station/filename)
-        out_path : str
+        out_path : Path or str
             Directory where the extracted file is stored.
 
         Returns
         -------
-        extraced_file : str
+        extracted_file : Path
             Path to the the extracted file.
         """
         out_path = Path(out_path)
+        file_in_archive = PurePosixPath(file_in_archive)
 
-        self._check_subpath(path_in_archive)
+        file_in_archive = self._clean_subpath(file_in_archive)
 
-        filelist = np.array(self.zip.namelist())
+        ls = np.array(self.zip.namelist())
 
-        if path_in_archive in filelist: # single file was passed
-            self.zip.extract(member=path_in_archive, path=out_path)
+        ext = None
+        if str(file_in_archive) in ls: # single file was passed
+            ext = self.zip.extract(member=str(file_in_archive), path=out_path)
 
-        extracted = out_path / path_in_archive
-
-        return extracted
+        return Path(ext)
 
     @_zip
     def extract_dir(self, subdir_in_archive, out_path):
@@ -251,42 +263,15 @@ class ISMNArchive():
         """
         out_path = Path(out_path)
 
-        self._check_subpath(subdir_in_archive)
+        subdir_in_archive = PurePosixPath(subdir_in_archive)
+        subdir_in_archive = self._clean_subpath(subdir_in_archive)
 
-        filelist = np.array(self.zip.namelist())
+        ls = np.array(self.zip.namelist())
 
-        filterlist = list(filter(lambda x: x.startswith(subdir_in_archive),
-                                 filelist)).copy()
+        filterlist = list(
+            filter(lambda x: x.startswith(str(subdir_in_archive)), ls)).copy()
 
         self.zip.extractall(members=filterlist, path=out_path)
 
         return [out_path / f for f in filterlist]
 
-def test_archive():
-    path = "/media/wolfgang/Windows/temp/ismndata/testdata_ceop"
-    archive = ISMNArchive(path)
-    cont = archive.scan()
-    csvs = archive.find_files('FMI/SAA111')
-
-
-def test_zip_archive():
-    from tempfile import mkdtemp
-
-    path = "/media/wolfgang/Windows/temp/ismndata/testdata_ceop.zip"
-    archive = ISMNArchive(path)
-    cont = archive.scan()
-    fmi_csvs = archive.find_files('FMI/SAA111')
-    all_csvs = archive.find_files(None, '*.csv')
-
-    tempd = mkdtemp()
-
-    archive.extract_file(fmi_csvs[0], tempd)
-    archive.extract_dir('FMI/SAA111', tempd)
-
-
-
-
-
-if __name__ == '__main__':
-    test_archive()
-    test_zip_archive()

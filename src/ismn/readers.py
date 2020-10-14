@@ -29,10 +29,13 @@ import numpy as np
 import pandas as pd
 
 from collections import OrderedDict
-from ismn.archives import ISMNArchive, ISMNZipArchive
+from ismn.archive import IsmnArchive
 from ismn.components import *
 
 from tempfile import gettempdir, TemporaryDirectory
+from pathlib import Path, PurePosixPath
+from typing import Union
+import warnings
 
 import zipfile as zf
 
@@ -186,59 +189,108 @@ class IsmnFileCollection(object):
         logger.info('Number of sensors: {}'.format(len(self.get_sensors())))
         logger.info('Number of files: {}'.format(len(self.files)))
 
+class IsmnFile(object):
+    """
+    General base class for data and static metadata files in ismn archive.
 
-class StaticMetaFile(object):
+    Parameters
+    ----------
+    archive: IsmnArchive or str
+        Archive that contains the file to read
+    file_path : Path or str
+        Path to the file in the archive.
+    temp_root : Path or str, optional (default : gettempdir())
+        Root directory where a separate subdir for temporary files
+        will be created (and deleted).
+    """
 
+    def __init__(self, archive, file_path, temp_root=gettempdir()):
+
+        if not isinstance(archive, IsmnArchive):
+            archive = IsmnArchive(archive)
+
+        self.archive = archive
+        self.file_path = self.archive._clean_subpath(file_path)
+
+        if self.file_path not in self.archive:
+            raise IOError(f'Archive does not contain file: {self.file_path}')
+
+        if not os.path.exists(temp_root):
+            os.makedirs(temp_root, exist_ok=True)
+
+        self.temp_root = temp_root
+
+class StaticMetaFile(IsmnFile):
     """
     Represents a csv file containing site specific static variables.
     These attributes shall be assigned to all sensors at that site.
+
+    Parameters
+    ----------
+    archive: IsmnArchive
+        Archive that contains the file to read
+    file_path : Path or str
+        Path to the file in the archive. No leading slash!
+    temp_root : Path or str, optional (default : gettempdir())
+        Root directory where a separate subdir for temporary files
+        will be created (and deleted).
     """
 
-    def __init__(self, archive, subpath, filename='*.csv'):
+    def __init__(self, archive, file_path, temp_root=gettempdir()):
 
-        if not os.path.isfile(filename):
-            raise IOError('File does not exist: {}'.format(filename))
+        super(StaticMetaFile, self).__init__(archive, file_path, temp_root)
 
-        root, ext = os.path.splitext(filename)
+        if self.file_path.suffix.lower() != '.csv':
+            raise IOError(f'CSV file expected for StaticMetaFile object')
 
-        if ext.lower() != '.csv':
-            raise IOError(f'CSV file expected. Got {ext}.')
-
-        self.filename = filename
-
-    def _read_field(self, fieldname):
+    def _read_field(self, fieldname:str) -> np.array:
         """
         Extract a field from the loaded csv metadata
         """
         if fieldname in self.data.index:
             dt = list()
+
             for i, j in zip(np.atleast_1d(self.data.loc[fieldname]['depth_from[m]']),
                             np.atleast_1d(self.data.loc[fieldname]['depth_to[m]'])):
                 dt.append(('{}m_{}m'.format(i, j), np.float))
+
             return np.array([tuple(np.atleast_1d(self.data.loc[fieldname]['value']))],
                             dtype=np.dtype(dt))
         else:
-            return np.nan
+            return None
 
-    def read_csv(self):
-        """
-        Read csv file containing static variables into data frame.
-        """
-
+    def _read_csv(self, csvfile:Path) -> pd.DataFrame:
+        """ Load static metadata data frame from csv """
         try:
-            data = pd.read_csv(self.filename, delimiter=";")
+            data = pd.read_csv(csvfile, delimiter=";")
             data.set_index('quantity_name', inplace=True)
         except:
             # set columns manually
-            logging.info('no header: {}'.format(self.filename))
-            data = pd.read_csv(self.filename, delimiter=";", header=None)
+            logging.info('no header: {}'.format(csvfile))
+            data = pd.read_csv(csvfile, delimiter=";", header=None)
             cols = list(data.columns.values)
             cols[0:7] = ['quantity_name', 'unit', 'depth_from[m]', 'depth_to[m]',
                          'value', 'description', 'quantity_source_name']
             data.columns = cols
             data.set_index('quantity_name', inplace=True)
 
-        self.data = data
+        return data
+
+    def read_metadata(self):
+        """
+        Read csv file containing static variables into data frame.
+
+        Returns
+        -------
+        data : OrderedDict
+            Data read from csv file.
+        """
+        if self.archive.zip:
+            with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
+                extracted = self.archive.extract_file(self.file_path, tempdir)
+                self.data = self._read_csv(extracted)
+        else:
+            self.data = self._read_csv(self.archive.path / self.file_path)
 
         # read landcover classifications
         lc = self.data.loc[['land cover classification']][['value', 'quantity_source_name']]
@@ -256,16 +308,16 @@ class StaticMetaFile(object):
                 else:
                     lc_dict[key] = lc.loc[lc['quantity_source_name']
                                           == key]['value'].values[0]
-                    logging.info(f'insitu land cover classification available: {self.filename}')
+                    logging.info(f'insitu land cover classification available: {self.file_path}')
 
         # read climate classifications
-        cl = data.loc[['climate classification']][['value', 'quantity_source_name']]
+        cl = self.data.loc[['climate classification']][['value', 'quantity_source_name']]
         cl_dict = {'koeppen_geiger_2007': '', 'insitu': ''}
         for key in cl_dict.keys():
             if key in cl['quantity_source_name'].values:
                 cl_dict[key] = cl.loc[cl['quantity_source_name'] == key]['value'].values[0]
                 if key == 'insitu':
-                    logging.info(f'insitu climate classification available: {self.filename}')
+                    logging.info(f'insitu climate classification available: {self.file_path}')
 
         saturation = self._read_field('saturation')
         clay_fraction = self._read_field('clay fraction')
@@ -287,21 +339,21 @@ class StaticMetaFile(object):
             ('organic_carbon', organic_carbon),
         ])
 
-
-class IsmnFile(object):
+class IsmnDataFile(IsmnFile):
 
     """
-    IsmnFile class represents a single ISMN file. This represents only DATA files
-    not metadata csv files.
+    IsmnFile class represents a single ISMN data file.
+    This represents only .stm data files not metadata csv files.
 
     Parameters
     ----------
-    archive : ISMNArchive
+    archive : IsmnArchive or str
         Archive to the downloaded data.
     file_path : str
-        Path in the archive to the ismn file.
+        Path in the archive to the ismn file. No leading slash!
     load_data : bool, optional
         If True data will be loaded during metadata reading.
+    todo: update.
 
     Attributes
     ----------
@@ -341,18 +393,7 @@ class IsmnFile(object):
     def __init__(self, archive, file_path, load_data=False, static_meta=None,
                  temp_root=gettempdir()):
 
-        self.archive = archive
-
-        self.file_path = file_path
-
-        if not file_path not in self.archive:
-            raise IOError(f'Archive does not contain file: {self.file_path}')
-
-        if not os.path.exists(temp_root):
-            os.makedirs(temp_root, exist_ok=True)
-
-        self.zip = True if isinstance(self.archive, ISMNZipArchive) else False
-        self.temp_root = temp_root
+        super(IsmnDataFile, self).__init__(archive, file_path, temp_root)
 
         self.file_type = 'undefined'
         self.metadata = {}
@@ -364,7 +405,6 @@ class IsmnFile(object):
 
         if load_data:
             self.load_data()
-
 
     def __getitem__(self, item):
         return self.metadata[item]
@@ -382,7 +422,7 @@ class IsmnFile(object):
             elif self.file_type == 'header_values':
                 self._read_format_header_values()
             else:
-                logger.warning("Unknown file type: {}".format(self.filename))
+                logger.warning(f"Unknown file type: {self.file_path}")
 
     def read_data(self):
         """
@@ -412,13 +452,12 @@ class IsmnFile(object):
             self.metadata = self._get_metadata_header_values()
             self.file_type = 'header_values'
         else:
-            logger.warning(f"Unknown file type: {self.subpath} in {self.archive}")
+            logger.warning(f"Unknown file type: {self.file_path} in {self.archive}")
 
         if self.static_meta is None:
             self.static_meta = self._get_static_metadata_from_csv()
 
         self.metadata.update(self.static_meta)
-
 
     def _get_static_metadata_from_csv(self):
         """
@@ -430,14 +469,11 @@ class IsmnFile(object):
         static_meta : OrderedDict
             Dictionary of static metadata
         """
-        with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
-            filename = extract_from_archive(self.archive, s, tempdir)
+        csv = self.archive.find_files(self.file_path.parent, '*.csv')
+        assert len(csv) == 1, f"Expected 1 csv file for station, found {len(csv)}"
+        static_meta = StaticMetaFile(self.archive, csv[0]).read_metadata()
 
-            with io.open(filename, mode='r', newline=None) as f:
-                header = f.readline()
-        csv_path = glob.glob(os.path.join(os.path.dirname(self.filename), '*.csv'))
-        assert len(csv_path) == 1, "More than 1 csv file found in path"
-        return StaticMetaFile(csv_path[0]).read_csv()
+        return static_meta
 
     def _get_metadata_ceop_sep(self):
         """
@@ -505,7 +541,6 @@ class IsmnFile(object):
 
         return metadata
 
-
     def _get_metadata_from_file(self, delim='_'):
         """
         Read first line of file and split filename.
@@ -519,24 +554,21 @@ class IsmnFile(object):
 
         Returns
         -------
-        header_elements : list
+        header_elements : list[str]
             First line of file split into list
-        file_basename_elements : list
+        file_basename_elements : list[str]
             File basename without path split by 'delim'
         """
-        if self.zip:
+        if self.archive.zip:
             with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
-                filename = extract_from_archive(
-                    self.archive, os.path.join(self.subpath, self.filename), tempdir)
+                filename = self.archive.extract_file(self.file_path, tempdir)
 
-                assert len(filename) == 0, "Too many files extracted"
-
-                with io.open(filename[0], mode='r', newline=None) as f:
+                with filename.open(mode='r', newline=None) as f:
                     header = f.readline()
         else:
-            filename = os.path.join(self.archive, self.subpath, self.filename)
+            filename = self.archive.path / self.file_path
 
-            with io.open(filename, mode='r', newline=None) as f:
+            with filename.open(mode='r', newline=None) as f:
                 header = f.readline()
 
         header_elements = header.split()
@@ -582,24 +614,30 @@ class IsmnFile(object):
         data : pandas.DataFrame
             Time series.
         """
-        data = pd.read_csv(self.filename, skiprows=skiprows, usecols=usecols,
-                           names=names, delim_whitespace=True,
-                           parse_dates=[[0, 1]])
+        readf = lambda f: pd.read_csv(f, skiprows=skiprows, usecols=usecols,
+                                      names=names, delim_whitespace=True,
+                                      parse_dates=[[0, 1]])
+        if self.archive.zip:
+            with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
+                filename = self.archive.extract_file(self.file_path, tempdir)
+                data = readf(filename)
+        else:
+            data = readf(self.archive.path / self.file_path)
 
         data.set_index('date_time', inplace=True)
 
         return data
 
 
-def usecase_file():
-    path = "/media/wolfgang/Windows/temp/ismndata/testdata_ceop/FMI/SAA111/FMI_FMI_SAA111_sm_0.050000_0.050000_5TE_20101001_20201005.stm"
-    nodat = IsmnFile(path, load_data=False)
-    dat = IsmnFile(path, load_data=True)
-    d2 = nodat.load_data()
-    d1 = dat.load_data()
+def usecase_file_zip():
+    path = r"C:\Temp\delete_me\ismn\testdata_ceop.zip"
+    archive = IsmnArchive(path)
+    f = IsmnFile(archive, file_path='FMI\SAA111\FMI_FMI_SAA111_sm_0.050000_0.050000_5TE_20101001_20201005.stm',
+                     load_data=False)
+    d2 = f.load_data()
 
 def usecase_coll():
-    path = "/media/wolfgang/Windows/temp/ismndata/testdata_ceop"
+    path = r"C:\Temp\delete_me\ismn\testdata_ceop"
     coll = IsmnFileCollection(path, load_data=False)
     nets = coll.get_networks()
     stats = coll.get_stations(None)
@@ -607,7 +645,8 @@ def usecase_coll():
 
 
 if __name__ == '__main__':
-    usecase_coll()
+    usecase_file_zip()
+
 
     coll = IsmnFileCollection(r"C:\Temp\delete_me\ismn\testdata_ceop")
     coll.get_networks()
