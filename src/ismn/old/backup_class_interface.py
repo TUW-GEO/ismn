@@ -83,7 +83,7 @@ class NetworkCollection(object):
     -------
     add_network(name)
         Add network to collection.
-    get_sensors(network=None, station=None, variable=None, depth=None)
+    iter_sensors(network=None, station=None, variable=None, depth=None)
         Get all sensors for a specific network and/or station and/or
         variable and/or depth.
     get_nearest_station(lon, lat, max_dist=np.inf)
@@ -232,7 +232,7 @@ class Network(object):
         Add station to network.
     remove_station(name)
         Remove station from network.
-    get_stations(variable=None, depth=None)
+    iter_stations(variable=None, depth=None)
         Get all stations having at least one sensor observing
         a specific variable and/or sensing depth.
     n_stations()
@@ -374,7 +374,7 @@ class Station(object):
         Add sensor to station.
     remove_sensor(name)
         Remove sensor from station.
-    get_sensors(variable=None, depth=None)
+    iter_sensors(variable=None, depth=None)
         Get all sensors for variable and/or depth information.
     n_sensors()
         Number of sensors.
@@ -608,9 +608,9 @@ class IsmnFileCollection(object):
     -------
     get_networks()
         Get networks from ISMN file collection.
-    get_stations(network=None)
+    iter_stations(network=None)
         Get stations from ISMN file collection.
-    get_sensors(self, network=None, station=None)
+    iter_sensors(self, network=None, station=None)
         Get sensors from ISMN file collection.
     """
 
@@ -746,7 +746,7 @@ class IsmnFile(object):
         Load data from file.
     read_data()
         Read data in file.
-    _read_metadata()
+    read_metadata()
         Read metadata from file name and first line of file.
     _get_metadata_ceop_sep()
         Get metadata in the file format called CEOP in separate files.

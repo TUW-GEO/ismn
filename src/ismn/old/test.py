@@ -15,6 +15,135 @@ import numpy as np
 
 filepath= r"C:\Temp\delete_me\ismn\Data_separate_files_20101001_20201005_5712_GMIw_20201005.zip"
 
+
+class NetworkCollection():
+
+    def __init__(self, networks: list = None):
+        """
+        A network collection contains multiple networks and a grid with all
+        stations for spatial searches.
+
+        Parameters
+        ----------
+        networks: list[Network], optional (default: None)
+            A list of Network objects that create the (initial) collection.
+        load_data : bool, optional (default: True)
+            Load and keep ismn data into memory as soon as possible. Accessing
+            already loaded data is faster than re-loading.
+        """
+        self.networks = {}
+
+        if networks is not None:
+            for net in networks:
+                self.networks[net.name] = net
+
+        self.grid = None
+        self._update_grid()
+
+    def iter_networks(self):
+        # iterate over current networks
+        for name, net in self.networks.items():
+            yield net
+
+    def _update_grid(self):
+        # build grid for current networks
+        lons, lats = [], []
+        for net in self.iter_networks():
+            net_lons, net_lats = net.coords
+            lons += net_lons
+            lats += net_lats
+
+        self.grid = BasicGrid(lons, lats)
+
+    @classmethod
+    def from_filelist(self, filelist, load_data=False):
+        """
+        Create network collection from previously loaded IsmnFileCollection.
+
+        Parameters
+        ----------
+        filelist : pd.DataFrame
+            DataFrame that contains the files to read.
+            As in IsmnFileCollection.files or as returned by the filter functions.
+        load_data : bool, optional (default: False)
+            Load data into memory for all networks
+
+        Returns
+        -------
+
+        """
+        networks = {}
+        points = []  # idx, lon, lat
+
+        for idx, row in filelist.iterrows():
+            f = row['filehandler']
+
+            if load_data:
+                f.load_data()
+
+            nw_name, st_name, se_name = f['network'].val, f['station'].val, f['sensor'].val
+
+            if nw_name not in networks:
+                networks[nw_name] = Network(nw_name)
+
+            if st_name not in networks[nw_name].stations:
+                networks[nw_name].add_station(st_name,
+                                              f['longitude'].val,
+                                              f['latitude'].val,
+                                              f['elevation'].val)
+                points.append((idx, f['longitude'].val, f['latitude'].val))
+
+            if se_name not in networks[nw_name].stations[st_name].sensors:
+                networks[nw_name].stations[st_name]. \
+                    add_sensor(se_name, f['variable'].val, f['variable'].depth, f)
+
+        points = np.array(points)
+
+        self.networks = networks
+        # self.grid_lut = points[:,0]
+        self.grid = BasicGrid(points[:, 1], points[:, 2])  # todo: could use subset and create grid for full filelist?
+
+    def add_network(self, network):
+        """
+        Add another network to the collection.
+
+        Parameters
+        ----------
+        network : Network
+            Network to add, must not exist in collection
+        """
+        if network.name in self.networks.keys():  # todo: or warn?
+            raise ValueError("Network {network} already exists in collection.")
+
+        self.networks[network.name] = network
+
+        self._update_grid()
+
+@filelist
+def filter_col_network(self, network):
+    """
+    Filter the file list for files from passed network(s).
+
+    Parameters
+    ----------
+    network : list or str
+        Name of the network to filter file list for
+
+    Returns
+    -------
+    filtered_list : pd.DataFrame
+        The filtered original data frame.
+    """
+
+    network = np.atleast_1d(network)
+    net_in_coll = np.unique(self.files['network'].values)
+    net_not_found = network[~np.in1d(network, net_in_coll)]
+    if any(net_not_found):
+        ISMNError(f"Network(s) not found: {net_not_found.tolist()}")
+    filtered_filelist = self.files.loc[np.isin(self.files['network'], network)]
+
+    return filtered_filelist
+
 def walk_zipfile():
     root_path, dirs, files = [], [], []
     with zipfile.ZipFile(filepath) as zip:

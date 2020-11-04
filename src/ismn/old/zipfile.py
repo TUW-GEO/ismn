@@ -62,7 +62,7 @@ class IsmnFile(object):
         Load data from file.
     read_data()
         Read data in file.
-    _read_metadata()
+    read_metadata()
         Read metadata from file name and first line of file.
     _get_metadata_ceop_sep()
         Get metadata in the file format called CEOP in separate files.

@@ -20,10 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import logging
-import numpy as np
-from pygeogrids.grids import BasicGrid
+from collections import Sequence
 
+from ismn.tables import *
+from pygeogrids import BasicGrid
+
+import warnings
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -34,198 +37,6 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-
-variable_lookup = {'sm': 'soil_moisture',
-                   'ts': 'soil_temperature',
-                   'su': 'soil_suction',
-                   'p': 'precipitation',
-                   'ta': 'air_temperature',
-                   'fc': 'field_capacity',
-                   'wp': 'permanent_wilting_point',
-                   'paw': 'plant_available_water',
-                   'ppaw': 'potential_plant_available_water',
-                   'sat': 'saturation',
-                   'si_h': 'silt_fraction',
-                   'sd': 'snow_depth',
-                   'sa_h': 'sand_fraction',
-                   'cl_h': 'clay_fraction',
-                   'oc_h': 'organic_carbon',
-                   'sweq': 'snow_water_equivalent',
-                   'tsf': 'surface_temperature',
-                   'tsfq': 'surface_temperature_quality_flag_original'}
-
-
-class NetworkCollection(object):
-
-    """
-    A hierarchical description of Networks, Stations and Sensors
-    derived from an IsmnFileCollection.
-
-    Parameters
-    ----------
-    file_collection : IsmnFileCollection
-        Collection of ISMN files described as IsmnFileCollection.
-
-    Attributes
-    ----------
-    file_collection : IsmnFileCollection
-        File collection.
-    networks : dict of Network
-        Networks.
-    grid : pygeogrids.BasicGrid
-        Latitude/longitude coordinates of stations.
-    grid_lut : numpy.ndarray
-        Look-up table between grid point indices and file index.
-
-    Methods
-    -------
-    add_network(name)
-        Add network to collection.
-    get_sensors(network=None, station=None, variable=None, depth=None)
-        Get all sensors for a specific network and/or station and/or
-        variable and/or depth.
-    get_nearest_station(lon, lat, max_dist=np.inf)
-        Get nearest station for given longitude/latitude coordinates.
-    """
-
-    def __init__(self, file_collection):
-
-        self.file_collection = file_collection
-        self.networks = {}
-
-        lon = []
-        lat = []
-        idx = []
-
-        for f_id, f in self.file_collection.files.items():
-            nw_name = f.metadata['network']
-            st_name = f.metadata['station']
-            se_name = f.metadata['sensor']
-
-            if nw_name not in self.networks:
-                self.add_network(nw_name)
-
-            if st_name not in self.networks[nw_name].stations:
-                self.networks[nw_name].add_station(
-                    st_name, f.metadata['longitude'], f.metadata['latitude'],
-                    f.metadata['elevation'])
-                idx.append(f_id)
-                lon.append(f.metadata['longitude'])
-                lat.append(f.metadata['latitude'])
-
-            if se_name not in self.networks[nw_name].stations[st_name].sensors:
-                self.networks[nw_name].stations[st_name].add_sensor(
-                    se_name, f.metadata['variable'], f.metadata['depth'], f)
-
-        self.grid = BasicGrid(lon, lat)
-        self.grid_lut = np.array(idx)
-
-    @classmethod
-    def from_archive(cls, data_path, load_data=False):
-        """
-        Create a network collection for given file path.
-
-        Parameters
-        ----------
-        data_path : str
-            Path to data.
-        load_data : bool, optional
-            Load data while reading metadata (default: False)
-            Attention: Can be slow for a large number of files.
-
-        Returns
-        -------
-        nwc : NetworkCollection
-            Metadata and data (if loaded) from in situ data.
-        """
-        fc = IsmnFileCollection(data_path, load_data)
-        return cls(fc)
-
-    def add_network(self, name):
-        """
-        Add network to collection.
-
-        Parameters
-        ----------
-        name : str
-            Network name.
-        """
-        if name not in self.networks:
-            self.networks[name] = Network(name)
-        else:
-            logger.warning('Network already exists: {}'.format(name))
-
-    def get_sensors(self, network=None, station=None, variable=None,
-                    depth=None):
-        """
-        Yield all sensors for a specific network and/or station and/or
-        variable and/or depth.
-
-        Parameters
-        ----------
-        network : str, optional
-            Network name (default: None).
-        station : str, optional
-            Station name (default: None).
-        variable : str, optional
-            Variable name (default: None).
-        depth : Depth, optional
-            Sensing depth (default: None).
-
-        Yield
-        -----
-        sensor : Sensor
-            Sensor.
-        """
-        if depth is not None:
-            d = Depth(depth[0], depth[1])
-        else:
-            d = Depth(-np.inf, np.inf)
-
-        for n in self.networks.values():
-            if network not in [None, n.name]:
-                continue
-            for st in n.stations.values():
-                if station not in [None, st.name]:
-                    continue
-                for se in st.sensors.values():
-                    if (variable not in [None, se.variable] and
-                            se.depth.enclose(d)):
-                        continue
-
-                    yield se
-
-    def get_nearest_station(self, lon, lat, max_dist=np.inf):
-        """
-        Get nearest station for given longitude/latitude coordinates.
-
-        Parameters
-        ----------
-        lon : float
-            Longitude coordinate.
-        lat : float
-            Latitude coordinate.
-        max_dist : float, optional
-            Maximum search distance (default: numpy.inf).
-
-        Returns
-        -------
-        station : Station
-            Station.
-        dist : float
-            Distance in meter.
-        """
-        gpi, dist = self.grid.find_nearest_gpi(lon, lat, max_dist)
-
-        if dist != np.inf:
-            idx = self.grid_lut[gpi]
-            f = self.file_collection.files[idx]
-            station = self.networks[f.metadata['network']].stations[
-                f.metadata['station']]
-        else:
-            station = None
-
-        return station, dist
 
 
 class Network(object):
@@ -251,7 +62,7 @@ class Network(object):
         Add station to network.
     remove_station(name)
         Remove station from network.
-    get_stations(variable=None, depth=None)
+    iter_stations(variable=None, depth=None)
         Get all stations having at least one sensor observing
         a specific variable and/or sensing depth.
     n_stations()
@@ -260,7 +71,20 @@ class Network(object):
 
     def __init__(self, name):
         self.name = name
-        self.stations = {}
+        self.stations = {} # todo. using station dicts means that duplicate station names are not possible
+
+    @property
+    def coords(self) -> (list, list):
+        lons, lats = [], []
+        for name, stat in self.stations.items():
+            lons.append(stat.lon)
+            lats.append(stat.lat)
+
+        return lons, lats
+
+    @property
+    def grid(self):
+        return BasicGrid(*self.coords)
 
     def add_station(self, name, lon, lat, elev, static_variables=None):
         """
@@ -281,7 +105,7 @@ class Network(object):
         """
         if name not in self.stations:
             self.stations[name] = Station(name, lon, lat, elev,
-                                          static_variables)
+                                          static_variables=static_variables)
         else:
             logger.warning('Station already exists: {}'.format(name))
 
@@ -299,7 +123,7 @@ class Network(object):
         else:
             logger.warning('Station not found {}'.format(name))
 
-    def get_stations(self, variable=None, depth=None):
+    def iter_stations(self, variable=None, depth=None, filter_dict=None):
         """
         Get all stations having at least one sensor observing
         a specific variable and/or sensing depth.
@@ -308,7 +132,7 @@ class Network(object):
         ----------
         variable : str, optional
             Observed variable.
-        depth : list, optional
+        depth : Depth, optional
             Sensing depth.
 
         Yields
@@ -316,17 +140,20 @@ class Network(object):
         station : Station
             Station.
         """
-        if depth is not None:
-            d = Depth(depth[0], depth[1])
-        else:
-            d = Depth(-np.inf, np.inf)
+        if depth is None:
+            depth = Depth(-np.inf, np.inf)
 
         for station in self.stations.values():
             flag = False
             for sensor in station.sensors.values():
-                if (variable in [None, sensor.variable] and
-                        sensor.depth.enclose(d)):
+                if (variable in [None, sensor.variable]) and depth.encloses(sensor.depth):
                     flag = True
+                if flag and filter_dict:
+                    f = sensor.filehandler
+                    if f is None:
+                        warnings.warn("Filehandler is None, can't filter by metadata")
+                    flag = sensor.filehandler.check_metadata(
+                        variable, depth.start, depth.end, filter_static_vars=filter_dict)
             if flag:
                 yield station
 
@@ -393,7 +220,7 @@ class Station(object):
         Add sensor to station.
     remove_sensor(name)
         Remove sensor from station.
-    get_sensors(variable=None, depth=None)
+    iter_sensors(variable=None, depth=None)
         Get all sensors for variable and/or depth information.
     n_sensors()
         Number of sensors.
@@ -406,6 +233,43 @@ class Station(object):
         self.elev = elev
         self.static_variables = static_variables
         self.sensors = {}
+
+    def get_variables(self):
+        """
+        Get variables measured by all sensors at station.
+
+        Returns
+        -------
+        variables : list
+            List of variables that are observed.
+        """
+        variables = []
+        for sensor in self.sensors.values():
+            if sensor.variable not in variables:
+                variables.append(sensor.variable)
+
+        return variables
+
+    def get_depths(self, variable=None):
+        """
+        Get depths of sensors measuring at station.
+
+        Parameters
+        ----------
+        variable : str, optional (default: None)
+            Only consider sensors measuring this variable.
+
+        Returns
+        -------
+        variables : list
+            List of variables that are observed.
+        """
+        depths = []
+        for sensor in self.sensors.values():
+            if sensor.eval(variable=variable):
+                depths.append(sensor.depth)
+
+        return depths
 
     def add_sensor(self, instrument, variable, depth, filehandler):
         """
@@ -445,7 +309,7 @@ class Station(object):
         else:
             logger.warning('Sensor not found: {}'.format(name))
 
-    def get_sensors(self, variable=None, depth=None):
+    def iter_sensors(self, variable=None, depth=None):
         """
         Get all sensors for variable and/or depth information.
 
@@ -522,6 +386,52 @@ class Sensor(object):
         self.depth = depth
         self.filehandler = filehandler
 
+    def read_data(self):
+        """
+        Load data from filehandler for sensor.
+        """
+        if self.filehandler is None:
+            warnings.warn(f"No filehandler found for sensor {self.name}")
+        else:
+            return self.filehandler.read_data()
+
+    def eval(self, variable=None, depth=None, filter_meta_dict=None):
+        """
+        Evaluate whether the sensor complies with the passed metadata requirements.
+
+        Parameters
+        ----------
+        variable : str, optional (default: None)
+            Check if the variable name matches
+        depth : Depth, optional (default: None)
+            Check if the passed depth encloses the sensor depth.
+        filter_meta_dict : dict, optional (default: None)
+            Additional metadata keys and values for which the file list is filtered
+            e.g. {'lc_2010': 10} to filter for a landcover class.
+
+        Returns
+        -------
+        flag : bool
+            Indicates success.
+        """
+
+        if depth is None:
+            depth = Depth(-np.inf, np.inf)
+
+        flag = False
+
+        if (variable in [None, self.variable]) and depth.encloses(self.depth):
+            flag = True
+
+        if flag and filter_meta_dict:
+            if self.filehandler is None:
+                warnings.warn("Filehandler is None, can't filter by metadata")
+            else:
+                # checks also if the metadata in file matches
+                flag = self.filehandler.check_metadata(
+                    variable, depth.start, depth.end, filter_static_vars=filter_meta_dict)
+
+        return flag
 
 class Depth(object):
 
@@ -553,12 +463,20 @@ class Depth(object):
     def __init__(self, start, end):
         self.start = start
         self.end = end
+
         self.extent = self.end - self.start
+
+        if self.extent < 0:
+            raise ValueError("End can not be smaller than start")
 
         if self.start == self.end:
             self.is_profile = False
         else:
             self.is_profile = True
+
+    def __str__(self):
+        # todo: could add a unit to depth?
+        return f"{self.start}_{self.end}[m]"
 
     def __eq__(self, other):
         """
@@ -574,16 +492,37 @@ class Depth(object):
         flag : bool
             True if both depths are equal, False otherwise.
         """
-        if self.start == other.start and self.end == other.end:
+        if (self.start == other.start) and (self.end == other.end):
             flag = True
         else:
             flag = False
 
         return flag
 
-    def enclose(self, other):
+    def encloses(self, other):
         """
-        Test if other Depth encloses given Depth.
+        Test if this Depth encloses other Depth.
+
+        Parameters
+        ----------
+        other : Depth
+            Depth.
+
+        Returns
+        -------
+        flag : bool
+            True if other depth surrounds given depth, False otherwise.
+        """
+        if (self.start <= other.start) and (self.end >= other.end):
+            flag = True
+        else:
+            flag = False
+
+        return flag
+
+    def enclosed(self, other):
+        """
+        Test if other Depth encloses this Depth.
 
         Parameters
         ----------
@@ -601,3 +540,45 @@ class Depth(object):
             flag = False
 
         return flag
+
+class StaticVariable():
+    """
+    Represents a static variable for a ismn time series
+    """
+    def __init__(self, name, values:Sequence, depths:Sequence=None):
+
+        self.name = name
+        self.values = np.atleast_1d(values)
+
+        if depths is not None:
+            depths = np.atleast_1d(depths)
+            assert len(depths) == len(values), "One value per depth expected"
+
+        self.depths = depths
+
+    def as_struct(self):
+        #return variable in old format (struct array)
+        vals, dtypes = [], []
+
+        for v, d in zip(self.values, self.depths):
+            dtypes.append((d, type(v)))
+            vals.append(v)
+
+        return np.array(vals, dtype=dtypes)
+
+    def value_for_depth(self, depth_from, depth_to=None):
+        """
+        Get the respective value for the passed depth range.
+        If no depth_to is passed, only depth from is used.
+        One best matching value is found via: TODO:
+        """
+        pass
+
+
+if __name__ == '__main__':
+    net = Network('test')
+    for name, num in [('one', 1), ('two', 2), ('three', 3)]:
+        net.add_station(name, num, num, num)
+        net.stations[name].add_sensor('sensor_name', 'instrument', Depth(0,1), None)
+    net.stations['one'].sensors['sensor_name_instrument_0.000000_1.000000'].eval()
+    col = NetworkCollection([net])

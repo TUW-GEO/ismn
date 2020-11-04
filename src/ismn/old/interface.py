@@ -114,7 +114,7 @@ class ISMN_station(object):
         returns the variables measured at this station
     get_depths(variable)
         get the depths in which a variable was measured at this station
-    get_sensors(variable,depth_from,depth_to)
+    iter_sensors(variable,depth_from,depth_to)
         get the sensors for the given variable, depth combination
     read_variable(variable,depth_from=None,depth_to=None,sensor=None)
         read the data for the given parameter combination

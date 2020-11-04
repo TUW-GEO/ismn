@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from ismn.archive import IsmnArchive
+from ismn.archive import IsmnRoot
 from tempfile import mkdtemp
 
 def test_archive(path):
-    archive = IsmnArchive(path)
+    archive = IsmnRoot(path)
     cont = archive.scan()
     csvs = archive.find_files('FMI/SAA111')
 
 def test_zip_archive(path):
-    archive = IsmnArchive(path)
+    archive = IsmnRoot(path)
     cont = archive.scan()
     fmi_csvs = archive.find_files('FMI/SAA111')
     all_csvs = archive.find_files(None, '*.csv')

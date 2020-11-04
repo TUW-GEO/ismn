@@ -37,7 +37,7 @@ Updated on Mar 15, 2020
 
 import matplotlib
 matplotlib.use('Agg')
-from ismn import interface
+from ismn.old import interface
 import os
 import sys
 import datetime

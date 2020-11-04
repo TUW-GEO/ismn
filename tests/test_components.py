@@ -30,9 +30,7 @@ import unittest
 
 import numpy as np
 
-from ismn.class_interface import IsmnFile, IsmnFileCollection
-from ismn.class_interface import Network, Station, Sensor, Depth
-from ismn.class_interface import create_network_collection
+from ismn.components import Network, Station, Sensor, Depth
 
 rpath = os.path.join(os.path.dirname(__file__), 'test_data')
 
@@ -202,7 +200,7 @@ class NetworkCollectionTest(unittest.TestCase):
         """
         Test accessing sensor metadata and data.
         """
-        for sensor in self.nwc.get_sensors():
+        for sensor in self.nwc.iter_sensors():
             assert sensor.instrument == 'Cosmic-ray-Probe'
 
     def test_get_nearest_station(self):
@@ -267,10 +265,10 @@ def test_IsmnFileCollection(path):
     nw = fc.get_networks()
     assert len(nw) == 1
 
-    st = fc.get_stations()
+    st = fc.iter_stations()
     assert len(st) == 2
 
-    sen = fc.get_sensors()
+    sen = fc.iter_sensors()
     assert len(sen) == 2
 
     assert len(fc.files) == 2
