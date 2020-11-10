@@ -3,7 +3,7 @@ from ismn.readers import IsmnFile
 from tempfile import TemporaryDirectory, gettempdir
 import zipfile as zf
 import numpy as np
-from ismn.utils import scan_archive
+from ismn.old.utils import scan_archive
 
 
 import os

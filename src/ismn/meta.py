@@ -1,21 +1,42 @@
 # -*- coding: utf-8 -*-
 from ismn.components import Depth
+import numpy as np
+from typing import Optional, List, Any
 
 class MetaVar():
-    def __init__(self, name, val, depth:Depth=None):
+    """
+    Meta Variable is a simple combination of a name, a value
+    and a depth (optional)
+    """
+    def __init__(self, name, val, depth: Depth = None):
         self.name = name
         self.val = val
         self.depth = depth
 
+    def __str__(self) -> str:
+        return f"{self.name} ({str(self.depth) if self.depth else 'no depth'}): {self.val}"
+
 class MetaData():
-    def __init__(self, vars:list=None):
-        if vars is None: # not a dict, because multiple meta vars with same name possible
+    """
+    MetaData contains multiple MetaVars as a list (there can be multiple
+    vars with the same name, e.g. for different depths)
+    """
+    def __init__(self, vars: List[MetaVar] = None):
+        """
+        Parameters
+        ----------
+        vars : List[MetaVar]
+            List of MetaVars that build the MetaData
+        """
+        if vars is None:
             self.metadata = []
+            # not a dict, because multiple meta vars with same name possible
         else:
             self.metadata = vars
 
-    def __getitem__(self, item):
-        items = [v for v in self.metadata if v.name == item]
+    def __getitem__(self, name:str):
+        # get all variables with the selected name
+        items = [v for v in self.metadata if v.name == name]
         if len(items) == 0:
             return None
         elif len(items) == 1:
@@ -23,7 +44,7 @@ class MetaData():
         else:
             return items
 
-    def __repr__(self):
+    def __str__(self):
         names, depths = [], []
         for var in self.metadata:
             names.append(var.name)
@@ -35,36 +56,83 @@ class MetaData():
         return "\n".join([f"{name} ({depth})" for name, depth in zip(names, depths)])
 
     def keys(self) -> list :
+        # get only variable names
         keys = []
         for var in self.metadata:
             keys.append(var.name)
         return keys
 
     @classmethod
-    def from_dict(cls, data:dict):
+    def from_dict(cls, data:dict) -> 'MetaData':
+        # Build Metadata from dict
         vars = []
         for k, v in data.items():
             vars.append(MetaVar(k, v))
         return cls(vars)
     
-    def merge(self, other:'MetaData', inplace=False):
+    def merge(self, other:'MetaData', inplace=False) -> Optional['MetaData']:
+        # Merge two metadata sets
         if inplace:
             self.metadata += other.metadata
         else:
             vars = self.metadata + other.metadata
             return MetaData(vars)
 
-    def add(self, name, val, depth:Depth=None):
+    def add(self, name, val, depth: Depth = None):
+        """
+        Create a new MetaVar and add it to this collection.
+
+        Parameters
+        ----------
+        name : str
+            Name of the variable
+        val : Any
+            Value of the variable
+        depth : Depth, optional (default: None)
+            A depth that is asssigned to the variable.
+        """
         self.metadata.append(MetaVar(name, val, depth))
 
-    def get_meta_for_depth(self, depth_from, depth_to=None):
-        # go through vars and read those that have no depth or match best to passed d.
-        # also get metadata withut depth assigned
-        # sensor depth is assigned to sensor"
-        # todo: implement method to return metadataonly for specific depth range
-        # find a way to handle to select a best matching depth.
-        NotImplementedError
-        
+    def best_meta_for_depth(self, depth):
+        """
+        For meta variables that have a depth assigned, find the ones that match
+        best (see func: perc_overlap()) to the passed depth.
+
+        Parameters
+        ----------
+        depth : Depth
+            Reference depth, e.g. the depth of a sensor.
+
+        Returns
+        -------
+        best_vars : dict
+            A dict of variable names and a single variable for each name that
+            was found to match best to the passed depth.
+            Any variables that have a depth assigned which does not overlap
+            with the passed depth are excluded here!
+        """
+        best_vars = {}
+        for varname in self.keys():
+            var = self[varname]
+            if isinstance(var, list):
+                best_p = -np.inf
+                best_var = var[0]
+                for v in var:
+                    p = depth.perc_overlap(v.depth)
+                    if p > best_p:
+                        best_p = p
+                        best_var = v
+                best_vars[varname] = best_var
+            else:
+                if var.depth is None: # if var has no depth, use it
+                    best_vars[varname] = var
+                elif depth.overlap(var.depth): # need overlap
+                    best_vars[varname] = var
+                else:
+                    pass # ignore var only if there is a depth but no overlap
+
+        return best_vars
+
     
 if __name__ == '__main__':
     var1 = MetaVar('station', 'bla1')
@@ -74,4 +142,5 @@ if __name__ == '__main__':
     var5 = MetaVar('sand_fraction', 1, Depth(0.5, 1.))
 
     meta = MetaData([var1, var2, var3, var4, var5])
+    meta.best_meta_for_depth(Depth(0,0.5))
 

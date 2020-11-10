@@ -28,14 +28,13 @@ class IsmnRoot():
 
     def __init__(self, path):
         """
-        Connection to the pure zip/extracted zip archive downloaded from the
-        ismn website. This class only handles file accesses requests made by the
-        readers and is different to IsmnFileCollection, which
-        organises the data components (networks, stations, sensors).
+        Connection to the pure zip resp. extracted zip archive downloaded from the
+        ismn website. This class only handles file accesses / requests made by the
+        readers, findes files in path and extracts data to temp folders for reading.
 
         Parameters
         ----------
-        path : str
+        path : str or Path
             Path to the downloaded zip file or the extracted zip
             directory.
         """
@@ -50,20 +49,22 @@ class IsmnRoot():
         self.open()
 
     @property
-    def isopen(self):
+    def isopen(self) -> bool:
+        # if data is a zipfile, this indicates if the zip is opened
         return self.__isopen
 
     @property
-    def root_dir(self):
+    def root_dir(self) -> Path:
+        # the parent directory where the data is stored
         if self.zip:
             return self.path.parent
         else:
             return self.path
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{'Zip' if self.zip else 'Extracted'} Archive: {str(self.path)}"
 
-    def __contains__(self, filepath):
+    def __contains__(self, filepath) -> bool:
         """ Check if files exists in archive """
         if self.zip:
             filepath = PurePosixPath(filepath)

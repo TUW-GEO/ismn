@@ -22,9 +22,10 @@
 
 from collections import Sequence
 
-from ismn.tables import *
+
 from pygeogrids import BasicGrid
 
+import numpy as np
 import warnings
 import logging
 
@@ -35,8 +36,6 @@ ch.setLevel(logging.INFO)
 formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-
-
 
 
 class Network(object):
@@ -55,6 +54,10 @@ class Network(object):
         Network name.
     stations : dict of Station
         Stations belonging to the network.
+    coords : list, list
+        Station lats and lons
+    grid : BasicGrid
+        Staton locations as grid
 
     Methods
     -------
@@ -71,10 +74,12 @@ class Network(object):
 
     def __init__(self, name):
         self.name = name
-        self.stations = {} # todo. using station dicts means that duplicate station names are not possible
+        self.stations = {}
+        # todo: using station dicts means that duplicate station names are not possible
 
     @property
     def coords(self) -> (list, list):
+        # get lists of lats and lons for all stations in the network
         lons, lats = [], []
         for name, stat in self.stations.items():
             lons.append(stat.lon)
@@ -84,11 +89,12 @@ class Network(object):
 
     @property
     def grid(self):
+        # get grid for all stations in network
         return BasicGrid(*self.coords)
 
     def add_station(self, name, lon, lat, elev, static_variables=None):
         """
-        Add station to network.
+        Add a station to the network.
 
         Parameters
         ----------
@@ -211,11 +217,15 @@ class Station(object):
         Latitude coordinate.
     elev : float
         Elevation information.
-    static_variables : list, optional
-        Static variable information (default: None).
+    static_variables : list
+        Static variable information
 
     Methods
     -------
+    get_variables()
+        Get variables measured by all sensors at station.
+    get_depths(variable)
+        Get depths of sensors measuring at station.
     add_sensor(instrument, variable, depth, filehandler)
         Add sensor to station.
     remove_sensor(name)
@@ -261,8 +271,8 @@ class Station(object):
 
         Returns
         -------
-        variables : list
-            List of variables that are observed.
+        depths : list
+            List of depths of all sensors that measure the passed variable.
         """
         depths = []
         for sensor in self.sensors.values():
@@ -309,29 +319,27 @@ class Station(object):
         else:
             logger.warning('Sensor not found: {}'.format(name))
 
-    def iter_sensors(self, variable=None, depth=None):
+    def iter_sensors(self, variable=None, depth=None, **kwargs):
         """
         Get all sensors for variable and/or depth information.
 
         Parameters
         ----------
         variable : str, optional
-            Observed variable.
-        depth : list, optional
-            Sensing depth.
+            Observed variabl e.
+        depth: Depth, optinal (default: None)
+            Yield only sensors that are enlosed by this depth.
+        kwargs:
+            All other kwargs as used in the sensor.eval() function to
+            evaluate the sensor.
 
         Yields
         ------
         sensors : Sensor
-            Sensor.
+            Sensor that measure the passsed var within the passed depth.
         """
-        if depth is not None:
-            d = Depth(depth[0], depth[1])
-        else:
-            d = Depth(-np.inf, np.inf)
-
         for sensor in self.sensors.values():
-            if variable in [None, sensor.variable] and sensor.depth.enclose(d):
+            if sensor.eval(variable, depth, **kwargs):
                 yield sensor
 
     def n_sensors(self):
@@ -395,7 +403,8 @@ class Sensor(object):
         else:
             return self.filehandler.read_data()
 
-    def eval(self, variable=None, depth=None, filter_meta_dict=None):
+    def eval(self, variable=None, depth=None, filter_meta_dict=None,
+             check_only_sensor_depth_from=False):
         """
         Evaluate whether the sensor complies with the passed metadata requirements.
 
@@ -408,6 +417,9 @@ class Sensor(object):
         filter_meta_dict : dict, optional (default: None)
             Additional metadata keys and values for which the file list is filtered
             e.g. {'lc_2010': 10} to filter for a landcover class.
+        check_only_sensor_depth_from : bool, optional (default: False)
+            Ignores the sensors depth_to value and only checks if depth_from of
+            the sensor is in the passed depth (e.g. for cosmic ray probes).
 
         Returns
         -------
@@ -419,8 +431,13 @@ class Sensor(object):
             depth = Depth(-np.inf, np.inf)
 
         flag = False
+        
+        if check_only_sensor_depth_from:
+            d = Depth(self.depth.start, self.depth.start)
+        else:
+            d = self.depth 
 
-        if (variable in [None, self.variable]) and depth.encloses(self.depth):
+        if (variable in [None, self.variable]) and depth.encloses(d):
             flag = True
 
         if flag and filter_meta_dict:
@@ -461,6 +478,9 @@ class Depth(object):
     """
 
     def __init__(self, start, end):
+
+        # todo: could add unit to depth?
+
         self.start = start
         self.end = end
 
@@ -475,7 +495,6 @@ class Depth(object):
             self.is_profile = True
 
     def __str__(self):
-        # todo: could add a unit to depth?
         return f"{self.start}_{self.end}[m]"
 
     def __eq__(self, other):
@@ -498,6 +517,72 @@ class Depth(object):
             flag = False
 
         return flag
+
+    def perc_overlap(self, other):
+        """
+        Estimate how much 2 depths correspond.
+        1 means that the are the same, 0 means that they have an infinitely
+        small correspondence (e.g. a single layer within a range, or 2 adjacent
+        depths). -1 means that they dont overlap.
+
+        Parameters
+        ----------
+        other : Depth
+            Second depth
+
+        Returns
+        -------
+        p : float
+            Normalised overlap range
+            <0 = no overlap, 0 = adjacent, >0 = overlap, 1 = equal
+        """
+        if self == other: # same depths
+            return 1
+        else:
+            r = max([self.end, other.end]) - min([self.start, other.start])
+            # Overlapping range normalised to the overall depth range r
+            p_f = abs(self.start - other.start) / r
+            p_t = abs(self.end - other.end) / r
+            p = 1 - p_f - p_t
+
+            if p < 0:
+                p = -1
+
+        return p
+
+    def overlap(self, other, return_perc=False):
+        """
+        Check if two depths overlap, (if the start of one depth is the same as
+        the end of the other, they overlap,
+        e.g. Depth(0, 0.1) and Depth(0.1, 0.2) do overlap.
+
+        Parameters
+        ----------
+        other : Depth
+            Other Depth
+        return_perc : bool, optional (default: False)
+            Returns how much the depths overlap. See func: perc_overlap()
+
+        Returns
+        -------
+        overlap : bool
+            True if Depths overlap
+        perc_overlap: float
+            Normalised overlap.
+        """
+        other_start_encl = self.encloses(Depth(other.start, other.start))
+        other_end_encl = self.encloses(Depth(other.end, other.end))
+
+        this_start_encl = other.encloses(Depth(self.start, self.start))
+        this_end_encl = other.encloses(Depth(self.end, self.end))
+
+        overlap = any([other_start_encl, other_end_encl,
+                       this_start_encl, this_end_encl])
+
+        if return_perc:
+            return overlap, self.perc_overlap(other)
+        else:
+            return overlap
 
     def encloses(self, other):
         """
@@ -541,44 +626,3 @@ class Depth(object):
 
         return flag
 
-class StaticVariable():
-    """
-    Represents a static variable for a ismn time series
-    """
-    def __init__(self, name, values:Sequence, depths:Sequence=None):
-
-        self.name = name
-        self.values = np.atleast_1d(values)
-
-        if depths is not None:
-            depths = np.atleast_1d(depths)
-            assert len(depths) == len(values), "One value per depth expected"
-
-        self.depths = depths
-
-    def as_struct(self):
-        #return variable in old format (struct array)
-        vals, dtypes = [], []
-
-        for v, d in zip(self.values, self.depths):
-            dtypes.append((d, type(v)))
-            vals.append(v)
-
-        return np.array(vals, dtype=dtypes)
-
-    def value_for_depth(self, depth_from, depth_to=None):
-        """
-        Get the respective value for the passed depth range.
-        If no depth_to is passed, only depth from is used.
-        One best matching value is found via: TODO:
-        """
-        pass
-
-
-if __name__ == '__main__':
-    net = Network('test')
-    for name, num in [('one', 1), ('two', 2), ('three', 3)]:
-        net.add_station(name, num, num, num)
-        net.stations[name].add_sensor('sensor_name', 'instrument', Depth(0,1), None)
-    net.stations['one'].sensors['sensor_name_instrument_0.000000_1.000000'].eval()
-    col = NetworkCollection([net])

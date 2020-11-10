@@ -21,18 +21,18 @@
 # SOFTWARE.
 
 """
-This module tests the ISMN interface.
+This module tests the ISMN components.
 """
 
 import os
-import pytest
 import unittest
 
-import numpy as np
-
 from ismn.components import Network, Station, Sensor, Depth
+from pygeogrids.grids import BasicGrid
 
 rpath = os.path.join(os.path.dirname(__file__), 'test_data')
+
+from ismn.files import DataFile
 
 
 class NetworkTest(unittest.TestCase):
@@ -61,6 +61,8 @@ class NetworkTest(unittest.TestCase):
         assert self.network.stations[name].lat == 0
         assert self.network.stations[name].elev == 0
 
+        assert self.network.grid == BasicGrid([0], [0])
+
     def test_remove_station(self):
         """
         Test removing stations.
@@ -74,6 +76,21 @@ class NetworkTest(unittest.TestCase):
 
         assert self.network.n_stations() == 1
 
+    def test_iter_stations(self):
+        self.network.add_station('station1', 0, 0, 0)
+        self.network.stations['station1'].add_sensor('sens1', 'var1', Depth(0.5, 1), None)
+        self.network.stations['station1'].add_sensor('sens2', 'var1', Depth(1 ,2), None)
+
+        for s in self.network.iter_stations('var1', Depth(0 ,1)):
+            # sensor 1 applies to conditions, therefore station is found.
+            assert s.name == 'station1'
+
+        self.network.add_station('station2', 1, 1, 1)
+        self.network.stations['station2'].add_sensor('sens1', 'var1', Depth(0 ,1), None)
+        self.network.stations['station2'].add_sensor('sens2', 'var2', Depth(1 ,2), None)
+
+        for s in self.network.iter_stations('var1', Depth(0 ,0.5)):
+            raise ValueError("Found station but shouldn't ...") # this should never be reached
 
 class StationTest(unittest.TestCase):
 
@@ -83,10 +100,6 @@ class StationTest(unittest.TestCase):
         """
         self.station = Station('station1', 0, 0, 0)
 
-    def test_add_sensor(self):
-        """
-        Test adding sensors.
-        """
         name = 'sensor1'
         d = Depth(0, 0.05)
         variable = 'sm'
@@ -97,49 +110,107 @@ class StationTest(unittest.TestCase):
 
         assert self.station.sensors[se_name].variable == 'sm'
 
+        name = 'sensor2'
+        d = Depth(0, 0.1)
+        variable = 'sm2'
+
+        self.station.add_sensor(name, variable, d, None)
+
+        assert self.station.n_sensors() == 2
+
+    def test_add_sensor(self):
+        """
+        Test adding sensors.
+        """
+        name = 'sensor3'
+        d = Depth(0, 0.1)
+        variable = 'sm'
+
+        self.station.add_sensor(name, variable, d, None)
+        assert self.station.n_sensors() == 3
+
+    def test_get_variables(self):
+        """
+        Test deriving the variables of all sensors at setion
+        """
+        assert self.station.get_variables()== ['sm', 'sm2']
+
+    def test_get_depths(self):
+        """
+        Test deriving the depths of all sensors measuring a variable at station
+        """
+        assert self.station.get_depths('sm') == [Depth(0,0.05)]
+
+    def test_iter_sensors(self):
+        """
+        Test if sensor1 one is found when iteration over all sensors in 0-0.05 m.
+        """
+        for sen in self.station.iter_sensors('sm', Depth(0, 0.05),
+                                             check_only_sensor_depth_from=False):
+            assert sen.name == 'sensor1_sm_0.000000_0.050000'
+
     def test_remove_sensor(self):
         """
         Test removing sensors.
         """
-        name = 'sensor1'
-        d = Depth(0, 0.05)
-        variable = 'sm'
-        se_name = '{}_{}_{:1.6f}_{:1.6f}'.format(
-            name, variable, d.start, d.end)
-
-        d2 = Depth(0, 0.10)
-
-        self.station.add_sensor('sensor1', variable, d, None)
-        self.station.add_sensor('sensor2', variable, d2, None)
-
         assert self.station.n_sensors() == 2
 
-        self.station.remove_sensor(se_name)
+        self.station.remove_sensor('sensor2_sm2_0.000000_0.100000')
 
         assert self.station.n_sensors() == 1
 
-
 class SensorTest(unittest.TestCase):
+
+    # todo: test reading sensor metadata?
 
     def setUp(self):
         """
         Setup test data.
         """
-        instrument = 'sensor1'
-        d = Depth(0, 0.05)
-        variable = 'sm'
+        instrument = 'Cosmic-ray-Probe'
+        d = Depth(0, 0.21)
+        variable = 'soil_moisture'
         name = '{}_{}_{:1.6f}_{:1.6f}'.format(
             instrument, variable, d.start, d.end)
 
-        self.sensor = Sensor(name, instrument, variable, d)
+        filepath = os.path.join(
+            rpath, "Data_seperate_files_20170810_20180809", "COSMOS", "Barrow-ARM",
+            "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
+
+        self.sensor = Sensor(name, instrument, variable, d, DataFile(rpath, filepath))
 
     def test_sensor_attributes(self):
         """
         Test sensor attributes.
         """
-        self.sensor.instrument == 'sensor1'
-        self.sensor.variable = 'sm'
-        self.sensor.depth == Depth(0, 0.05)
+        assert self.sensor.instrument == 'Cosmic-ray-Probe'
+        assert self.sensor.variable == 'soil_moisture'
+        assert self.sensor.depth == Depth(0, 0.21)
+
+    def test_eval(self):
+        assert self.sensor.eval('soil_moisture', Depth(0,5))
+        assert self.sensor.eval('soil_moisture', Depth(0,0.21),
+                                check_only_sensor_depth_from=True)
+        assert self.sensor.eval('soil_moisture', Depth(0,0.05),
+                                check_only_sensor_depth_from=True)
+        # fails because of varname:
+        assert not self.sensor.eval('wrongname', Depth(0,0.21))
+        # fails because of depth
+        assert not self.sensor.eval('soil_moisture', Depth(0,0.05),
+                                    check_only_sensor_depth_from=False)
+
+        # test based on metadata
+        assert self.sensor.eval('soil_moisture', Depth(0,1),
+                                filter_meta_dict={'lc_2010': 210, 'climate_KG': 'ET'})
+        assert not self.sensor.eval('soil_moisture', Depth(0,1),
+                                    filter_meta_dict={'lc_2010': 999})
+
+    def test_read_data(self):
+        """ Test reading the actual data """
+        data = self.sensor.read_data()
+        assert data.index.size == 7059
+        assert data.columns.size == 3
+
 
 
 class DepthTest(unittest.TestCase):
@@ -175,108 +246,12 @@ class DepthTest(unittest.TestCase):
         Test if other depth encloses depth.
         """
         other = Depth(0, 0.05)
-        assert self.d.enclose(other)
+        assert self.d.encloses(other)
+        assert other.enclosed(self.d)
 
-        other = Depth(0, 0.02)
-        assert not self.d.enclose(other)
-
-
-class NetworkCollectionTest(unittest.TestCase):
-
-    def setUp(self):
-        """
-        Setup test data.
-        """
-        path = os.path.join(rpath, 'Data_seperate_files_20170810_20180809')
-        self.nwc = create_network_collection(path)
-
-    def test_attributes(self):
-        """
-        Test attributes.
-        """
-        assert len(self.nwc.networks) == 1
-
-    def test_get_sensors(self):
-        """
-        Test accessing sensor metadata and data.
-        """
-        for sensor in self.nwc.iter_sensors():
-            assert sensor.instrument == 'Cosmic-ray-Probe'
-
-    def test_get_nearest_station(self):
-        """
-        Test nearest station method.
-        """
-        station, dist = self.nwc.get_nearest_station(-97, 36)
-        np.testing.assert_almost_equal(station.lon, -97.4878, 4)
-        np.testing.assert_almost_equal(station.lat, 36.6054, 4)
-        np.testing.assert_almost_equal(dist, 80201.85, 2)
-
-
-class IsmnFileTest(unittest.TestCase):
-
-    def setUp(self):
-        """
-        Setup test data.
-        """
-        filename_ceop_sep = os.path.join(
-            rpath, 'format_ceop_sep', 'SMOSMANIA',
-            'SMOSMANIA_SMOSMANIA_Narbonne_sm_0.050000_0.050000_ThetaProbe-ML2X_20070101_20070131.stm')
-
-        filename_header_values = os.path.join(
-            rpath, 'format_header_values', 'SMOSMANIA',
-            'SMOSMANIA_SMOSMANIA_Narbonne_sm_0.050000_0.050000_ThetaProbe-ML2X_20070101_20070131.stm')
-
-        self.if_ceop_sep = IsmnFile(filename_ceop_sep)
-        self.if_header_values = IsmnFile(filename_header_values)
-
-    def test_metadata(self):
-        """
-        Test metadata.
-        """
-        assert self.if_ceop_sep.metadata == self.if_header_values.metadata
-
-    def test_data(self):
-        """
-        Test data.
-        """
-        data_ceop_sep = self.if_ceop_sep.read_data()
-        data_header_values = self.if_header_values.read_data()
-
-        variables = ['soil_moisture', 'soil_moisture_flag']
-
-        for variable in variables:
-            np.testing.assert_array_equal(data_ceop_sep[variable].values,
-                                          data_header_values[variable].values)
-
-
-path_c = os.path.join(rpath, 'Data_seperate_files_20170810_20180809')
-path_h = os.path.join(rpath, 'Data_seperate_files_header_20170810_20180809')
-paths = [path_c, path_h]
-
-
-@pytest.mark.parametrize("path", paths)
-def test_IsmnFileCollection(path):
-    """
-    Test IsmnFileCollection class.
-    """
-    fc = IsmnFileCollection(path)
-
-    nw = fc.get_networks()
-    assert len(nw) == 1
-
-    st = fc.iter_stations()
-    assert len(st) == 2
-
-    sen = fc.iter_sensors()
-    assert len(sen) == 2
-
-    assert len(fc.files) == 2
-
-    data = fc.files[0].read_data()
-    np.testing.assert_equal(data['soil_moisture'][0:4].values,
-                            [0.141, 0.139, 0.139, 0.140])
-
+        other = Depth(0, 0.1)
+        assert not self.d.encloses(other)
+        assert not other.enclosed(self.d)
 
 if __name__ == '__main__':
     unittest.main()
