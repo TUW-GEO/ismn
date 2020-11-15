@@ -9,19 +9,19 @@ import unittest
 
 
 from ismn.components import Depth
-from ismn.files import StaticMetaFile
+from ismn.files import StaticMetaFile, DataFile
 from pathlib import Path
 
 from ismn.tables import CSV_META_TEMPLATE
 
-rpath = Path(os.path.join(os.path.dirname(__file__), 'test_data'))
+testdata_path = Path(os.path.join(os.path.dirname(__file__), 'test_data'))
 
-# todo: test handling wen some static vars are missing in csv file?
+# todo: test handling when some static vars are missing in csv file?
 
 class StaticMetaFileTest(unittest.TestCase):
 
     def setUp(self) -> None:
-        root = rpath / "Data_seperate_files_20170810_20180809"
+        root = testdata_path / "Data_seperate_files_20170810_20180809"
         filepath = Path("COSMOS", "ARM-1", "COSMOS_COSMOS_ARM-1_static_variables.csv")
         self.file = StaticMetaFile(root, filepath)
 

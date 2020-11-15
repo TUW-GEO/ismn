@@ -377,46 +377,46 @@ class DataFile(IsmnFile):
 
         return True
 
-    def get_formatted_metadata(self, format='list'):
-        """
-        Return metadata for file in different formats such as list, dataframe,
-        dict and structured array.
-
-        Parameters
-        ----------
-        format : str, optional (default: 'list')
-            Name of the format, one of 'struct', 'dict', 'pandas', 'list'
-
-        Returns
-        -------
-        formatted_meta : Any
-            Metadata in the selected format.
-        """
-
-        if self.metadata is None:
-            warnings.warn("No metadata yet loaded.")
-            return None
-
-        meta = deepcopy(self.metadata)
-
-        depth = meta.pop('depth')
-
-        meta['depth_from'], meta['depth_to'] = depth.start, depth.end
-
-        meta['archive'] = self.root.path
-        meta['filepath'] = self.file_path
-
-        if format.lower() == 'struct':
-            return np.array([tuple(meta.values())],
-                            [(k, object) for k in meta.keys()])
-        elif format.lower() == 'dict':
-            return meta
-        elif format.lower() == 'pandas':
-            return pd.Series(meta)
-        elif format.lower() == 'list':
-            return tuple(list(meta.values()))
-        else:
-            raise NotImplementedError(f"Format {format} is not (yet) implemented")
+    # def get_formatted_metadata(self, format='list'):
+    #     """
+    #     Return metadata for file in different formats such as list, dataframe,
+    #     dict and structured array.
+    #
+    #     Parameters
+    #     ----------
+    #     format : str, optional (default: 'list')
+    #         Name of the format, one of 'struct', 'dict', 'pandas', 'list'
+    #
+    #     Returns
+    #     -------
+    #     formatted_meta : Any
+    #         Metadata in the selected format.
+    #     """
+    #
+    #     if self.metadata is None:
+    #         warnings.warn("No metadata yet loaded.")
+    #         return None
+    #
+    #     meta = deepcopy(self.metadata)
+    #
+    #     depth = meta.pop('depth')
+    #
+    #     meta['depth_from'], meta['depth_to'] = depth.start, depth.end
+    #
+    #     meta['archive'] = self.root.path
+    #     meta['filepath'] = self.file_path
+    #
+    #     if format.lower() == 'struct':
+    #         return np.array([tuple(meta.values())],
+    #                         [(k, object) for k in meta.keys()])
+    #     elif format.lower() == 'dict':
+    #         return meta
+    #     elif format.lower() == 'pandas':
+    #         return pd.Series(meta)
+    #     elif format.lower() == 'list':
+    #         return tuple(list(meta.values()))
+    #     else:
+    #         raise NotImplementedError(f"Format {format} is not (yet) implemented")
 
     def read_metadata(self, static_meta=None, best_meta_for_sensor=True):
         """
@@ -546,8 +546,8 @@ class DataFile(IsmnFile):
         else:
             variable = filename_elements[3]
 
-        depth = Depth(float(filename_elements[6]),
-                      float(filename_elements[7]))
+        depth = Depth(float(header_elements[6]),
+                      float(header_elements[7]))
 
         metadata = MetaData([MetaVar('network', header_elements[1]),
                              MetaVar('station', header_elements[2]),
@@ -602,7 +602,7 @@ class DataFile(IsmnFile):
         Read data in the file format called CEOP in separate files.
         """
         var = self.metadata['variable']
-        varname = var.name
+        varname = var.val
         names = ['date', 'time', varname, varname + '_flag', varname + '_orig_flag']
         usecols = [0, 1, 12, 13, 14]
 
@@ -613,7 +613,7 @@ class DataFile(IsmnFile):
         Read data file in the format called Header Values.
         """
         var = self.metadata['variable']
-        varname = var.name
+        varname = var.val
         names = ['date', 'time', varname, varname + '_flag', varname + '_orig_flag']
 
         self.data = self._read_csv(names, skiprows=1)

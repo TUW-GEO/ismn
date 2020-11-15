@@ -263,6 +263,7 @@ class ISMN_Interface():
             max_depth=max_depth, filter_static_vars=filter_static_vars)
 
     def read_ts(self, idx):# todo: load data?
+        # todo: rename data column from variable to e.g. soil_moisture?
         """
         Read a time series directly by the id
 
@@ -276,7 +277,7 @@ class ISMN_Interface():
         timeseries : pandas.DataFrame
             of the read data
         """
-        self.act_coll.files[idx]['filehandler'].read_data()
+        self.act_coll.files.loc[idx]['filehandler'].read_data()
 
     def read(self, *args, **kwargs):
         # calls read_ts
@@ -537,7 +538,8 @@ class ISMN_Interface():
 
 
 if __name__ == '__main__':
-    ds = ISMN_Interface(r"C:\Temp\delete_me\ismn\testdata_ceop.zip")
+    ds = ISMN_Interface(r"/home/wolfgang/code/ismn/tests/test_data/zip_archives/ceop/Data_seperate_files_20170810_20180809.zip")
+    ds.read_ts(1)
     fig, ax, count = ds.plot_station_locations(variable='soil_moisture', min_depth=0, max_depth=0.05,
                                                stats_text=False, filename=r"C:\Temp\delete_me\map.png",
                                                check_only_sensor_depth_from=False)

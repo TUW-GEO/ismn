@@ -173,11 +173,12 @@ class SensorTest(unittest.TestCase):
         name = '{}_{}_{:1.6f}_{:1.6f}'.format(
             instrument, variable, d.start, d.end)
 
-        filepath = os.path.join(
-            rpath, "Data_seperate_files_20170810_20180809", "COSMOS", "Barrow-ARM",
+        root = os.path.join(
+            rpath, "Data_seperate_files_20170810_20180809")
+        subpath = os.path.join("COSMOS", "Barrow-ARM",
             "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
 
-        self.sensor = Sensor(name, instrument, variable, d, DataFile(rpath, filepath))
+        self.sensor = Sensor(name, instrument, variable, d, DataFile(root, subpath))
 
     def test_sensor_attributes(self):
         """
@@ -210,7 +211,6 @@ class SensorTest(unittest.TestCase):
         data = self.sensor.read_data()
         assert data.index.size == 7059
         assert data.columns.size == 3
-
 
 
 class DepthTest(unittest.TestCase):
