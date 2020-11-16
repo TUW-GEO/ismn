@@ -22,14 +22,11 @@
 
 import os
 
-import numpy as np
-from pygeogrids import BasicGrid
-
 from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn.components import Network, Depth
 from ismn.tables import *
-from ismn.files import DataFile
+from ismn.filehandlers import DataFile
 
 import ismn
 pkg_version = ismn.__version__
@@ -539,28 +536,28 @@ class NetworkCollection(object):
         station = self.station4idx(gpi)
 
         return station, dist
-
-
-    # todo: into other class?
-    # @filelist
-    def load_all(self, network=None):
-        # todo: use the filehandler (bad if code changes) or paths and recreate handler
-        if network is None:
-            filelist = self.files
-        else:
-            filelist = self.files.loc[self.files['network'] == network]
-
-        for f in filelist:
-            print(f'Loading: {f}')
-            f.load_data()
-
-        self.data_loaded = True
-
-    # @filelist
-    def unload_all(self):
-        for f in self.files['filehandler']:
-            f.data = None
-        self.data_loaded = False
+    #
+    #
+    # # todo: into other class?
+    # # @filelist
+    # def load_all(self, network=None):
+    #     # todo: use the filehandler (bad if code changes) or paths and recreate handler
+    #     if network is None:
+    #         filelist = self.files
+    #     else:
+    #         filelist = self.files.loc[self.files['network'] == network]
+    #
+    #     for f in filelist:
+    #         print(f'Loading: {f}')
+    #         f.load_data()
+    #
+    #     self.data_loaded = True
+    #
+    # # @filelist
+    # def unload_all(self):
+    #     for f in self.files['filehandler']:
+    #         f.data = None
+    #     self.data_loaded = False
 
 if __name__ == '__main__':
     filelist= build_filelist(r"C:\Temp\delete_me\ismn\testdata_ceop")

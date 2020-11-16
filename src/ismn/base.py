@@ -189,7 +189,7 @@ class IsmnRoot():
         ----------
         station_subdirs : bool, optional (default: True)
             Include the station dir as a subdir of network dir.
-            If Flase is selected, station dir is included directly.
+            If False is selected, station dir is included directly.
 
         Returns
         -------

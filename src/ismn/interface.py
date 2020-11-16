@@ -17,9 +17,10 @@ except ImportError:
     plotlibs = False
 
 from pathlib import Path
-from ismn.collection import *
+from ismn.groupings import *
 from tempfile import gettempdir
 from ismn.components import *
+from ismn.tables import *
 
 import sys
 import os

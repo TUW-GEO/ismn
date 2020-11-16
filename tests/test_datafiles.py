@@ -7,7 +7,7 @@ Module that tests filehandler classes for reading ismn data.
 import os
 import unittest
 
-from ismn.files import DataFile
+from ismn.filehandlers import DataFile
 from ismn.meta import MetaData
 
 from pathlib import Path
@@ -15,8 +15,7 @@ from datetime import datetime
 
 testdata_path = Path(os.path.join(os.path.dirname(__file__), 'test_data'))
 
-
-class DataFileCeopSepTestUnzipped(unittest.TestCase):
+class Test_DataFileCeopSepUnzipped(unittest.TestCase):
     # from dir, no load_data
     def setUp(self) -> None:
         self.station_name = "Barrow-ARM"
@@ -113,10 +112,10 @@ class DataFileCeopSepTestUnzipped(unittest.TestCase):
             assert var in allmeta
 
 
-class DataFileCeopSepTestZipped(DataFileCeopSepTestUnzipped):
+class Test_DataFileCeopSepZipped(Test_DataFileCeopSepUnzipped):
     # same as test from unzipped archive, but uses zip directly. Runs all tests.
     def setUp(self) -> None:
-        super(DataFileCeopSepTestZipped, self).setUp()
+        super(Test_DataFileCeopSepZipped, self).setUp()
 
         root = testdata_path / "zip_archives" / "ceop" / "Data_seperate_files_20170810_20180809.zip"
         filepath = Path(self.network_name,  self.station_name,
@@ -125,10 +124,10 @@ class DataFileCeopSepTestZipped(DataFileCeopSepTestUnzipped):
         self.file = DataFile(root, filepath, load_data=True)
 
 
-class DataFileHeaderValuesTestUnzipped(DataFileCeopSepTestUnzipped):
-    # same as test from unzipped archive, but uses zip directly. Runs all tests.
+class Test_DataFileHeaderValuesUnzipped(Test_DataFileCeopSepUnzipped):
+    # same as for ceop sep format, but uses header values data
     def setUp(self) -> None:
-        super(DataFileHeaderValuesTestUnzipped, self).setUp()
+        super(Test_DataFileHeaderValuesUnzipped, self).setUp()
 
         root = testdata_path / "Data_seperate_files_header_20170810_20180809"
         filepath = Path(self.network_name,  self.station_name,
@@ -137,10 +136,10 @@ class DataFileHeaderValuesTestUnzipped(DataFileCeopSepTestUnzipped):
         self.file = DataFile(root, filepath, load_data=True)
 
 
-class DataFileHeaderValuesTestZipped(DataFileCeopSepTestUnzipped):
-    # same as test from unzipped archive, but uses zip directly. Runs all tests.
+class Test_DataFileHeaderValuesZipped(Test_DataFileCeopSepUnzipped):
+    # same as for ceop sep format, but uses header values data
     def setUp(self) -> None:
-        super(DataFileHeaderValuesTestZipped, self).setUp()
+        super(Test_DataFileHeaderValuesZipped, self).setUp()
 
         root = testdata_path / "zip_archives" / "header" / "Data_seperate_files_header_20170810_20180809.zip"
         filepath = Path(self.network_name,  self.station_name,
