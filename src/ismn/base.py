@@ -289,7 +289,7 @@ class IsmnRoot():
         return [out_path / f for f in filterlist]
 
     def open(self):
-
+        # open connection to data archive
         if zipfile.is_zipfile(self.path):
             self.zip = zipfile.ZipFile(self.path, mode='r')
             self.name = self.path.with_suffix('').name
@@ -300,6 +300,7 @@ class IsmnRoot():
         self.__isopen = True
 
     def close(self):
+        # close connection to data archive
         if self.zip: # if not zip, connection is always open
             self.zip.close()
             self.zip = None

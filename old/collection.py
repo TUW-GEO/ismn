@@ -278,7 +278,7 @@ class IsmnFileCollection(object):
         Scan ismn archive and build file object list.
         Reuse static metadata if possible
         """
-        # todo: can this be stored directly? Maybe if load_data is False?
+        # todo: can this be stored directly? Maybe if _load_data is False?
 
         for net_dir, stat_dirs in self.root.cont.items():
             for stat_dir in stat_dirs:

@@ -1,245 +1,146 @@
-# The MIT License (MIT)
-#
-# Copyright (c) 2019 TU Wien
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-'''
-tests for the ismn interface
-Created on Thu Feb 26 12:36:30 2015
-
-@author: Christoph Paulik
-
-Updated on Dec 14, 2018
-
-@author: Philip Buttinger philip.buttinger@geo.tuwien.ac.at
-
-Updated on Mar 15, 2020
-
-@author: Daniel Aberer daberer@geo.tuwien.ac.at
-'''
-
-import matplotlib
-matplotlib.use('Agg')
-from ismn.old import interface
+# -*- coding: utf-8 -*-
+import unittest
 import os
-import sys
-import datetime
+from tempfile import TemporaryDirectory
+from datetime import datetime
 import pytest
-import numpy.testing as nptest
-import ismn.metadata_collector as metadata_collector
-import numpy as np
+
+from tests.test_filecollection import cleanup
+from ismn.interface import ISMN_Interface
+testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
+
+class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
+
+    def setUp(self) -> None:
+        testdata_path_unzipped = os.path.join(testdata_root,
+            'Data_seperate_files_20170810_20180809')
+        metadata_path = os.path.join(testdata_path_unzipped, 'python_metadata')
+
+        cleanup(metadata_path)
+
+        self.ds = ISMN_Interface(testdata_path_unzipped)
+
+    def test_list(self):
+        assert len(self.ds.list_networks()) == 1
+        assert len(self.ds.list_stations()) == len(self.ds.list_stations('COSMOS')) == 2
+        assert len(self.ds.list_sensors()) == 2
+        assert len(self.ds.list_sensors(station='Barrow-ARM')) == 1
+
+    def test_network_for_station(self):
+        assert self.ds.network_for_station('Barrow-ARM') == ['COSMOS']
+        assert self.ds.network_for_station('ARM-1') == ['COSMOS']
+
+    def test_stations_that_measure(self):
+        for s in self.ds.stations_that_measure('soil_moisture'):
+            assert s.name in ['ARM-1', 'Barrow-ARM']
+
+        for s in self.ds.stations_that_measure('nonexisting'):
+            raise AssertionError("Found var that doesnt exist")
+
+    def test_get_dataset_ids(self):
+        ids = self.ds.get_dataset_ids('soil_moisture', max_depth=100)
+        assert ids == [0,1]
+
+        ids = self.ds.get_dataset_ids('soil_moisture', max_depth=0.19)
+        assert ids == [0]
+
+        ids = self.ds.get_dataset_ids('soil_moisture', max_depth=99,
+                                      filter_static_vars={'lc_2010': 210})
+        assert ids == [1]
+
+        ids = self.ds.get_dataset_ids('novar')
+        assert len(ids) == 0
+
+    def test_read_ts(self):
+        data1 = self.ds.read(0)
+        assert not data1.empty
+
+        data2 = self.ds.read_ts(1)
+        assert not data2.empty
+
+        assert len(data1.index) != len(data2.index) # make sure they are not same
+
+    def test_find_nearest_station(self):
+        should_lon, should_lat = -156.62870, 71.32980
+
+        station = self.ds.find_nearest_station(should_lon, should_lat)
+
+        assert station.lon == should_lon
+        assert station.lat == should_lat
+
+    def test_plot_station_locations(self):
+        with TemporaryDirectory() as out_dir:
+            outpath = os.path.join(out_dir, 'plot.png')
+            self.ds.plot_station_locations('soil_moisture', markersize=5,
+                                           filename=outpath)
+            assert len(os.listdir(out_dir)) == 1
+
+    def test_get_min_max_obs_timestamps(self):
+        tmin, tmax = self.ds.get_min_max_obs_timestamps('soil_moisture', max_depth=0.19)
+        assert tmin.to_pydatetime() == datetime(2017, 8, 10, 0)
+        assert tmax.to_pydatetime() == datetime(2018, 8, 9, 23)
+
+    def test_get_static_var_val(self):
+        vals = self.ds.get_static_var_vals('soil_moisture', max_depth=0.19)
+        assert vals == {130: 'Grassland'}
+
+        vals = self.ds.get_landcover_types('soil_moisture', max_depth=100)
+        assert len(vals) == 2
+        assert vals[130] == 'Grassland'
+        assert vals[210] == 'Water'
+        self.ds.print_landcover_dict()
+
+        vals = self.ds.get_climate_types('soil_moisture', max_depth=100,
+                                         climate='climate_KG')
+        assert len(vals) == 2
+        assert vals['ET'] == 'Polar Tundra'
+        assert vals['Cfa'] == 'Temperate Without Dry Season, Hot Summer'
+        self.ds.print_climate_dict()
+
+    def test_get_var(self):
+        vars = self.ds.get_variables()
+        assert vars == 'soil_moisture'
 
 
-def test_min_max_obstime_getting():
-    """
-    test of the getting minimum and maxiumum observation time
-    of a station
-    """
+class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
 
-    paths_header_values = [os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'format_header_values', 'SMOSMANIA'),
-                           os.path.join(os.path.dirname(__file__),
-                                       'test_data', 'zip_archives', 'format_header_values', 'Data_SMOSMANIA.zip')]
-    for path_header_values in paths_header_values:
-        hv_interface = interface.ISMN_Interface(path_header_values)
+    def setUp(self) -> None:
+        testdata_path_unzipped = os.path.join(testdata_root,
+            'Data_seperate_files_header_20170810_20180809')
+        # clean existing metadata
+        cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
 
-        station = hv_interface.get_station('Narbonne')
-        startd, endd = station.get_min_max_obs_timestamp()
-        assert startd == datetime.datetime(2007, 1, 1, 1)
-        assert endd == datetime.datetime(2007, 1, 31, 23)
+        metadata_path = os.path.join(testdata_path_unzipped, 'python_metadata')
 
-        path_ceop_sep = os.path.join(os.path.dirname(__file__),
-                                     'test_data', 'format_ceop_sep', 'SMOSMANIA')
-        ceop_sep_interface = interface.ISMN_Interface(path_ceop_sep)
+        cleanup(metadata_path)
 
-        station = ceop_sep_interface.get_station('Narbonne')
-        startd, endd = station.get_min_max_obs_timestamp()
-        assert startd == datetime.datetime(2007, 1, 1, 1)
-        assert endd == datetime.datetime(2007, 1, 31, 23)
+        self.ds = ISMN_Interface(testdata_path_unzipped)
 
+@pytest.mark.zip
+class Test_ISMN_Interface_CeopZipped(Test_ISMN_Interface_CeopUnzipped):
 
-def test_min_max_obstime_networks():
-    """
-    test of the getting minimum and maxiumum observation time
-    of several networks
-    """
+    def setUp(self) -> None:
+        testdata_path = os.path.join(testdata_root, 'zip_archives', 'ceop')
+        testdata_zip_path = os.path.join(testdata_path,
+            'Data_seperate_files_20170810_20180809.zip')
+        # clean up existing metadata
+        metadata_path = os.path.join(testdata_path, 'python_metadata')
+        cleanup(metadata_path)
 
-    paths_header_values = [os.path.join(os.path.dirname(__file__),
-                                        'test_data', 'multinetwork', 'header_values'),
-                           os.path.join(os.path.dirname(__file__),
-                                        'test_data', 'zip_archives', 'multinetwork', 'header_values', 'Data_header_values.zip')]
-    for path_header_values in paths_header_values:
-        hv_interface = interface.ISMN_Interface(path_header_values)
-        data = hv_interface.get_min_max_obs_timestamps(min_depth=0, max_depth=0.1)
-        assert data.loc['MAQU']['end date'][
-            0] == datetime.datetime(2010, 7, 31, 23)
-        assert data.loc['MAQU']['end date'][
-            1] == datetime.datetime(2010, 7, 31, 23)
-        assert data.loc['MAQU']['start date'][
-            1] == datetime.datetime(2008, 7, 1, 0)
-        assert data.loc['SCAN']['start date'][
-            1] == datetime.datetime(2007, 1, 1, 0)
-        assert data.loc['SOILSCAPE']['start date'][
-            1] == datetime.datetime(2012, 12, 14, 19)
+        self.ds = ISMN_Interface(testdata_zip_path)
 
+@pytest.mark.zip
+class Test_ISMN_Interface_HeaderValuesZipped(Test_ISMN_Interface_CeopUnzipped):
 
-def test_interface_network_init():
-    """
-    test limitation of interface to certain networks
-    """
+    def setUp(self) -> None:
+        testdata_path = os.path.join(testdata_root, 'zip_archives', 'header')
+        testdata_zip_path = os.path.join(testdata_path,
+            'Data_seperate_files_header_20170810_20180809.zip')
+        # clean up existing metadata
+        metadata_path = os.path.join(testdata_path, 'python_metadata')
+        cleanup(metadata_path)
 
-    paths_header_values = [os.path.join(os.path.dirname(__file__),
-                                        'test_data', 'multinetwork', 'header_values'),
-                           os.path.join(os.path.dirname(__file__),
-                                        'test_data', 'zip_archives', 'multinetwork', 'header_values', 'Data_header_values.zip')]
-    for path_header_values in paths_header_values:
-        hv_interface = interface.ISMN_Interface(
-            path_header_values, network=['SCAN'])
-        assert hv_interface.list_networks().size == 1
-        assert hv_interface.list_networks()[0] == 'SCAN'
-        hv_interface = interface.ISMN_Interface(
-            path_header_values, network=['SCAN', 'MAQU'])
-        assert hv_interface.list_networks().size == 2
+        self.ds = ISMN_Interface(testdata_zip_path)
 
-
-def test_find_nearest_station():
-    """
-    Test nearest neighbor search
-    """
-    paths_header_values = [os.path.join(os.path.dirname(__file__),
-                                        'test_data', 'multinetwork', 'header_values'),
-                           os.path.join(os.path.dirname(__file__),
-                                        'test_data', 'zip_archives', 'multinetwork', 'header_values', 'Data_header_values.zip')]
-    for path_header_values in paths_header_values:
-        hv_interface = interface.ISMN_Interface(
-            path_header_values, network=['SCAN'])
-        station, distance = hv_interface.find_nearest_station(-90, 35, True)
-        assert station.station == "AAMU-jtg"
-        assert station.network == "SCAN"
-        nptest.assert_almost_equal(distance, 316228.53147802927)
-
-
-@pytest.mark.skipif(sys.version_info[0] == 3 and sys.version_info[1] == 4,
-                    reason="Cartopy for python 3.4 does not support plotting of state boundaries.")
-@pytest.mark.mpl_image_compare(tolerance=7)
-def test_interface_plotting():
-    """
-    test plotting of networks
-    """
-    path_header_values = os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'multinetwork', 'header_values')
-    hv_interface = interface.ISMN_Interface(
-        path_header_values, network=['SCAN'])
-    fig, axes = hv_interface.plot_station_locations()
-    return fig
-
-
-
-def test_list_landcover_types():
-    """
-    Test available landcover classifications for dataset
-    """
-    paths_to_ismn_data = [os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'Data_seperate_files_header_20170810_20180809'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'Data_seperate_files_20170810_20180809'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'zip_archives', 'header', 'Data_seperate_files_header_20170810_20180809.zip')]
-
-    for path_to_ismn_data in paths_to_ismn_data:
-        ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-        lc = ISMN_reader.get_landcover_types()
-        assert list(lc) == [130, 210]
-        lc = ISMN_reader.get_landcover_types(landcover='landcover_insitu')
-        assert lc == ['']
-
-
-
-def test_list_climate_types():
-    """
-    Test available climate classifications for dataset
-    """
-    paths_to_ismn_data = [os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'Data_seperate_files_header_20170810_20180809'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'Data_seperate_files_20170810_20180809'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'zip_archives', 'header', 'Data_seperate_files_header_20170810_20180809.zip')]
-
-    for path_to_ismn_data in paths_to_ismn_data:
-        ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-        cl = ISMN_reader.get_climate_types()
-        assert sorted(list(cl)) == sorted(['Cfa', 'ET'])
-        cl = ISMN_reader.get_climate_types(climate='climate_insitu')
-        assert list(cl) == []
-
-
-def test_get_dataset_ids():
-    """
-    Test returned indeces from filtering
-    """
-    paths_to_ismn_data = [os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'Data_seperate_files_header_20170810_20180809'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'Data_seperate_files_20170810_20180809'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip'),
-                          os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'zip_archives', 'header', 'Data_seperate_files_header_20170810_20180809.zip')]
-
-
-    for path_to_ismn_data in paths_to_ismn_data:
-        ISMN_reader = interface.ISMN_Interface(path_to_ismn_data)
-        ids1 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_2010=130)
-        assert np.array_equal(np.array([0]), ids1)
-        ids2 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, climate='ET')
-        assert np.array_equal(np.array([1]), ids2)
-        ids3 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1)
-        assert np.array_equal(np.array([0, 1]), ids3)
-        ids4 = ISMN_reader.get_dataset_ids(variable='soil moisture', min_depth=0, max_depth=1, landcover_insitu='')
-        assert np.array_equal(np.array([0, 1]), ids4)
-
-
-def test_station_order():
-    """
-    Test the station order returned by the metadata collector
-    """
-
-    paths_header_values = [os.path.join(os.path.dirname(__file__),
-                                      'test_data', 'multinetwork', 'header_values'),
-                           os.path.join(os.path.dirname(__file__), 'test_data',
-                                       'zip_archives', 'ceop', 'Data_seperate_files_20170810_20180809.zip')]
-
-    for path_header_values in paths_header_values:
-        _ = interface.ISMN_Interface(path_header_values)
-
-        metadata = metadata_collector.collect_from_folder(path_header_values)
-
-        filenames = []
-        for m in metadata:
-            filenames.append(m['filename'])
-
-        sorted_filenames = sorted(filenames)
-
-        assert sorted_filenames == filenames
+if __name__ == '__main__':
+    unittest.main()

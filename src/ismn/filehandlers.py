@@ -98,17 +98,18 @@ class StaticMetaFile(IsmnFile):
         if self.file_path.suffix.lower() != '.csv':
             raise IsmnFileError(f'CSV file expected for StaticMetaFile object')
 
-    def _read_field(self, fieldname:str, new_name=None) -> np.array:
+    @staticmethod
+    def _read_field(data, fieldname:str, new_name=None) -> np.array:
         """
         Extract a field from the loaded csv metadata
         """
         field_vars = []
 
-        if fieldname in self.data.index:
+        if fieldname in data.index:
 
-            froms = np.atleast_1d(self.data.loc[fieldname]['depth_from[m]'])
-            tos = np.atleast_1d(self.data.loc[fieldname]['depth_to[m]'])
-            vals = np.atleast_1d(self.data.loc[fieldname]['value'])
+            froms = np.atleast_1d(data.loc[fieldname]['depth_from[m]'])
+            tos = np.atleast_1d(data.loc[fieldname]['depth_to[m]'])
+            vals = np.atleast_1d(data.loc[fieldname]['value'])
 
             for d_from, d_to, val in zip(froms, tos, vals):
                 d = Depth(d_from, d_to)
@@ -150,12 +151,12 @@ class StaticMetaFile(IsmnFile):
             if not self.root.isopen: self.root.open()
             with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
                 extracted = self.root.extract_file(self.file_path, tempdir)
-                self.data = self._read_csv(extracted)
+                data = self._read_csv(extracted)
         else:
-            self.data = self._read_csv(self.root.path / self.file_path)
+            data = self._read_csv(self.root.path / self.file_path)
 
         # read landcover classifications
-        lc = self.data.loc[['land cover classification']][['value', 'quantity_source_name']]
+        lc = data.loc[['land cover classification']][['value', 'quantity_source_name']]
 
         lc_dict = {'CCI_landcover_2000': tables.CSV_META_TEMPLATE['lc_2000'],
                    'CCI_landcover_2005': tables.CSV_META_TEMPLATE['lc_2005'],
@@ -176,7 +177,7 @@ class StaticMetaFile(IsmnFile):
                     logging.info(f'insitu land cover classification available: {self.file_path}')
 
         # read climate classifications
-        cl = self.data.loc[['climate classification']][['value', 'quantity_source_name']]
+        cl = data.loc[['climate classification']][['value', 'quantity_source_name']]
         for key in cl_dict.keys():
             if key in cl['quantity_source_name'].values:
                 cl_dict[key] = cl.loc[cl['quantity_source_name'] == key]['value'].values[0]
@@ -194,11 +195,13 @@ class StaticMetaFile(IsmnFile):
         metavars.append(MetaVar('climate_insitu', cl_dict['insitu']))
 
         static_meta = {
-            'saturation': self._read_field('saturation'),
-            'clay_fraction': self._read_field('clay fraction', new_name='clay_fraction'),
-            'sand_fraction': self._read_field('sand fraction', new_name='sand_fraction'),
-            'silt_fraction': self._read_field('silt fraction', new_name='silt_fraction'),
-            'organic_carbon': self._read_field('organic carbon', new_name='organic_carbon')}
+            'saturation': self._read_field(data, 'saturation'),
+            'clay_fraction': self._read_field(data, 'clay fraction', new_name='clay_fraction'),
+            'sand_fraction': self._read_field(data, 'sand fraction', new_name='sand_fraction'),
+            'silt_fraction': self._read_field(data, 'silt fraction', new_name='silt_fraction'),
+            'organic_carbon': self._read_field(data, 'organic carbon', new_name='organic_carbon'),
+        }
+
         for name, vars in static_meta.items():
             if len(vars) > 0:
                 metavars += vars
@@ -220,8 +223,6 @@ class DataFile(IsmnFile):
         Archive to the downloaded data.
     file_path : str
         Path in the archive to the ismn file. No leading slash!
-    load_data : bool, optional
-        If True data will be loaded during metadata reading.
     load_metadata : bool, optional (default: True)
         Load metadata during initialisation.
     static_meta : OrderedDict, optional (default: None)
@@ -246,36 +247,18 @@ class DataFile(IsmnFile):
         Data stored in file.
     static_meta : OrderedDict
         Static meta data loaded from station csv file.
-    # todo: update attrs and methods
 
     Methods
     -------
     check_metadata(self, variable, min_depth=0, max_depth=0.1, filter_static_vars=None)
         Evaluate whether the file complies with the passed metadata requirements
-    load_data()
-        Load data from file.
     read_data()
         Read data in file.
     read_metadata()
         Read metadata from file name and first line of file.
-    _get_metadata_ceop_sep()
-        Get metadata in the file format called CEOP in separate files.
-    _get_metadata_header_values()
-        Get metadata file in the format called Header Values.
-    _get_metadata_from_file(delim='_')
-        Read first line of file and split filename.
-        Information is used to collect metadata information for all
-        ISMN formats.
-    _read_format_ceop_sep()
-        Read data in the file format called CEOP in separate files.
-    _read_format_header_values()
-        Read data file in the format called Header Values.
-    _read_csv(names=None, usecols=None, skiprows=0)
-        Read data.
     """
 
-    def __init__(self, root, file_path, load_data=False,
-                 load_metadata=True, static_meta=None,
+    def __init__(self, root, file_path, load_metadata=True, static_meta=None,
                  temp_root=gettempdir()):
 
         super(DataFile, self).__init__(root, file_path, temp_root)
@@ -287,180 +270,8 @@ class DataFile(IsmnFile):
             self.metadata = self.read_metadata(static_meta=static_meta,
                                                best_meta_for_sensor=True)
 
-        self.data = None
-        if load_data:
-            self.load_data()
-
     def __getitem__(self, item):
         return self.metadata[item]
-
-    def load_data(self):
-        """
-        Load data from file.
-        """
-        if self.data is None:
-
-            if not self.root.isopen: self.open()
-
-            if self.file_type == 'ceop':
-                # todo: what is this format?
-                # self._read_format_ceop()
-                raise NotImplementedError
-            elif self.file_type == 'ceop_sep':
-                self._read_format_ceop_sep()
-            elif self.file_type == 'header_values':
-                self._read_format_header_values()
-            else:
-                raise IOError(f"Unknown file format found for: {self.file_path}")
-                # logger.warning(f"Unknown file type: {self.file_path}")
-
-    def read_data(self):
-        """
-        Read data in file. Load file if necessary.
-
-        Returns
-        -------
-        data : pd.DataFrame
-            File content.
-        """
-        self.load_data()
-        return self.data
-
-    def check_metadata(self, variable, min_depth=0, max_depth=0.1,
-                        filter_static_vars=None) -> bool:
-        """
-        Evaluate whether the file complies with the passed metadata requirements
-
-        Parameters
-        ----------
-        variable : str
-            Name of the required variable measured, e.g. soil_moisture
-        min_depth : float, optional (default: 0)
-            Minimum depth that the measurement should have.
-        max_depth : float, optional (default: 0.1)
-            Maximum depth that the measurement should have.
-        filter_static_vars: dict
-            Additional metadata keys and values for which the file list is filtered
-            e.g. {'lc_2010': 10} to filter for a landcover class.
-
-        Returns
-        -------
-        valid : bool
-            Whether the metadata complies with the passed conditions or not.
-        """
-
-        if min_depth is None:
-            min_depth = -np.inf
-        if max_depth is None:
-            max_depth = np.info
-
-        lc_cl = list(tables.CSV_META_TEMPLATE.keys())
-
-        if not (self.metadata['variable'].val == variable):
-            return False
-
-        sensor_depth = self.metadata['sensor'].depth
-
-        if not Depth(min_depth, max_depth).encloses(sensor_depth):
-            return False
-
-        if filter_static_vars:
-            fil_lc_cl = [True]
-            for k in filter_static_vars.keys():
-                if k not in lc_cl:
-                    raise ValueError(f"{k} is not a valid metadata variable, "
-                                     f"select one of {lc_cl}")
-                fil_lc_cl.append(self.metadata[k].val == filter_static_vars[k])
-
-            if not all(fil_lc_cl):
-                return False
-
-        return True
-
-    # def get_formatted_metadata(self, format='list'):
-    #     """
-    #     Return metadata for file in different formats such as list, dataframe,
-    #     dict and structured array.
-    #
-    #     Parameters
-    #     ----------
-    #     format : str, optional (default: 'list')
-    #         Name of the format, one of 'struct', 'dict', 'pandas', 'list'
-    #
-    #     Returns
-    #     -------
-    #     formatted_meta : Any
-    #         Metadata in the selected format.
-    #     """
-    #
-    #     if self.metadata is None:
-    #         warnings.warn("No metadata yet loaded.")
-    #         return None
-    #
-    #     meta = deepcopy(self.metadata)
-    #
-    #     depth = meta.pop('depth')
-    #
-    #     meta['depth_from'], meta['depth_to'] = depth.start, depth.end
-    #
-    #     meta['archive'] = self.root.path
-    #     meta['filepath'] = self.file_path
-    #
-    #     if format.lower() == 'struct':
-    #         return np.array([tuple(meta.values())],
-    #                         [(k, object) for k in meta.keys()])
-    #     elif format.lower() == 'dict':
-    #         return meta
-    #     elif format.lower() == 'pandas':
-    #         return pd.Series(meta)
-    #     elif format.lower() == 'list':
-    #         return tuple(list(meta.values()))
-    #     else:
-    #         raise NotImplementedError(f"Format {format} is not (yet) implemented")
-
-    def read_metadata(self, static_meta=None, best_meta_for_sensor=True):
-        """
-        Read metadata from file name and first line of file.
-
-        Parameters
-        ----------
-        static_meta : MetaData, optional (default: None)
-            Static meta data for the file, can be passed as a paramter e.g. if
-            it was already loaded before to reduce number of file accesses.
-        best_meta_for_sensor : bool, optional (default: True)
-            Compare the sensor depth to metadata that is available in multiple
-            depth layers (e.g. static metadata variables). Find the variable
-            for which the depth matches best with the sensor depth.
-        """
-        header_elements, filename_elements = self._get_metadata_from_file()
-
-        if len(filename_elements) == 5 and len(header_elements) == 16:
-            self.file_type = 'ceop'
-            raise RuntimeError('CEOP format not supported')
-        elif len(header_elements) == 15 and len(filename_elements) >= 9:
-            metadata, depth = self._get_metadata_ceop_sep()
-            self.file_type = 'ceop_sep'
-        elif len(header_elements) < 14 and len(filename_elements) >= 9:
-            metadata, depth = self._get_metadata_header_values()
-            self.file_type = 'header_values'
-        else:
-            raise IOError(f"Unknown file format found for: {self.file_path}")
-            #logger.warning(f"Unknown file type: {self.file_path} in {self.archive}")
-
-        # metadata.add('depth', None, depth)
-
-        if static_meta is None:
-            static_meta = self._get_static_metadata_from_csv()
-
-        metadata = metadata.merge(static_meta)
-
-        if best_meta_for_sensor:
-            depth = metadata['sensor'].depth
-            metadata = metadata.best_meta_for_depth(depth)
-
-        self.metadata = metadata
-
-        return self.metadata
 
     def _get_static_metadata_from_csv(self):
         """
@@ -489,78 +300,129 @@ class DataFile(IsmnFile):
 
         return static_meta
 
-    def _get_metadata_ceop_sep(self):
+    @staticmethod
+    def _read_lines(filename):
+        """
+        Read fist and last line from file as list, skips empty lines.
+        """
+        with filename.open(mode='r', newline=None) as f:
+            lines = f.read().splitlines()
+            headr = lines[0].split()
+
+            last, scnd = [], []
+            i = 1
+            while (not last) or (not scnd):
+                if not last:
+                    last = lines[-i].split()
+                if not scnd:
+                    scnd = lines[i].split()
+                i += 1
+
+        return headr, scnd, last
+
+    def _get_metadata_ceop_sep(self, elements=None):
         """
         Get metadata in the file format called CEOP in separate files.
 
+        Parameters
+        ----------
+        elements : dict, optional (default: None)
+            Previously loaded elements can be passed here to avoid reading the
+            file again.
         Returns
         -------
         metadata : dict
             Metadata information.
         """
-        header_elements, filename_elements = self._get_metadata_from_file()
-
-        if len(filename_elements) > 9:
-            sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
+        if elements:
+            headr = elements['headr']
+            last = elements['last']
+            fname = elements['fname']
         else:
-            sensor = filename_elements[6]
+            headr, _, last, fname = self._get_elements_from_file()
 
-        if filename_elements[3] in tables.VARIABLE_LUT:
-            variable = tables.VARIABLE_LUT[filename_elements[3]]
+        if len(fname) > 9:
+            instr = '_'.join(fname[6:len(fname) - 2])
         else:
-            variable = filename_elements[3]
+            instr = fname[6]
 
-        depth = Depth(float(filename_elements[4]),
-                      float(filename_elements[5]))
+        if fname[3] in tables.VARIABLE_LUT:
+            variable = tables.VARIABLE_LUT[fname[3]]
+        else:
+            variable = fname[3]
 
-        metadata = MetaData([MetaVar('network', filename_elements[1]),
-                             MetaVar('station', filename_elements[2]),
+        timerange_from = pd.to_datetime(' '.join(headr[:2]))
+        timerange_to = pd.to_datetime(' '.join(last[:2]))
+
+        depth = Depth(float(fname[4]),
+                      float(fname[5]))
+
+        metadata = MetaData([MetaVar('network', fname[1]),
+                             MetaVar('station', fname[2]),
                              MetaVar('variable', variable, depth),
-                             MetaVar('sensor', sensor, depth),
-                             MetaVar('latitude', float(header_elements[7])),
-                             MetaVar('longitude', float(header_elements[8])),
-                             MetaVar('elevation', float(header_elements[9])),
+                             MetaVar('instrument', instr, depth),
+                             MetaVar('timerange_from', timerange_from),
+                             MetaVar('timerange_to', timerange_to),
+                             MetaVar('latitude', float(headr[7])),
+                             MetaVar('longitude', float(headr[8])),
+                             MetaVar('elevation', float(headr[9])),
                              ])
 
         return metadata, depth
 
-
-    def _get_metadata_header_values(self):
+    def _get_metadata_header_values(self, elements=None):
         """
         Get metadata file in the format called Header Values.
 
+        Parameters
+        ----------
+        elements : dict, optional (default: None)
+            Previously loaded elements can be passed here to avoid reading the
+            file again.
+
         Returns
         -------
         metadata : dict
             Metadata information.
         """
-        header_elements, filename_elements = self._get_metadata_from_file()
-
-        if len(filename_elements) > 9:
-            sensor = '_'.join(filename_elements[6:len(filename_elements) - 2])
+        if elements:
+            headr = elements['headr']
+            scnd = elements['scnd']
+            last = elements['last']
+            fname = elements['fname']
         else:
-            sensor = filename_elements[6]
+            headr, scnd, last, fname = self._get_elements_from_file()
 
-        if filename_elements[3] in tables.VARIABLE_LUT:
-            variable = tables.VARIABLE_LUT[filename_elements[3]]
+        if len(fname) > 9:
+            instrument = '_'.join(fname[6:len(fname) - 2])
         else:
-            variable = filename_elements[3]
+            instrument = fname[6]
 
-        depth = Depth(float(header_elements[6]),
-                      float(header_elements[7]))
+        if fname[3] in tables.VARIABLE_LUT:
+            variable = tables.VARIABLE_LUT[fname[3]]
+        else:
+            variable = fname[3]
 
-        metadata = MetaData([MetaVar('network', header_elements[1]),
-                             MetaVar('station', header_elements[2]),
+        timerange_from = pd.to_datetime(' '.join(scnd[:2]))
+        timerange_to = pd.to_datetime(' '.join(last[:2]))
+
+        depth = Depth(float(headr[6]),
+                      float(headr[7]))
+
+        metadata = MetaData([MetaVar('network', headr[1]),
+                             MetaVar('station', headr[2]),
                              MetaVar('variable', variable, depth),
-                             MetaVar('sensor', sensor, depth),
-                             MetaVar('latitude', float(header_elements[3])),
-                             MetaVar('longitude', float(header_elements[4])),
-                             MetaVar('elevation', float(header_elements[5])),
+                             MetaVar('instrument', instrument, depth),
+                             MetaVar('timerange_from', timerange_from),
+                             MetaVar('timerange_to', timerange_to),
+                             MetaVar('latitude', float(headr[3])),
+                             MetaVar('longitude', float(headr[4])),
+                             MetaVar('elevation', float(headr[5])),
                              ])
 
         return metadata, depth
 
-    def _get_metadata_from_file(self, delim='_'):
+    def _get_elements_from_file(self, delim='_', only_basename_elements=False):
         """
         Read first line of file and split filename.
         Information is used to collect metadata information for all
@@ -570,34 +432,40 @@ class DataFile(IsmnFile):
         ----------
         delim : str, optional
             File basename delimiter.
+        only_basename_elements : bool, optional (default: False)
+            Parse only the filename and not the file contents.
 
         Returns
         -------
-        header_elements : list[str]
-            First line of file split into list
-        file_basename_elements : list[str]
+        headr : list[str] or None
+            First line of file split into list, None if only_filename is True
+        secnd : list[str] or None
+            Second line of file split into list, None if only_filename is True
+        last : list[str] or None
+            Last non empty line elements,  None if only_filename is True
+        file_basename_elements : list[str], None if only_filename is True
             File basename without path split by 'delim'
         """
-        if self.root.zip:
-            if not self.root.isopen: self.root.open()
-            with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
-                filename = self.root.extract_file(self.file_path, tempdir)
-
-                with filename.open(mode='r', newline=None) as f:
-                    header = f.readline()
+        if only_basename_elements:
+            headr = None
+            secnd = None
+            last = None
         else:
-            filename = self.root.path / self.file_path
+            if self.root.zip:
+                if not self.root.isopen: self.root.open()
+                with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
+                    filename = self.root.extract_file(self.file_path, tempdir)
+                    headr, secnd, last = self._read_lines(filename)
+            else:
+                filename = self.root.path / self.file_path
+                headr, secnd, last = self._read_lines(filename)
 
-            with filename.open(mode='r', newline=None) as f:
-                header = f.readline()
-
-        header_elements = header.split()
         path, basename = os.path.split(filename)
         file_basename_elements = basename.split(delim)
 
-        return header_elements, file_basename_elements
+        return headr, secnd, last, file_basename_elements
 
-    def _read_format_ceop_sep(self):
+    def _read_format_ceop_sep(self) -> pd.DataFrame:
         """
         Read data in the file format called CEOP in separate files.
         """
@@ -606,9 +474,9 @@ class DataFile(IsmnFile):
         names = ['date', 'time', varname, varname + '_flag', varname + '_orig_flag']
         usecols = [0, 1, 12, 13, 14]
 
-        self.data = self._read_csv(names, usecols)
+        return self._read_csv(names, usecols)
 
-    def _read_format_header_values(self):
+    def _read_format_header_values(self) -> pd.DataFrame:
         """
         Read data file in the format called Header Values.
         """
@@ -616,7 +484,7 @@ class DataFile(IsmnFile):
         varname = var.val
         names = ['date', 'time', varname, varname + '_flag', varname + '_orig_flag']
 
-        self.data = self._read_csv(names, skiprows=1)
+        return self._read_csv(names, skiprows=1)
 
     def _read_csv(self, names=None, usecols=None, skiprows=0):
         """
@@ -648,36 +516,133 @@ class DataFile(IsmnFile):
 
         return data
 
+    def read_data(self) -> pd.DataFrame:
+        """
+        Read data in file. Load file if necessary.
+
+        Returns
+        -------
+        data : pd.DataFrame
+            File content.
+        """
+
+        if not self.root.isopen: self.open()
+
+        if self.file_type == 'ceop':
+            # todo: what is this format?
+            # self._read_format_ceop()
+            raise NotImplementedError
+        elif self.file_type == 'ceop_sep':
+            return self._read_format_ceop_sep()
+        elif self.file_type == 'header_values':
+            return self._read_format_header_values()
+        else:
+            raise IOError(f"Unknown file format found for: {self.file_path}")
+            # logger.warning(f"Unknown file type: {self.file_path}")
+
+    def check_metadata(self, variable, min_depth=0, max_depth=0.1,
+                       filter_static_vars=None) -> bool:
+        """
+        Evaluate whether the file complies with the passed metadata requirements
+
+        Parameters
+        ----------
+        variable : str
+            Name of the required variable measured, e.g. soil_moisture
+        min_depth : float, optional (default: 0)
+            Minimum depth that the measurement should have.
+        max_depth : float, optional (default: 0.1)
+            Maximum depth that the measurement should have.
+        filter_static_vars: dict
+            Additional metadata keys and values for which the file list is filtered
+            e.g. {'lc_2010': 10} to filter for a landcover class.
+
+        Returns
+        -------
+        valid : bool
+            Whether the metadata complies with the passed conditions or not.
+        """
+
+        if min_depth is None:
+            min_depth = -np.inf
+        if max_depth is None:
+            max_depth = np.info
+
+        lc_cl = list(tables.CSV_META_TEMPLATE.keys())
+
+        if not (self.metadata['variable'].val == variable):
+            return False
+
+        sensor_depth = self.metadata['instrument'].depth
+
+        if not Depth(min_depth, max_depth).encloses(sensor_depth):
+            return False
+
+        if filter_static_vars:
+            fil_lc_cl = [True]
+            for k in filter_static_vars.keys():
+                if k not in lc_cl:
+                    raise ValueError(f"{k} is not a valid metadata variable, "
+                                     f"select one of {lc_cl}")
+                fil_lc_cl.append(self.metadata[k].val == filter_static_vars[k])
+
+            if not all(fil_lc_cl):
+                return False
+
+        return True
+
+    def read_metadata(self, static_meta=None, best_meta_for_sensor=True):
+        """
+        Read metadata from file name and first line of file.
+
+        Parameters
+        ----------
+        static_meta : MetaData, optional (default: None)
+            Static meta data for the file, can be passed as a paramter e.g. if
+            it was already loaded before to reduce number of file accesses.
+        best_meta_for_sensor : bool, optional (default: True)
+            Compare the sensor depth to metadata that is available in multiple
+            depth layers (e.g. static metadata variables). Find the variable
+            for which the depth matches best with the sensor depth.
+        """
+        try:
+            headr, scnd, last, fname = self._get_elements_from_file()
+        except Exception as e:
+            raise IOError(f"Unknown file format found for: {self.file_path}")
+        
+        elements = dict(headr=headr, scnd=scnd, last=last, fname=fname)
+
+        if len(fname) == 5 and len(headr) == 16:
+            self.file_type = 'ceop'
+            raise RuntimeError('CEOP format not supported')
+        elif len(headr) == 15 and len(fname) >= 9:
+            metadata, depth = self._get_metadata_ceop_sep(elements)
+            self.file_type = 'ceop_sep'
+        elif len(headr) < 14 and len(fname) >= 9:
+            metadata, depth = self._get_metadata_header_values(elements)
+            self.file_type = 'header_values'
+        else:
+            raise IOError(f"Unknown file format found for: {self.file_path}")
+            # logger.warning(f"Unknown file type: {self.file_path} in {self.archive}")
+
+        # metadata.add('depth', None, depth)
+
+        if static_meta is None:
+            static_meta = self._get_static_metadata_from_csv()
+
+        metadata = metadata.merge(static_meta)
+
+        if best_meta_for_sensor:
+            depth = metadata['instrument'].depth
+            metadata = metadata.best_meta_for_depth(depth)
+
+        self.metadata = metadata
+
+        return self.metadata
+
 if __name__ == '__main__':
-    import pickle
-    archive =  r"C:\Temp\delete_me\ismn\testdata_ceop.zip"
-    filepath = "FMI/SAA111/FMI_FMI_SAA111_sm_0.050000_0.050000_5TE_20101001_20201005.stm"
-    nodat = DataFile(archive, filepath, load_data=False)
+    filepath = "COSMOS\Barrow-ARM\COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm"
+    nodat = DataFile(r"H:\code\ismn\tests\test_data\Data_seperate_files_20170810_20180809",
+                     filepath)
     nodat.read_metadata()
 
-    meta = nodat.metadata.get_meta_for_depth(0,0.05)
-
-    flag = nodat.check_metadata('soil_moisture', 0, 0.1, {'lc_2010':110})
-    nodat.close()
-    with open(r"C:\Temp\delete_me\dumpnodat.pkl", 'wb') as handle:
-        pickle.dump(nodat, handle)
-
-    with open(r"C:\Temp\delete_me\dumpnodat.pkl", 'rb') as handle:
-        nodat = pickle.load(handle)
-
-    nodat.open()
-
-    data = nodat.load_data()
-
-    dat = DataFile(archive, filepath, load_data=True)
-    dat.close()
-    with open(r"C:\Temp\delete_me\dumpdat.pkl", 'wb') as handle:
-        pickle.dump(dat, handle)
-
-    with open(r"C:\Temp\delete_me\dumpdat.pkl", 'rb') as handle:
-        dat = pickle.load(handle)
-
-    dat.data
-    dat.load_data()
-    print(nodat.data)
-    print(dat.data)

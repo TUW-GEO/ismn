@@ -9,7 +9,7 @@ import unittest
 
 
 from ismn.components import Depth
-from ismn.filehandlers import StaticMetaFile, DataFile
+from ismn.filehandlers import StaticMetaFile
 from pathlib import Path
 
 from ismn.tables import CSV_META_TEMPLATE

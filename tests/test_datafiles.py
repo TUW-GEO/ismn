@@ -16,7 +16,7 @@ from datetime import datetime
 testdata_path = Path(os.path.join(os.path.dirname(__file__), 'test_data'))
 
 class Test_DataFileCeopSepUnzipped(unittest.TestCase):
-    # from dir, no load_data
+    # from dir, no _load_data
     def setUp(self) -> None:
         self.station_name = "Barrow-ARM"
         self.network_name = "COSMOS"
@@ -33,7 +33,7 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
         filepath = Path(self.network_name,  self.station_name,
             f"{self.network_name}_{self.network_name}_{self.station_name}_sm_{self.depth_from:.6f}_{self.depth_to:.6f}_{self.instrument}_20170810_20180809.stm")
 
-        self.file = DataFile(root, filepath, load_data=True)
+        self.file = DataFile(root, filepath)
 
         self.data_should_201708113 = {
             "datetime": "2017-08-11 13:00:00",
@@ -59,15 +59,17 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
 
         assert self.file.metadata['station'].val == self.station_name
         assert self.file.metadata['network'].val == self.network_name
-        assert self.file.metadata['sensor'].depth.start == self.depth_from
-        assert self.file.metadata['sensor'].depth.end == self.depth_to
-        assert self.file.metadata['sensor'].val == self.instrument
+        assert self.file.metadata['instrument'].depth.start == self.depth_from
+        assert self.file.metadata['instrument'].depth.end == self.depth_to
+        assert self.file.metadata['instrument'].val == self.instrument
         assert self.file.metadata['longitude'].val == self.longitude
         assert self.file.metadata['latitude'].val == self.latitude
         assert self.file.metadata['variable'].val == self.variable
         assert self.file.metadata['sand_fraction'].val == 34.
         assert self.file.metadata['sand_fraction'].depth.start == 0.
         assert self.file.metadata['sand_fraction'].depth.end == 0.3
+        assert self.file.metadata['timerange_from'].val == datetime(2017,8,10,0)
+        assert self.file.metadata['timerange_to'].val == datetime(2018,8,9,8)
 
 
     def test_data(self):
@@ -75,11 +77,14 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
         # todo: why is sm column called "variable"?
         timestamp = datetime(2017,8,11,13)
 
-        data_is = self.file.data.loc[timestamp]
+        data = self.file.read_data()
+        data_is = data.loc[timestamp]
 
         assert data_is[self.variable] == self.data_should_201708113[self.variable]
-        assert data_is[f"{self.variable}_flag"] == self.data_should_201708113[f"{self.variable}_flag"]
-        assert data_is[f"{self.variable}_orig_flag"] == self.data_should_201708113[f"{self.variable}_orig_flag"]
+        assert data_is[f"{self.variable}_flag"] == \
+               self.data_should_201708113[f"{self.variable}_flag"]
+        assert data_is[f"{self.variable}_orig_flag"] == \
+               self.data_should_201708113[f"{self.variable}_orig_flag"]
 
 
     def test_metadata_for_depth(self):
@@ -121,7 +126,7 @@ class Test_DataFileCeopSepZipped(Test_DataFileCeopSepUnzipped):
         filepath = Path(self.network_name,  self.station_name,
         f"{self.network_name}_{self.network_name}_{self.station_name}_sm_{self.depth_from:.6f}_{self.depth_to:.6f}_{self.instrument}_20170810_20180809.stm")
 
-        self.file = DataFile(root, filepath, load_data=True)
+        self.file = DataFile(root, filepath)
 
 
 class Test_DataFileHeaderValuesUnzipped(Test_DataFileCeopSepUnzipped):
@@ -133,7 +138,7 @@ class Test_DataFileHeaderValuesUnzipped(Test_DataFileCeopSepUnzipped):
         filepath = Path(self.network_name,  self.station_name,
         f"{self.network_name}_{self.network_name}_{self.station_name}_sm_{self.depth_from:.6f}_{self.depth_to:.6f}_{self.instrument}_20170810_20180809.stm")
 
-        self.file = DataFile(root, filepath, load_data=True)
+        self.file = DataFile(root, filepath)
 
 
 class Test_DataFileHeaderValuesZipped(Test_DataFileCeopSepUnzipped):
@@ -145,9 +150,9 @@ class Test_DataFileHeaderValuesZipped(Test_DataFileCeopSepUnzipped):
         filepath = Path(self.network_name,  self.station_name,
         f"{self.network_name}_{self.network_name}_{self.station_name}_sm_{self.depth_from:.6f}_{self.depth_to:.6f}_{self.instrument}_20170810_20180809.stm")
 
-        self.file = DataFile(root, filepath, load_data=True)
+        self.file = DataFile(root, filepath)
 
 
-# todo: test from zip, load_data
+# todo: test from zip, _load_data
 if __name__ == '__main__':
     unittest.main()

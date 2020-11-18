@@ -20,14 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from collections import Sequence
-
-
 from pygeogrids import BasicGrid
 
 import numpy as np
 import warnings
 import logging
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +36,10 @@ formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+class IsmnComponent():
+    pass
 
-class Network(object):
+class Network(IsmnComponent):
     """
     A network is described by a distinct name and can be composed of
     multiple stations.
@@ -188,7 +189,7 @@ class Network(object):
         return info
 
 
-class Station(object):
+class Station(IsmnComponent):
 
     """
     A station is described by a distinct name and location.
@@ -243,7 +244,7 @@ class Station(object):
         self.elev = elev
         self.static_variables = static_variables
         self.sensors = {}
-
+        
     def get_variables(self):
         """
         Get variables measured by all sensors at station.
@@ -281,7 +282,8 @@ class Station(object):
 
         return depths
 
-    def add_sensor(self, instrument, variable, depth, filehandler):
+    def add_sensor(self, instrument, variable, depth, filehandler, name=None,
+                   keep_loaded_data=False):
         """
         Add sensor to station.
 
@@ -295,13 +297,15 @@ class Station(object):
             Sensing depth.
         filehandler : IsmnFile
             File handler.
+        name : str or int, optional (default: None)
+            A name or id for the sensor. If None is passed, one is generated.
         """
-        name = '{}_{}_{:1.6f}_{:1.6f}'.format(
-            instrument, variable, depth.start, depth.end)
+        if name is None:
+            name = f"{instrument}_{variable}_{depth.start:1.6f}_{depth.end:1.6f}"
 
         if name not in self.sensors:
-            self.sensors[name] = Sensor(name, instrument, variable,
-                                        depth, filehandler)
+            self.sensors[name] = Sensor(instrument, variable, depth, name,
+                                        filehandler, keep_loaded_data)
         else:
             logger.warning('Sensor already exists: {}'.format(name))
 
@@ -354,21 +358,21 @@ class Station(object):
         return len(self.sensors)
 
 
-class Sensor(object):
+class Sensor(IsmnComponent):
 
     """
     A Sensor with ground observations.
 
     Parameters
     ----------
-    name : str
-        Name of the sensor.
     instrument : str
         Instrument name.
     variable : str
         Observed variable.
     depth : Depth
         Sensing depth.
+    name : str or int, optional (default: None)
+        Id or Name of the sensor. If None is passed, a name is generated.
     filehandler : IsmnFile, optional
         File handler (default: None).
 
@@ -386,22 +390,37 @@ class Sensor(object):
         File handler (default: None).
     """
 
-    def __init__(self, name, instrument, variable, depth, filehandler=None):
+    def __init__(self, instrument, variable, depth, name=None, filehandler=None,
+                 keep_loaded_data=False):
 
-        self.name = name
         self.instrument = instrument
         self.variable = variable
         self.depth = depth
         self.filehandler = filehandler
+        self.keep_loaded_data = keep_loaded_data
+        self.data = None
+        self.name = name if name is not None else self.__repr__()
 
-    def read_data(self):
+    def __repr__(self):
+        return f"{self.instrument}_{self.variable}_{self.depth.start:1.6f}_{self.depth.end:1.6f}"
+
+    def read_data(self) -> pd.DataFrame:
         """
         Load data from filehandler for sensor.
         """
         if self.filehandler is None:
             warnings.warn(f"No filehandler found for sensor {self.name}")
         else:
-            return self.filehandler.read_data()
+            if not self.data:
+                data = self.filehandler.read_data()
+
+                if self.keep_loaded_data:
+                    self.data = data
+
+                return data
+            else:
+                return self.data
+
 
     def eval(self, variable=None, depth=None, filter_meta_dict=None,
              check_only_sensor_depth_from=False):
@@ -450,7 +469,7 @@ class Sensor(object):
 
         return flag
 
-class Depth(object):
+class Depth(IsmnComponent):
 
     """
     A class representing a depth (0=surface).
@@ -517,6 +536,10 @@ class Depth(object):
             flag = False
 
         return flag
+
+    def __iter__(self):
+        for d in [self.start, self.end]:
+            yield d
 
     def perc_overlap(self, other):
         """

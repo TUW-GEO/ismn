@@ -27,7 +27,7 @@ class NetworkCollection():
         ----------
         networks: list[Network], optional (default: None)
             A list of Network objects that create the (initial) collection.
-        load_data : bool, optional (default: True)
+        _load_data : bool, optional (default: True)
             Load and keep ismn data into memory as soon as possible. Accessing
             already loaded data is faster than re-loading.
         """
@@ -79,7 +79,7 @@ class NetworkCollection():
             f = row['filehandler']
 
             if load_data:
-                f.load_data()
+                f._load_data()
 
             nw_name, st_name, se_name = f['network'].val, f['station'].val, f['sensor'].val
 

@@ -32,7 +32,7 @@ from pygeogrids.grids import BasicGrid
 
 rpath = os.path.join(os.path.dirname(__file__), 'test_data')
 
-from ismn.files import DataFile
+from ismn.filehandlers import DataFile
 
 
 class NetworkTest(unittest.TestCase):
@@ -178,7 +178,7 @@ class SensorTest(unittest.TestCase):
         subpath = os.path.join("COSMOS", "Barrow-ARM",
             "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
 
-        self.sensor = Sensor(name, instrument, variable, d, DataFile(root, subpath))
+        self.sensor = Sensor(instrument, variable, d, filehandler=DataFile(root, subpath))
 
     def test_sensor_attributes(self):
         """

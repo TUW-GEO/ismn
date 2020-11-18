@@ -3,7 +3,7 @@ from ismn.readers import IsmnFile
 from tempfile import TemporaryDirectory, gettempdir
 import zipfile as zf
 import numpy as np
-from ismn.old.utils import scan_archive
+from old import scan_archive
 
 
 import os
@@ -58,7 +58,7 @@ class IsmnFile(object):
 
     Methods
     -------
-    load_data()
+    _load_data()
         Load data from file.
     read_data()
         Read data in file.
@@ -68,7 +68,7 @@ class IsmnFile(object):
         Get metadata in the file format called CEOP in separate files.
     _get_metadata_header_values()
         Get metadata file in the format called Header Values.
-    _get_metadata_from_file(delim='_')
+    _get_elements_from_file(delim='_')
         Read first line of file and split filename.
         Information is used to collect metadata information for all
         ISMN formats.

@@ -9,9 +9,10 @@ import os
 import unittest
 import shutil
 from pathlib import Path
+import pytest
 
 import numpy as np
-from ismn.groupings import IsmnFileCollection
+from ismn.file_collection import IsmnFileCollection
 
 testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
 
@@ -20,7 +21,7 @@ def cleanup(metadata_path):
     if os.path.isdir(metadata_path):
         shutil.rmtree(metadata_path)
 
-class Test_FileCollectionCeopSep(unittest.TestCase):
+class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
 
     def setUp(self) -> None:
         testdata_path_unzipped = os.path.join(testdata_root,
@@ -33,30 +34,34 @@ class Test_FileCollectionCeopSep(unittest.TestCase):
     def test_filelist(self):
         # cecks content of file collection
 
-        cols_should = ['network', 'station', 'sensor', 'variable',
+        cols_should = ['network', 'station', 'instrument', 'variable',
                        'depth_from', 'depth_to', 'root_path', 'file_path',
-                       'filehandler']
+                       'timerange_from', 'timerange_to', 'filehandler']
 
         assert all([c in cols_should for c in self.coll.files.columns])
 
         assert self.coll.files.iloc[1]['root_path'] == self.coll.root.path
-        assert self.coll.files.iloc[1]['file_path'] == \
-               Path(os.path.join("COSMOS", "Barrow-ARM",
-                    "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm"))
-        assert self.coll.files.iloc[1]['sensor'] == 'Cosmic-ray-Probe'
+        assert self.coll.files.iloc[1]['file_path'].parts == \
+               ("COSMOS", "Barrow-ARM",
+                    "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
+        assert self.coll.files.iloc[1]['instrument'] == 'Cosmic-ray-Probe'
         assert self.coll.files.iloc[1]['variable'] == 'soil_moisture'
         assert self.coll.files.iloc[1]['depth_from'] == 0.0
         assert self.coll.files.iloc[1]['depth_to'] == 0.21
 
         # check some values that are in file list AND in metadata of filehandler
         assert self.coll.files.iloc[1].filehandler.metadata['station'].val == 'Barrow-ARM'
-        assert self.coll.files.iloc[1].filehandler.metadata['sensor'].depth.start ==\
+        assert self.coll.files.iloc[1].filehandler.metadata['instrument'].depth.start ==\
                self.coll.files.iloc[1]['depth_from']
-        assert self.coll.files.iloc[1].filehandler.metadata['sensor'].depth.end ==\
+        assert self.coll.files.iloc[1].filehandler.metadata['instrument'].depth.end ==\
                self.coll.files.iloc[1]['depth_to']
 
         # read data using a filehandler
         data = self.coll.files.iloc[1]['filehandler'].read_data()
+
+        assert self.coll.files.iloc[1]['timerange_from'] == data.index[0]
+        assert self.coll.files.iloc[1]['timerange_to'] == data.index[-1]
+
         assert self.coll.files.iloc[1]['variable']  in data.columns
         assert len(data.index) == 7059
 
@@ -123,7 +128,7 @@ class Test_FileCollectionCeopSep(unittest.TestCase):
         except ValueError: # should raise ValueError
             pass
 
-class Test_FileCollectionHeaderValues(Test_FileCollectionCeopSep):
+class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
     def setUp(self) -> None:
         testdata_path_unzipped = os.path.join(testdata_root,
@@ -131,12 +136,37 @@ class Test_FileCollectionHeaderValues(Test_FileCollectionCeopSep):
 
         # clean existing metadata
         metadata_path = os.path.join(testdata_path_unzipped, 'python_metadata')
-        if os.path.isdir(metadata_path):
-            shutil.rmtree(metadata_path)
+        cleanup(metadata_path)
 
         self.coll = IsmnFileCollection(testdata_path_unzipped)
 
+@pytest.mark.zip
+class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
+    # same tests as for ceop sep format,
+    def setUp(self) -> None:
+        testdata_path = os.path.join(testdata_root, 'zip_archives', 'ceop')
+        testdata_zip_path = os.path.join(testdata_path,
+            'Data_seperate_files_20170810_20180809.zip')
 
+        # clean existing metadata
+        metadata_path = os.path.join(testdata_path, 'python_metadata')
+        cleanup(metadata_path)
+
+        self.coll = IsmnFileCollection(testdata_zip_path)
+
+@pytest.mark.zip
+class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
+    # same tests as for ceop sep format,
+    def setUp(self) -> None:
+        testdata_path = os.path.join(testdata_root, 'zip_archives', 'header')
+        testdata_zip_path = os.path.join(testdata_path,
+                'Data_seperate_files_header_20170810_20180809.zip')
+
+        # clean existing metadata
+        metadata_path = os.path.join(testdata_path, 'python_metadata')
+        cleanup(metadata_path)
+
+        self.coll = IsmnFileCollection(testdata_zip_path)
 
 if __name__ == '__main__':
     unittest.main()

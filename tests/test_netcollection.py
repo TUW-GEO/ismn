@@ -7,8 +7,10 @@ and filtering the filelist.
 
 import os
 import unittest
+import pytest
 
-from ismn.groupings import NetworkCollection, IsmnFileCollection
+from ismn.network_collection import NetworkCollection
+from ismn.file_collection import IsmnFileCollection
 from ismn.components import Depth
 
 from tests.test_filecollection import cleanup
@@ -16,7 +18,7 @@ from tests.test_filecollection import cleanup
 testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
 
 
-class Test_NetworkCollectionCeopSep(unittest.TestCase):
+class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
 
     def setUp(self) -> None:
 
@@ -26,10 +28,13 @@ class Test_NetworkCollectionCeopSep(unittest.TestCase):
         cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
 
         self.netcol = NetworkCollection(IsmnFileCollection(testdata_path_unzipped),
-                                        load_all=True)
+                                        keep_loaded_data=False)
 
         gpis, lons, lats = self.netcol.grid.get_grid_points()
-        assert gpis.size == lons.size == lats.size == self.netcol.files.index.size
+        n_stats = 0
+        for net in self.netcol.iter_networks():
+            n_stats += net.n_stations()
+        assert gpis.size == lons.size == lats.size == n_stats
 
 
     def test_station4idx(self):
@@ -84,22 +89,83 @@ class Test_NetworkCollectionCeopSep(unittest.TestCase):
             raise ValueError("Found sensor, although none should exist")
 
     def test_get_nearest_station(self):
-        station, dist = self.netcol.get_nearest_station(-156.62870,71.32980)
-        assert dist == 0
-        assert station.lon == -156.62870
-        assert station.lat == 71.32980
-        gpi, dist = self.netcol.grid.find_nearest_gpi(-156,70)
-        assert dist != 0
-        assert self.netcol.files.loc[int(gpi)]['filehandler'].metadata['longitude'].val == \
-               station.lon
-        assert self.netcol.files.loc[int(gpi)]['filehandler'].metadata['latitude'].val == \
-               station.lat
+        should_lon, should_lat = -156.62870, 71.32980
 
-        station, dist = self.netcol.get_nearest_station(0,0, max_dist=100)
+        station, dist = self.netcol.get_nearest_station(should_lon, should_lat)
+        assert dist == 0
+        assert station.lon == should_lon
+        assert station.lat == should_lat
+        gpi, dist = self.netcol.grid.find_nearest_gpi(int(should_lon),int(should_lat))
+        assert dist != 0
+        for net in self.netcol.iter_networks():
+            if station.name in net.stations.keys():
+                assert net.stations[station.name].lon == should_lon
+                assert net.stations[station.name].lat == should_lat
+
+        station, dist = self.netcol.get_nearest_station(0, 0, max_dist=100)
         # todo: when fixed in pygeogrids this should return nothing...
         #https://github.com/TUW-GEO/pygeogrids/issues/64
         #assert station == None
 
+class Test_NetworkCollectionHeaderValuesUnzipped(Test_NetworkCollectionCeopSepUnzipped):
+
+    def setUp(self) -> None:
+
+        testdata_path_unzipped = os.path.join(testdata_root,
+            'Data_seperate_files_header_20170810_20180809')
+        # clean existing metadata
+        cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
+
+        self.netcol = NetworkCollection(IsmnFileCollection(testdata_path_unzipped),
+                                        keep_loaded_data=False)
+
+        gpis, lons, lats = self.netcol.grid.get_grid_points()
+        n_stats = 0
+        for net in self.netcol.iter_networks():
+            n_stats += net.n_stations()
+        assert gpis.size == lons.size == lats.size == n_stats
+
+@pytest.mark.zip
+class Test_NetworkCollectionCeopSepZipped(Test_NetworkCollectionCeopSepUnzipped):
+
+    def setUp(self) -> None:
+        testdata_path = os.path.join(testdata_root, 'zip_archives', 'ceop')
+        testdata_zip_path = os.path.join(testdata_path,
+            'Data_seperate_files_20170810_20180809.zip')
+
+        # clean up existing metadata
+        metadata_path = os.path.join(testdata_path, 'python_metadata')
+        cleanup(metadata_path)
+
+        self.netcol = NetworkCollection(IsmnFileCollection(testdata_zip_path),
+                                        keep_loaded_data=False)
+
+        gpis, lons, lats = self.netcol.grid.get_grid_points()
+        n_stats = 0
+        for net in self.netcol.iter_networks():
+            n_stats += net.n_stations()
+        assert gpis.size == lons.size == lats.size == n_stats
+
+@pytest.mark.zip
+class Test_NetworkCollectionHeaderValuesZipped(Test_NetworkCollectionCeopSepUnzipped):
+
+    def setUp(self) -> None:
+        testdata_path = os.path.join(testdata_root, 'zip_archives', 'header')
+        testdata_zip_path = os.path.join(testdata_path,
+            'Data_seperate_files_header_20170810_20180809.zip')
+
+        # clean up existing metadata
+        metadata_path = os.path.join(testdata_path, 'python_metadata')
+        cleanup(metadata_path)
+
+        self.netcol = NetworkCollection(IsmnFileCollection(testdata_zip_path),
+                                        keep_loaded_data=False)
+
+        gpis, lons, lats = self.netcol.grid.get_grid_points()
+        n_stats = 0
+        for net in self.netcol.iter_networks():
+            n_stats += net.n_stations()
+        assert gpis.size == lons.size == lats.size == n_stats
 
 if __name__ == '__main__':
     unittest.main()
