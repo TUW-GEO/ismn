@@ -68,13 +68,13 @@ class Test_MetaData(unittest.TestCase):
 
         # all but one depth overlaps
         best_meta_015 = self.dat.best_meta_for_depth(Depth(0,1.5))
-        assert len(best_meta_inf) == len(self.dat)-1
+        assert len(best_meta_015) == len(self.dat)-1
         assert best_meta_015['dup'].depth.start == 1
         assert best_meta_015['dup'].depth.end == 3
 
         # both duplicate depths overlap, but one more --> keep second
         best_meta_231 = self.dat.best_meta_for_depth(Depth(2,3.1))
-        assert len(best_meta_inf) == len(self.dat)-2 # one duplicate and first
+        assert len(best_meta_231) == len(self.dat)-2 # one duplicate and first
         assert best_meta_231['dup'].depth.start == 2
         assert best_meta_231['dup'].depth.end == 4
 
