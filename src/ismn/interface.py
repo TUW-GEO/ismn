@@ -399,8 +399,8 @@ class ISMN_Interface():
         if filename is not None:
             fig.savefig(filename, bbox_extra_artists=(lgd, text) if stats_text else (lgd),
                         dpi=300)
-
-        return fig, ax, counts
+        else:
+            return fig, ax, counts
 
 
     def get_min_max_obs_timestamps(self, variable="soil moisture",
