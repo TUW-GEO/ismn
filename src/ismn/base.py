@@ -23,14 +23,14 @@ def dir(func):
         return func(cls, *args, **kwargs)
     return wrapper
 
-
 class IsmnRoot():
 
     def __init__(self, path):
         """
-        Connection to the pure zip resp. extracted zip archive downloaded from the
+        Connection to the zip resp. extracted zip archive downloaded from the
         ismn website. This class only handles file accesses / requests made by the
-        readers, findes files in path and extracts data to temp folders for reading.
+        readers, lists files in path and can extract files to temp folders for
+        safe reading.
 
         Parameters
         ----------

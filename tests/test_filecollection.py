@@ -8,9 +8,10 @@ and filtering the filelist.
 import os
 import unittest
 import shutil
-from pathlib import Path
 import pytest
+from tempfile import TemporaryDirectory
 
+from pathlib import Path
 import numpy as np
 from ismn.file_collection import IsmnFileCollection
 
@@ -23,38 +24,48 @@ def cleanup(metadata_path):
 
 class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        """ get_some_resource() is slow, to avoid calling it for each test use setUpClass()
+            and store the result as class variable
+        """
+        super(Test_FileCollectionCeopSepUnzipped, cls).setUpClass()
         testdata_path_unzipped = os.path.join(testdata_root,
             'Data_seperate_files_20170810_20180809')
-
         cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
+        print('Setup from scratch')
+        cls.coll = IsmnFileCollection.from_scratch(Path(testdata_path_unzipped), parallel=True)
 
-        self.coll = IsmnFileCollection(testdata_path_unzipped)
+    def setUp(self) -> None:
+        pass
+
+    def tearDown(self) -> None:
+        self.coll.close()
 
     def test_filelist(self):
         # cecks content of file collection
 
         cols_should = ['network', 'station', 'instrument', 'variable',
-                       'depth_from', 'depth_to', 'root_path', 'file_path',
+                       'sensor_depth_from', 'sensor_depth_to',
+                       'file_path',
                        'timerange_from', 'timerange_to', 'filehandler']
 
         assert all([c in cols_should for c in self.coll.files.columns])
 
-        assert self.coll.files.iloc[1]['root_path'] == self.coll.root.path
-        assert self.coll.files.iloc[1]['file_path'].parts == \
+        assert Path(self.coll.files.iloc[1]['file_path']).parts == \
                ("COSMOS", "Barrow-ARM",
                     "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
         assert self.coll.files.iloc[1]['instrument'] == 'Cosmic-ray-Probe'
         assert self.coll.files.iloc[1]['variable'] == 'soil_moisture'
-        assert self.coll.files.iloc[1]['depth_from'] == 0.0
-        assert self.coll.files.iloc[1]['depth_to'] == 0.21
+        assert self.coll.files.iloc[1]['sensor_depth_from'] == 0.0
+        assert self.coll.files.iloc[1]['sensor_depth_to'] == 0.21
 
         # check some values that are in file list AND in metadata of filehandler
         assert self.coll.files.iloc[1].filehandler.metadata['station'].val == 'Barrow-ARM'
         assert self.coll.files.iloc[1].filehandler.metadata['instrument'].depth.start ==\
-               self.coll.files.iloc[1]['depth_from']
+               self.coll.files.iloc[1]['sensor_depth_from']
         assert self.coll.files.iloc[1].filehandler.metadata['instrument'].depth.end ==\
-               self.coll.files.iloc[1]['depth_to']
+               self.coll.files.iloc[1]['sensor_depth_to']
 
         # read data using a filehandler
         data = self.coll.files.iloc[1]['filehandler'].read_data()
@@ -62,13 +73,19 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
         assert self.coll.files.iloc[1]['timerange_from'] == data.index[0]
         assert self.coll.files.iloc[1]['timerange_to'] == data.index[-1]
 
-        assert self.coll.files.iloc[1]['variable']  in data.columns
+        assert self.coll.files.iloc[1]['variable'] in data.columns
         assert len(data.index) == 7059
 
 
-    def test_from_filelist(self):
+    def test_from_csv(self):
         # test alternative method to build collection, should get same result
-        other = IsmnFileCollection.from_filelist(self.coll.files)
+        print('Setup from csv')
+
+        with TemporaryDirectory() as temp:
+            self.coll.to_metadata_csv(os.path.join(temp, 'meta.csv'))
+
+            other = IsmnFileCollection.from_metadata_csv(
+                self.coll.root.path, os.path.join(temp, 'meta.csv'))
 
         for coll in self.coll.files.columns:
             if coll == 'filehandler': continue
@@ -130,7 +147,9 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
 
 class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_FileCollectionCeopSepUnzipped, cls).setUpClass()
         testdata_path_unzipped = os.path.join(testdata_root,
             'Data_seperate_files_header_20170810_20180809')
 
@@ -138,12 +157,14 @@ class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped
         metadata_path = os.path.join(testdata_path_unzipped, 'python_metadata')
         cleanup(metadata_path)
 
-        self.coll = IsmnFileCollection(testdata_path_unzipped)
+        cls.coll = IsmnFileCollection.from_scratch(testdata_path_unzipped)
 
 @pytest.mark.zip
 class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
-    def setUp(self) -> None:
+
+    @classmethod
+    def setUpClass(cls):
         testdata_path = os.path.join(testdata_root, 'zip_archives', 'ceop')
         testdata_zip_path = os.path.join(testdata_path,
             'Data_seperate_files_20170810_20180809.zip')
@@ -152,21 +173,21 @@ class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        self.coll = IsmnFileCollection(testdata_zip_path)
+        cls.coll = IsmnFileCollection.from_scratch(testdata_zip_path)
 
 @pytest.mark.zip
 class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
         testdata_path = os.path.join(testdata_root, 'zip_archives', 'header')
         testdata_zip_path = os.path.join(testdata_path,
                 'Data_seperate_files_header_20170810_20180809.zip')
-
         # clean existing metadata
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        self.coll = IsmnFileCollection(testdata_zip_path)
+        cls.coll = IsmnFileCollection.from_scratch(testdata_zip_path)
 
 if __name__ == '__main__':
     unittest.main()

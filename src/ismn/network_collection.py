@@ -25,6 +25,7 @@ from ismn.base import IsmnRoot
 from ismn.file_collection import IsmnFileCollection
 from ismn.tables import *
 
+from tempfile import gettempdir
 from pathlib import Path
 import os
 import pandas as pd
@@ -35,8 +36,8 @@ class NetworkCollection(object):
     and sensors using the passed file collection.
     A grid is added that contains all stations to perform spatial searches.
     """
-    def __init__(self, file_collection:IsmnFileCollection, networks=None,
-                 keep_loaded_data=False):
+    def __init__(self, data_path, networks=None, meta_path=None,
+                 keep_loaded_data=False, temp_root=gettempdir()):
 
         """
         Create network collection from previously loaded IsmnFileCollection.
@@ -47,83 +48,36 @@ class NetworkCollection(object):
             DataFrame that contains the files to read.
             As in IsmnFileCollection.files or as returned by the filter functions.
         networks : list or str, optional (default: None)
-            List of networks to activate.
+            List of network names to activate.
+        meta_path : str or Path
+            Path where the metadata csv file(s) is / are stored. The actual filename
+            is defined by the name of data_path and will be generated automatically.
         keep_loaded_data : bool, optional (default: False)
             Keep data for a file in memory once it is loaded. This makes subsequent
             calls of data faster (if e.g. a station is accessed multiple times)
             but can fill up memory if multiple networks are loaded.
+        temp_root : str or Path, optional (default: os temp dir)
+            Root path where temporary files are stored.
         """
+        
+        root = IsmnRoot(data_path)
 
-        self.file_collection = file_collection
+        meta_csv_filename = f'{root.name}.csv'
+
+        if meta_path is None:
+            meta_csv_file = root.root_dir / 'python_metadata' / meta_csv_filename
+        else:
+            meta_csv_file = Path(meta_path) / meta_csv_filename
+
+        if os.path.isfile(meta_csv_file):
+            self.file_collection = IsmnFileCollection.from_metadata_csv(root, meta_csv_file)
+        else:
+            self.file_collection = IsmnFileCollection.from_scratch(root, temp_root)
+            self.file_collection.to_metadata_csv(meta_csv_file)
+
         self.keep_loaded_data = keep_loaded_data
 
         self.networks, self.grid = self._collect_networks(networks)
-
-    @classmethod
-    def from_scratch(cls, data_root_path, metadata_out_path=None, networks=None,
-                     keep_loaded_data=False):
-        """
-        Build new NetworkCollection from files. Ie metadata is collected and
-        stored for subsequent, faster loading a collection for the data using the
-        from_metadata() classmethod.
-
-        Parameters
-        ----------
-        data_root_path : str or Path
-            Path where the ismn data is stored.
-        metadata_out_path : str or Path
-            Path to a directly where the generated metadata is stored.
-            If None is passed, the metadata is created within the data folder
-            as python_metadata. If data_path is a zip file, metadata is stored
-            on the same level by default.
-        networks : list or str, optional (default: None)
-            see __init__ description
-        keep_loaded_data : bool, optional (default: False)
-            see __init__ description
-        """
-        file_collection = IsmnFileCollection(data_root_path)
-
-        if metadata_out_path is not None:
-            metadata_out_path = Path(metadata_out_path)
-        else:
-            metadata_out_path = file_collection.root.root_dir / 'python_metadata'
-            
-        if not os.path.exists(metadata_out_path):
-            os.makedirs(metadata_out_path)
-
-        pklpath = metadata_out_path / f'{file_collection.root.name}.pkl'
-        
-        file_collection.store(pklpath, drop_filehandler=False)
-
-        return cls(file_collection, networks=networks, keep_loaded_data=keep_loaded_data)
-
-    @classmethod
-    def from_metadata(cls, data_root_path, metadata_path, networks=None,
-                      keep_loaded_data=False):
-        """
-        Re-build MetadataCollection using previously created metadata. Faster
-        then creating it from_scratch.
-
-        Parameters
-        ----------
-        data_root_path : str or Path
-            Path where the ismn data is stored.
-        metadata_path : str or Path
-            python_metadata folder where the pkl files are.
-        networks : list or str, optional (default: None)
-            see __init__ description
-        keep_loaded_data : bool, optional (default: False)
-            see __init__ description
-        """
-
-        pklpath = metadata_path / f'{IsmnRoot(data_root_path).name}.pkl'
-
-        if not os.path.isfile(pklpath):
-            raise ValueError(f"No metadata found under {pklpath}")
-
-        file_collection = IsmnFileCollection.from_pkl(pklpath)
-
-        return cls(file_collection, networks=networks, keep_loaded_data=keep_loaded_data)
 
     def iter_networks(self):
         # Iterate through all networks
@@ -142,6 +96,7 @@ class NetworkCollection(object):
 
         for net in self.iter_networks():
             for stat in net.iter_stations():
+                print(stat.name)
                 for sens in stat.iter_sensors():
                     assert sens.keep_loaded_data == True
                     sens.read_data()
@@ -301,6 +256,9 @@ class NetworkCollection(object):
         return station, dist
 
 if __name__ == '__main__':
-    networks = NetworkCollection.from_scratch(r"H:\code\ismn\tests\test_data\Data_seperate_files_20170810_20180809",
-                                              keep_loaded_data=True)
-    networks.load_all()
+    networks = NetworkCollection(r"C:\Temp\delete_me\ismn\testdata_ceop.zip",
+                                 meta_path=r"C:\Temp\delete_me\ismn\temp",
+                                 keep_loaded_data=True,
+                                 networks=None)
+
+

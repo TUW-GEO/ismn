@@ -33,17 +33,16 @@ class Test_MetaData(unittest.TestCase):
         assert len(self.dat) == 3
         assert 'second' in self.dat
         assert self.dat[1] in self.dat
-        assert tuple(self.dat)[0] == ('first', 1, 0, 1)
-        assert tuple(self.dat)[1] == ('second', 0, None, None)
+        assert tuple(self.dat[0]) == ('first', 1, 0., 1.)
+        assert tuple(self.dat[1]) == ('second', 0, None, None)
 
-        assert str(self.dat) == 'first (0_1[m]), second (no depth), dup (1_3[m])'
+        assert str(self.dat) == 'first (0.0_1.0[m]), second (no depth), dup (1.0_3.0[m])'
 
         assert self.dat['dup'] == self.dat[2]
 
         assert self.dat.keys() == ['first', 'second', 'dup']
 
-        ddict = self.dat.to_dict()
-        assert self.dat.from_dict(ddict) == self.dat
+        assert MetaData.from_dict({'first': (1,0,1)}) == self.dat[['first']]
 
 
     def test_best_meta(self):
@@ -52,7 +51,7 @@ class Test_MetaData(unittest.TestCase):
         assert len(self.dat) == 5
 
         with pytest.raises(ValueError):
-            self.dat.to_dict() # conversion to dict with two vars of same name not supported
+            self.dat.to_pd() # conversion to dict with two vars of same name not supported
 
         # no depths overlap
         best_meta_9_10 = self.dat.best_meta_for_depth(Depth(9,10))
@@ -81,14 +80,14 @@ class Test_MetaData(unittest.TestCase):
         # both duplicate depths overlap, equally good -> keep first
         best_meta_23 = self.dat.best_meta_for_depth(Depth(2,3))
         assert len(best_meta_23) == len(self.dat)-2 # one dup and first
-        assert best_meta_23['dup'].depth.start == 1
-        assert best_meta_23['dup'].depth.end == 3
+        assert best_meta_23['dup'].depth.start == 1.
+        assert best_meta_23['dup'].depth.end == 3.
         
         # one matches perfectlyt
         best_meta_13 = self.dat.best_meta_for_depth(Depth(1,3))
         assert len(best_meta_13) == len(self.dat)-1 # one dup only
-        assert best_meta_13['dup'].depth.start == 1
-        assert best_meta_13['dup'].depth.end == 3
+        assert best_meta_13['dup'].depth.start == 1.
+        assert best_meta_13['dup'].depth.end == 3.
         
 
 

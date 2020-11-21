@@ -26,6 +26,7 @@ from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn.tables import *
 from ismn.filehandlers import DataFile
+from ismn.meta import MetaData, MetaVar
 
 import ismn
 
@@ -33,9 +34,10 @@ pkg_version = ismn.__version__
 
 import pandas as pd
 from tempfile import gettempdir
-from pathlib import Path
-import warnings
+from pathlib import Path, PurePosixPath
 
+from typing import Union
+from multiprocessing import Pool, cpu_count
 
 class MetadataError(IOError):
     pass
@@ -45,7 +47,126 @@ class ISMNError(Exception):
     pass
 
 
-def build_filelist(data_path, temp_root=gettempdir()):
+def build_filelist_from_csv(data_path, csv_path) -> pd.DataFrame:
+    """
+    Use a pre-build metadata csv file to load the filelist
+
+    Parameters
+    ----------
+    data_path : str or Path
+        Root path where the data is store. Paths in csv file are RELATIVE to
+        this path.
+    csv_path : str or Path
+        Path to the metadata csv file.
+    """
+    print(f"Found existing ismn metadata in {csv_path}.")
+
+    metadata_df = pd.read_csv(csv_path, index_col=0, header=[0,1])
+
+    file_paths = metadata_df['file_path'].iloc[:, 0].values
+    metadata_df = metadata_df.drop(columns=['file_path'])
+
+    filelist = {'network': [], 'station': [], 'instrument': [],
+                'variable': [], 'sensor_depth_from': [], 'sensor_depth_to': [],
+                'timerange_from': [], 'timerange_to': [],
+                'file_path': [],  'filehandler': [], # file info, to reload file
+               }
+
+    for i, row in metadata_df.iterrows():
+        metavars = []
+        level = list(row.index.names).index('name')
+        for metavar_name in row.index.levels[level]:
+            if metavar_name == 'file_path': continue
+            var = row.loc[metavar_name]
+            depth_from, depth_to = var['depth_from'], var['depth_to']
+
+            if np.all(np.isnan(np.array([depth_from, depth_to]))):
+                depth = None
+            else:
+                depth = Depth(depth_from, depth_to)
+
+            metavar = MetaVar(metavar_name, var['val'], depth)
+            metavars.append(metavar)
+
+        metadata = MetaData(metavars)
+        f = DataFile(root=data_path,
+                     file_path=str(PurePosixPath(file_paths[i])),
+                     load_metadata=False)
+        f.metadata = metadata
+
+        filelist['network'].append(f.metadata['network'].val)
+        filelist['station'].append(f.metadata['station'].val)
+        filelist['instrument'].append(f.metadata['instrument'].val)
+        filelist['variable'].append(f.metadata['variable'].val)
+
+        filelist['sensor_depth_from'].append(f.metadata['instrument'].depth.start)
+        filelist['sensor_depth_to'].append(f.metadata['instrument'].depth.end)
+
+        filelist['timerange_from'].append(pd.Timestamp(f.metadata['timerange_from'].val))
+        filelist['timerange_to'].append(pd.Timestamp(f.metadata['timerange_to'].val))
+        filelist['file_path'].append(str(PurePosixPath(f.file_path)))
+        filelist['filehandler'].append(f)
+
+    files = pd.DataFrame.from_dict(filelist)
+    files.index = files.index.astype('int')
+
+    return files
+
+
+def _read_station_dir(
+        root: Union[IsmnRoot, Path, str],  # Path for reading from zip, avoid serialisation error
+        stat_dir: Union[Path, str],
+        temp_root: Path) -> dict:
+    """
+    Parallelizable function to read metadata for files in station dir
+    """
+
+    if not isinstance(root, IsmnRoot):
+        proc_root = True
+        root = IsmnRoot(root)
+    else:
+        proc_root = False
+
+    filelist = {}
+    for var in ['network', 'station', 'instrument', 'variable',
+                'sensor_depth_from', 'sensor_depth_to', 'timerange_from',
+                'timerange_to', 'file_path', 'filehandler']:
+        filelist[var] = []
+
+    data_files = root.find_files(stat_dir, '*.stm')
+    static_meta = None
+
+    for file_path in data_files:
+        try:
+            f = DataFile(root, file_path,
+                         static_meta=static_meta,
+                         temp_root=temp_root)
+        except IOError as e:
+            logger.error(f'Error loading ismn file: {e}')
+            continue
+
+        f.metadata = f.metadata.best_meta_for_depth(
+            Depth(f.metadata['instrument'].depth.start,
+                  f.metadata['instrument'].depth.end))
+
+        filelist['network'].append(f.metadata['network'].val)
+        filelist['station'].append(f.metadata['station'].val)
+        filelist['instrument'].append(f.metadata['instrument'].val)
+        filelist['variable'].append(f.metadata['variable'].val)
+        filelist['sensor_depth_from'].append(f.metadata['instrument'].depth.start)
+        filelist['sensor_depth_to'].append(f.metadata['instrument'].depth.end)
+        filelist['timerange_from'].append(f.metadata['timerange_from'].val)
+        filelist['timerange_to'].append(f.metadata['timerange_to'].val)
+        filelist['file_path'].append(str(PurePosixPath(f.file_path)))
+        filelist['filehandler'].append(f)
+
+    if proc_root:
+        root.close()
+
+    return filelist
+
+
+def build_filelist_from_data(root, parallel=True, temp_root=gettempdir()):
     """
     Build the file list
     Iterate over all networks and station folders in the root directory
@@ -58,57 +179,36 @@ def build_filelist(data_path, temp_root=gettempdir()):
 
     Parameters
     ----------
-    data_path : str or Path
-        Root path where the data is stored.
+    data_root : IsmnRoot
+        Root where the data is stored.
+    parallel : bool, optional (default: True)
+        Run metadata extraction in parallel (use all CPU cores).
     temp_root : str or Path
         Root path where temporary files are stored.
     """
+    print(f"Processing metadata for all ismn stations in {root.path}."
+          f" This may take a few minutes ...")
 
-    root = IsmnRoot(data_path)
-
-    # todo: basic info, not necessary?
-    filelist = {'network': [], 'station': [], 'instrument': [],
-                'variable': [], 'depth_from': [], 'depth_to': [],
-                'timerange_from': [], 'timerange_to': [],
-                'root_path': [], 'file_path': [],  # file info, to reload file
-                'filehandler': [],  # filehandler object
-                }
-
+    process_stat_dirs = []
     for net_dir, stat_dirs in root.cont.items():
-        for stat_dir in stat_dirs:
-            print(net_dir, stat_dir)
+        process_stat_dirs += list(stat_dirs)
 
-            data_files = root.find_files(stat_dir, '*.stm')
-            static_meta = None
+    root = root.path if root.zip else root
+    args = [(root, d, temp_root) for d in process_stat_dirs]
 
-            for file_path in data_files:
-                try:
-                    f = DataFile(root, file_path,
-                                 static_meta=static_meta,
-                                 temp_root=temp_root)
-                    # f.close() # to store pickle cut connection to archive
-                except IOError as e:
-                    logger.error(f'Error loading ismn file: {e}')
-                    continue
+    pool = Pool(1 if not parallel else cpu_count())
+    res = pool.starmap_async(_read_station_dir, args)
 
-                filelist['network'].append(f.metadata['network'].val)
-                filelist['station'].append(f.metadata['station'].val)
-                filelist['instrument'].append(f.metadata['instrument'].val)
-                filelist['variable'].append(f.metadata['variable'].val)
-                filelist['depth_from'].append(f.metadata['instrument'].depth.start)
-                filelist['depth_to'].append(f.metadata['instrument'].depth.end)
-                filelist['timerange_from'].append(f.metadata['timerange_from'].val)
-                filelist['timerange_to'].append(f.metadata['timerange_to'].val)
-                filelist['root_path'].append(f.root.path)
-                filelist['file_path'].append(f.file_path)
-                filelist['filehandler'].append(f)
+    pool.close()
+    pool.join()
 
-    files = pd.DataFrame.from_dict(filelist)
-    files.index = files.index.astype('int')
-    files.ismn_pkg_version = pkg_version
+    result = res.get()
 
-    return files
+    df = [pd.DataFrame.from_dict(r) for r in result]
+    df = pd.concat(df, axis=0, ignore_index=True, sort=False)
+    df = df.sort_values(['network', 'station']).reset_index(drop=True)
 
+    return df
 
 class IsmnFileCollection(object):
     """
@@ -119,86 +219,96 @@ class IsmnFileCollection(object):
     to files for a certain network/variable etc.
     """
 
-    def __init__(self, data_path, filelist=None, temp_root=gettempdir()):
+    def __init__(self, root, filelist):
+        """
+        Use the @classmethods to create this object!
+
+        Parameters
+        ----------
+        root : IsmnRoot
+            Root object where data is stored.
+        filelist : pd.DataFarme, optional (Default: None)
+            A pre-built filelist to use, if None is give one from data_path is created.
+        """
+        self.root = root
+        self.files = filelist
+
+    @classmethod
+    def from_scratch(cls, data_root, parallel=True, temp_root=gettempdir()):
         """
         Parameters
         ----------
-        data_path : str or Path
+        data_root : IsmnRoot or str or Path
             Root path of ISMN files or path to metadata pkl file.
             i.e. path to the downloaded zip file or the extracted zip directory (faster)
             or a file list that contains these infos already.
-        filelist : pd.DataFarme, optional (Default: None)
-            A pre-built filelist to use, if None is give one from data_path is created.
+        parallel : bool, optional (default: True)
+            Speed up metadata collecting with multiple processes.
         temp_root : str or Path
             Temporary folder where extraced data is copied during reading from
             zip archive.
         """
-        self.root = None
+        if isinstance(data_root, IsmnRoot):
+            root = data_root
+        else:
+            root = IsmnRoot(data_root)
 
         if not os.path.exists(temp_root):
             os.makedirs(temp_root, exist_ok=True)
 
-        self.temp_root = temp_root
+        filelist = build_filelist_from_data(
+            root, parallel=parallel, temp_root=temp_root)
 
-        data_path = Path(data_path)
-        self.root = IsmnRoot(data_path)
-
-        self.data_loaded = False
-
-        if filelist is not None:
-            assert data_path == self._rootpath_from_filelist(filelist), \
-                "Root paths dont match"
-            self.files = filelist
-        else:
-            self.files = build_filelist(data_path, temp_root)
+        return cls(root, filelist=filelist)
 
     @classmethod
-    def from_filelist(cls, filelist, temp_root=gettempdir()):
-        """
-        Create FileCollection from a pre-built file list.
-
-        Parameters
-        ----------
-        filelist : pd.DataFrame
-            File list that go into the file collection
-        """
-        data_path = cls._rootpath_from_filelist(filelist)
-
-        return cls(data_path, filelist=filelist, temp_root=temp_root)
-
-    @classmethod
-    def from_pkl(cls, filepath, temp_root=gettempdir()):
+    def from_metadata_csv(cls, data_root, meta_csv_file):
         """
         Load a previously created and stored filelist from pkl.
 
         Parameters
         ----------
-        filepath : str or Path
-            Path to a pkl file containing a file list data frame.
+        data_root : IsmnRoot or str or Path
+            Path where the ismn data is stored, can also be a zip file
+        meta_csv_file : str or Path
+            Csv file where the metadata is stored.
+        """
+        if isinstance(data_root, IsmnRoot):
+            data_root = data_root.path
+        else:
+            data_root = Path(data_root)
+
+        filelist = build_filelist_from_csv(data_root, csv_path=meta_csv_file)
+
+        return cls(IsmnRoot(data_root), filelist=filelist)
+
+    def to_metadata_csv(self, meta_csv_file):
+        """
+        Write filehandle metadata from filelist to metdata csv that contains
+        ALL metadata / variables of the filehander. Can be read back in as
+        filelist with filehandlers using from_metadata_csv().
+
+        Parameters
+        ----------
+        meta_csv_file : Path or str, optional (default: None)
+            Directory where the csv file with the correct name is crated
         """
 
-        filelist = pd.read_pickle(filepath)
+        dfs = []
+        filehandlers = self.files['filehandler'].values
+        file_paths = self.files['file_path'].values
 
-        # if self.root.path != Path(data_path):
-        #     raise MetadataError("Root path in filelist list does not match to passed root path."
-        #                         "Try re-creating ISMN metadata.")
+        for i, (filehandler, file_path) in enumerate(zip(filehandlers, file_paths)):
+            df = filehandler.metadata.to_pd(True)
+            df['file_path'] = file_path
+            df.index = [i]
+            dfs.append(df)
 
-        if hasattr(filelist, 'ismn_pkg_version'):
-            if filelist.ismn_pkg_version.lower() == 'unknown':
-                warnings.warn("Metadata was built with an unknown package version. "
-                              f"You should remove {filepath} and rebuild the metadata.")
+        metadata_df = pd.concat(dfs, axis=0)
+        metadata_df = metadata_df.fillna(np.nan)
 
-            if filelist.ismn_pkg_version != pkg_version:
-                warnings.warn("Metadata was build with a different package version. "
-                              f"You should remove {filepath} and rebuild the metadata.")
-
-        return cls.from_filelist(filelist, temp_root=temp_root)
-
-    @staticmethod
-    def _rootpath_from_filelist(filelist):
-        root = np.unique(filelist['root_path'].values)
-        assert len(root) == 1, "Found multiple root dirs"
-        return Path(root[0])
+        os.makedirs(Path(os.path.dirname(meta_csv_file)), exist_ok=True)
+        metadata_df.to_csv(meta_csv_file)
 
     def filter_col_val(self, col, vals, return_index=False):
         """
@@ -259,12 +369,12 @@ class IsmnFileCollection(object):
         filtered_filelist or filtered_index : pd.DataFrame or np.array
             Filtered file list or indices of included elements
         """
-        mask_from = np.greater_equal(self.files['depth_from'], min_depth)
+        mask_from = np.greater_equal(self.files['sensor_depth_from'], min_depth)
 
         if only_consider_depth_from:
-            mask_to = np.less_equal(self.files['depth_from'], max_depth)
+            mask_to = np.less_equal(self.files['sensor_depth_from'], max_depth)
         else:
-            mask_to = np.less_equal(self.files['depth_to'], max_depth)
+            mask_to = np.less_equal(self.files['sensor_depth_to'], max_depth)
 
         idx = self.files.loc[(mask_from & mask_to)].index.values
 
@@ -321,35 +431,20 @@ class IsmnFileCollection(object):
         else:
             return filelist.loc[idx, :]
 
-    def store(self, filename, drop_filehandler=False):
-        """
-        Store file list data frame to pkl, only possible if no data was loaded.
-
-        Parameters
-        ----------
-        filename : str or Path
-            Path to the file that will be created.
-        drop_filehandler : bool, optional (default: False)
-            Drow the file handlers from the dataframe before storing.
-        """
-
-        # todo: remove data when loaded? allow loaded data
-        if self.data_loaded:
-            raise IOError("Cannot store filelist when data was loaded.")
-
-        self.close()
-
-        if pkg_version == 'unknown':
-            warnings.warn('Storing metadata from unknown package version')
-
-        if drop_filehandler:
-            self.files.drop(columns='filehandler').to_pickle(filename)
-        else:
-            # todo: add functio to add filehandler to list with paths only?
-            self.files.to_pickle(filename)
-
     def close(self):
         # close root and all filehandlers
         self.root.close()
         for f in self.files['filehandler'].values:
             f.close()
+
+if __name__ == '__main__':
+    root_path = r"C:\Temp\delete_me\ismn\testdata_ceop.zip"
+    fc = IsmnFileCollection.from_scratch(root_path)
+    fc.to_metadata_csv(r"C:\Temp\delete_me\ismn")
+
+    fc = IsmnFileCollection.from_metadata_csv(root_path,
+                                              r"C:\Temp\delete_me\ismn")
+
+
+
+

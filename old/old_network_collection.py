@@ -21,14 +21,12 @@
 # SOFTWARE.
 
 from ismn.components import *
-from ismn.components import Network, Depth
+from ismn.base import IsmnRoot
 from ismn.file_collection import IsmnFileCollection
 from ismn.tables import *
 
-import ismn
-
-pkg_version = ismn.__version__
-
+from pathlib import Path
+import os
 import pandas as pd
 
 class NetworkCollection(object):
@@ -54,27 +52,83 @@ class NetworkCollection(object):
             Keep data for a file in memory once it is loaded. This makes subsequent
             calls of data faster (if e.g. a station is accessed multiple times)
             but can fill up memory if multiple networks are loaded.
-        load_all : bool, optional (default: False)
-            Load data into memory for all networks directly. This makes subsequent
-            reading faster.
         """
 
-        self.full_collection = file_collection
-        if networks is None:
-            self.active_collection = self.full_collection
-        else:
-            active_list = self.full_collection.filter_col_val('network', networks)
-            self.active_collection = IsmnFileCollection.from_filelist(active_list)
-
-        self.networks, self.grid = self._collect_networks()
-
+        self.file_collection = file_collection
         self.keep_loaded_data = keep_loaded_data
 
+        self.networks, self.grid = self._collect_networks(networks)
 
-    @property
-    def files(self):
-        # get files list
-        return self.active_collection.files
+    @classmethod
+    def from_scratch(cls, data_root_path, metadata_out_path=None, networks=None,
+                     keep_loaded_data=False):
+        """
+        Build new NetworkCollection from files. Ie metadata is collected and
+        stored for subsequent, faster loading a collection for the data using the
+        from_metadata() classmethod.
+
+        Parameters
+        ----------
+        data_root_path : str or Path
+            Path where the ismn data is stored.
+        metadata_out_path : str or Path
+            Path to a directly where the generated metadata is stored.
+            If None is passed, the metadata is created within the data folder
+            as python_metadata. If data_path is a zip file, metadata is stored
+            on the same level by default.
+        networks : list or str, optional (default: None)
+            see __init__ description
+        keep_loaded_data : bool, optional (default: False)
+            see __init__ description
+        """
+        file_collection = IsmnFileCollection(data_root_path)
+
+        if metadata_out_path is not None:
+            metadata_out_path = Path(metadata_out_path)
+        else:
+            metadata_out_path = file_collection.root.root_dir / 'python_metadata'
+            
+        if not os.path.exists(metadata_out_path):
+            os.makedirs(metadata_out_path)
+
+        meta_csv_path = metadata_out_path / f'{file_collection.root.name}.csv'
+        
+        file_collection.to_metadata_csv(meta_csv_path)
+
+        return cls(file_collection, networks=networks, keep_loaded_data=keep_loaded_data)
+
+    @classmethod
+    def from_metadata(cls, data_root_path, metadata_path, networks=None,
+                      keep_loaded_data=False):
+        """
+        Re-build MetadataCollection using previously created metadata. Faster
+        then creating it from_scratch.
+
+        Parameters
+        ----------
+        data_root_path : str or Path
+            Path where the ismn data is stored.
+        metadata_path : str or Path
+            python_metadata folder where the csv metadata file is.
+        networks : list or str, optional (default: None)
+            see __init__ description
+        keep_loaded_data : bool, optional (default: False)
+            see __init__ description
+        """
+
+        csv_path = Path(metadata_path) / f'{IsmnRoot(data_root_path).name}.csv'
+
+        if not os.path.isfile(csv_path):
+            raise ValueError(f"No metadata found under {csv_path}")
+
+        file_collection = IsmnFileCollection.from_metadata_csv(data_root_path, csv_path)
+
+        return cls(file_collection, networks=networks, keep_loaded_data=keep_loaded_data)
+
+    def iter_networks(self):
+        # Iterate through all networks
+        for network in self.networks.values():
+            yield network
 
     def load_all(self):
         """
@@ -84,23 +138,30 @@ class NetworkCollection(object):
         """
         if not self.keep_loaded_data:
             raise ValueError("Can only load all data when storing to memory is allowed. "
-                             "Pass keep_loaded=True.")
-        for idx, row in self.files.iterrows():
-            f = row['filehandler']
-            f.
+                             "Pass keep_loaded=True when creating the NetworkCollection.")
 
-    def _collect_networks(self) -> (dict, BasicGrid):
-        # build networks and fill them with stations and sensors and apply filehandlers
-        # for data reading.
+        for net in self.iter_networks():
+            for stat in net.iter_stations():
+                print(stat.name)
+                for sens in stat.iter_sensors():
+                    assert sens.keep_loaded_data == True
+                    sens.read_data()
 
-        filelist = self.active_collection.files
+    def _collect_networks(self, networks:list=None) -> (dict, BasicGrid):
+        # build networks and fill them with stations and sensors and apply
+        # filehandlers for data reading.
+        if networks is not None:
+            filelist = self.file_collection.filter_col_val('network', networks)
+        else:
+            filelist = self.file_collection.files
+
         networks = {}
         points = []  # idx, lon, lat
 
         for idx, row in filelist.iterrows():
             f = row['filehandler']
 
-            nw_name, st_name, se_name = f['network'].val, f['station'].val, f['sensor'].val
+            nw_name, st_name, instrument = f['network'].val, f['station'].val, f['instrument'].val
 
             if nw_name not in networks:
                 networks[nw_name] = Network(nw_name)
@@ -110,15 +171,16 @@ class NetworkCollection(object):
                                               f['longitude'].val,
                                               f['latitude'].val,
                                               f['elevation'].val)
-                points.append((idx, f['longitude'].val, f['latitude'].val))
 
-            if se_name not in networks[nw_name].stations[st_name].sensors:
+            # the senor name is the index in the list
+            if idx not in networks[nw_name].stations[st_name].sensors:
                 networks[nw_name].stations[st_name]. \
-                    add_sensor(se_name, f['variable'].val, f['variable'].depth, f)
+                    add_sensor(instrument, f['variable'].val, f['variable'].depth,
+                               f, name=idx, keep_loaded_data=self.keep_loaded_data)
+                points.append((idx, f['longitude'].val, f['latitude'].val))
 
         points = np.array(points)
 
-        # todo: could use subset and create grid for full filelist?
         grid = BasicGrid(points[:, 1], points[:, 2], gpis=points[:,0])
 
         return networks, grid
@@ -137,10 +199,14 @@ class NetworkCollection(object):
         station : Station
             Station at gpi.
         """
-        # todo: iterate over networks and stations to check the lon/lat
-        # with lon_lat from grid... sollte schnell sein max ~ 2000 loops
-        net, stat = self.full_collection.files.loc[idx, ['network', 'station']]
-        return self.networks[net].stations[stat]
+        if idx not in self.grid.activegpis:
+            raise ValueError("Index does not exist in loaded grid")
+
+        lon, lat = self.grid.gpi2lonlat(idx)
+        for net in self.iter_networks():
+            for stat in net.iter_stations():
+                if (stat.lon == lon) and (stat.lat == lat):
+                    return stat
 
     def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
                         filter_static_vars=None):
@@ -162,24 +228,17 @@ class NetworkCollection(object):
             if there are multiple conditions, ALL have to be fulfilled.
             e.g. {'lc_2010': 10', 'climate_KG': 'Dfc'})
         """
+        ids = []
 
-        idx_1 = self.active_collection.filter_col_val('variable', variable,
-                                                      return_index=True)
-        idx_2 = self.active_collection.filter_depth(min_depth=min_depth,
-                                                    max_depth=max_depth,
-                                                    return_index=True)
-        idx = np.intersect1d(idx_1, idx_2)
+        for se in self.get_sensors(variable=variable,
+                                   depth=Depth(min_depth, max_depth),
+                                   filter_static_vars=filter_static_vars):
+            ids.append(se.name)
 
-        if filter_static_vars is not None:
-            # use the prefiltered list to reduce number of loops
-            prefiltered_list = self.active_collection.files.loc[idx]
-            idx = self.active_collection.filter_metadata(
-                filter_static_vars, filelist=prefiltered_list, return_index=True)
-
-        return idx
+        return ids
 
     def get_sensors(self, network=None, station=None, variable=None,
-                    depth=None):
+                    depth=None, filter_static_vars=None):
         """
         Yield all sensors for a specific network and/or station and/or
         variable and/or depth.
@@ -194,6 +253,11 @@ class NetworkCollection(object):
             Variable name (default: None).
         depth : Depth, optional (default: None)
             Sensing depth.
+        filter_static_vars: dict, optional (default: None)
+            Additional metadata keys and values for which the file list is filtered
+            e.g. {'lc_2010': 10} to filter for a landcover class.
+            if there are multiple conditions, ALL have to be fulfilled.
+            e.g. {'lc_2010': 10', 'climate_KG': 'Dfc'})
 
         Yield
         -----
@@ -210,11 +274,8 @@ class NetworkCollection(object):
                 if station not in [None, st.name]:
                     continue
                 for se in st.sensors.values():
-                    if (variable not in [None, se.variable] and
-                            depth.encloses(se.depth)):
-                        continue
-
-                    yield se
+                    if se.eval(variable, depth, filter_static_vars):
+                        yield se
 
     def get_nearest_station(self, lon, lat, max_dist=np.inf):
         """
@@ -239,3 +300,13 @@ class NetworkCollection(object):
         station = self.station4idx(gpi)
 
         return station, dist
+
+if __name__ == '__main__':
+    networks = NetworkCollection.from_scratch(r"C:\Temp\delete_me\ismn\scan",
+                                               keep_loaded_data=True,
+                                               networks=None)
+    # networks = NetworkCollection.from_scratch(r"D:\data-read\ISMN\global_20191024",
+    #                                           metadata_out_path=r"C:\Temp\delete_me\meta",
+    #                                           keep_loaded_data=False)
+
+

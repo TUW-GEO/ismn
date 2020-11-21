@@ -33,6 +33,8 @@ from ismn.meta import MetaVar, MetaData
 from tempfile import gettempdir, TemporaryDirectory
 from pathlib import Path, PurePosixPath
 import warnings
+import subprocess
+
 
 class IsmnFileError(IOError):
     pass
@@ -67,6 +69,39 @@ class IsmnFile(object):
             os.makedirs(temp_root, exist_ok=True)
 
         self.temp_root = temp_root
+
+    @staticmethod
+    def tail(f, lines=1, _buffer=4098):
+        """Tail a file and get X lines from the end"""
+        # place holder for the lines found
+        lines_found = []
+
+        # block counter will be multiplied by buffer
+        # to get the block size from the end
+        block_counter = -1
+
+        # loop until we find X lines
+        while len(lines_found) < lines:
+            try:
+                f.seek(block_counter * _buffer, os.SEEK_END)
+            except IOError:  # either file is too small, or too many lines requested
+                f.seek(0)
+                lines_found = f.readlines()
+                break
+
+            lines_found = f.readlines()
+
+            # we found enough lines, get out
+            # Removed this line because it was redundant the while will catch
+            # it, I left it for history
+            # if len(lines_found) > lines:
+            #    break
+
+            # decrement the block counter to get the
+            # next X bytes
+            block_counter -= 1
+
+        return lines_found[-lines:]
 
     def close(self):
         self.root.close()
@@ -221,7 +256,7 @@ class DataFile(IsmnFile):
     ----------
     root : IsmnRoot or str
         Archive to the downloaded data.
-    file_path : str
+    file_path : str or Path
         Path in the archive to the ismn file. No leading slash!
     load_metadata : bool, optional (default: True)
         Load metadata during initialisation.
@@ -265,7 +300,7 @@ class DataFile(IsmnFile):
 
         self.file_type = 'undefined'
 
-        self.metadata = {}
+        self.metadata = None
         if load_metadata:
             self.metadata = self.read_metadata(static_meta=static_meta,
                                                best_meta_for_sensor=True)
@@ -300,12 +335,16 @@ class DataFile(IsmnFile):
 
         return static_meta
 
-    @staticmethod
-    def _read_lines(filename):
+    def _read_lines(self, filename):
         """
         Read fist and last line from file as list, skips empty lines.
         """
         with filename.open(mode='r', newline=None) as f:
+            # headr = f.readline().split()
+            # if len(headr) == 0:
+            #     headr = f.readline().split()
+            # scnd = f.readline().split()
+            # last = self.tail(f)[0].split()
             lines = f.read().splitlines()
             headr = lines[0].split()
 
@@ -446,6 +485,7 @@ class DataFile(IsmnFile):
         file_basename_elements : list[str], None if only_filename is True
             File basename without path split by 'delim'
         """
+        # todo: reading last line is slow...
         if only_basename_elements:
             headr = None
             secnd = None
@@ -591,7 +631,7 @@ class DataFile(IsmnFile):
 
         return True
 
-    def read_metadata(self, static_meta=None, best_meta_for_sensor=True):
+    def read_metadata(self, static_meta=None, best_meta_for_sensor=True) -> MetaData:
         """
         Read metadata from file name and first line of file.
 
@@ -641,8 +681,8 @@ class DataFile(IsmnFile):
         return self.metadata
 
 if __name__ == '__main__':
-    filepath = "COSMOS\Barrow-ARM\COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm"
-    nodat = DataFile(r"H:\code\ismn\tests\test_data\Data_seperate_files_20170810_20180809",
-                     filepath)
-    nodat.read_metadata()
+    fileroot =  r"C:\Temp\delete_me\ismn\scan"
+    filepath = r"SCAN\BeasleyLake\SCAN_SCAN_BeasleyLake_sm_0.203200_0.203200_Hydraprobe-Analog-(2.5-Volt)_19780101_20191211.stm"
+
+    filehandler = DataFile(fileroot, filepath)
 

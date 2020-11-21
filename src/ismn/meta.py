@@ -2,6 +2,8 @@
 from ismn.components import Depth
 import numpy as np
 from typing import Optional, List, Any, Union
+import pandas as pd
+from collections import OrderedDict
 
 class MetaVar():
     """
@@ -69,20 +71,24 @@ class MetaData():
 
     def __iter__(self):
         for var in self.metadata:
-            yield tuple(var)
+            yield var
 
-    def __getitem__(self, item:Union[str,int]):
+    def __getitem__(self, item:Union[str,int,list]) -> Union['MetaData',MetaVar, None]:
         # get all variables with the selected name
-        if isinstance(item, int):
-            return self.metadata[item]
-        else:
-            items = [v for v in self.metadata if v.name == item]
-            if len(items) == 0:
-                return None
-            elif len(items) == 1:
-                return items[0]
+        if not isinstance(item, list):
+            if isinstance(item, int):
+                return self.metadata[item]
             else:
-                return items
+                items = [v for v in self.metadata if v.name == item]
+                if len(items) == 0:
+                    return None
+                elif len(items) == 1:
+                    return items[0]
+                else:
+                    return MetaData(items)
+        else:
+            items = [v for v in self.metadata if v.name in item]
+            return MetaData(items)
 
     def __str__(self):
         names, depths = [], []
@@ -141,15 +147,25 @@ class MetaData():
             else:
                 vars.append(MetaVar(k, *v))
         return cls(vars)
-    
-    def to_dict(self):
-        d = {}
-        for var in self:
-            t = tuple(var)
-            if t[0] in d.keys():
-                raise ValueError(f'Cannot convert to dict with duplicate {t[0]}')
-            d[t[0]] = t[1:]
-        return d
+
+
+    def to_pd(self, transpose=False) -> pd.DataFrame:
+        # df = pd.DataFrame.from_dict(self.to_dict(always_depth=True)).fillna(np.nan)
+        # df.index = ['val', 'depth_from', 'depth_to']
+        # return pd.DataFrame(df.T.stack(dropna=False)).T
+        var_names = self.keys()
+        args = ['val', 'depth_from', 'depth_to']
+
+        if len(np.unique(var_names)) != len(var_names):
+            raise ValueError("Found duplicate values, conversion to pandas not supported.")
+
+        values = list(sum([tuple(self[var])[1:] for var in var_names], ()))
+
+        index = pd.MultiIndex.from_product([var_names, args], names=['name', 'meta_args'])
+
+        df = pd.DataFrame(index=index, data=values).fillna(np.nan)
+
+        return df if not transpose else df.T
 
     def merge(self, other:'MetaData', inplace=False) -> Optional['MetaData']:
         # Merge two metadata sets
@@ -195,7 +211,7 @@ class MetaData():
         best_vars = []
         for varname in np.unique(self.keys()):
             var = self[varname]
-            if isinstance(var, list):
+            if isinstance(var, MetaData):
                 best_p = -np.inf
                 best_var = var[0]
                 for v in var:
@@ -259,7 +275,11 @@ if __name__ == '__main__':
     var4 = MetaVar('sand_fraction', 1, Depth(0.1, 0.3))
     var5 = MetaVar('sand_fraction', 1, Depth(0.5, 1.))
 
-    meta = MetaData([var1, var2, var3, var4, var5])
+    meta = MetaData([var1, var2])
+    df = meta.to_pd()
+    a = meta.to_dict()
     d = meta.best_meta_for_depth(Depth(0,0.5))
-    dd = d.to_dict()
+
+
+    #dd = d.to_dict()
 

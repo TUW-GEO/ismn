@@ -36,8 +36,7 @@ formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-class IsmnComponent():
-    pass
+class IsmnComponent: pass
 
 class Network(IsmnComponent):
     """
@@ -421,7 +420,6 @@ class Sensor(IsmnComponent):
             else:
                 return self.data
 
-
     def eval(self, variable=None, depth=None, filter_meta_dict=None,
              check_only_sensor_depth_from=False):
         """
@@ -469,7 +467,7 @@ class Sensor(IsmnComponent):
 
         return flag
 
-class Depth(IsmnComponent):
+class Depth():
 
     """
     A class representing a depth (0=surface).
@@ -500,8 +498,8 @@ class Depth(IsmnComponent):
 
         # todo: could add unit to depth?
 
-        self.start = start
-        self.end = end
+        self.start = float(start)
+        self.end = float(end)
 
         self.extent = self.end - self.start
 
