@@ -47,7 +47,7 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
 
         cols_should = ['network', 'station', 'instrument', 'variable',
                        'sensor_depth_from', 'sensor_depth_to',
-                       'file_path',
+                       'file_path', 'file_type',
                        'timerange_from', 'timerange_to', 'filehandler']
 
         assert all([c in cols_should for c in self.coll.files.columns])

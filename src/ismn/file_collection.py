@@ -71,7 +71,7 @@ def build_filelist_from_csv(data_path, csv_path) -> pd.DataFrame:
     filelist = {'network': [], 'station': [], 'instrument': [],
                 'variable': [], 'sensor_depth_from': [], 'sensor_depth_to': [],
                 'timerange_from': [], 'timerange_to': [],
-                'file_path': [], 'filehandler': [], # file info, to reload file
+                'file_path': [], 'file_type': [], 'filehandler': [], # file info, to reload file
                }
 
     level = list(metadata_df.columns.names).index('name')
@@ -115,6 +115,7 @@ def build_filelist_from_csv(data_path, csv_path) -> pd.DataFrame:
         filelist['timerange_from'].append(pd.Timestamp(f.metadata['timerange_from'].val))
         filelist['timerange_to'].append(pd.Timestamp(f.metadata['timerange_to'].val))
         filelist['file_path'].append(str(PurePosixPath(f.file_path)))
+        filelist['file_type'].append(f.file_type)
         filelist['filehandler'].append(f)
 
     files = pd.DataFrame.from_dict(filelist)
