@@ -10,6 +10,8 @@ from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn import tables
 
+from tempfile import gettempdir
+
 try:
     import cartopy.crs as ccrs
     import cartopy.feature as cfeature
@@ -69,32 +71,26 @@ class ISMN_Interface():
     """
 
     def __init__(self, data_path, meta_path=None, network=None,
-                 keep_loaded_data=False):
+                 keep_loaded_data=False, temp_root=gettempdir()):
 
         self.climate, self.landcover = tables.KOEPPENGEIGER, tables.LANDCOVER
 
-        try:
-            if meta_path is None:
-                meta_path = IsmnRoot(data_path).root_dir / 'python_metadata'
-            self.act_coll = NetworkCollection.from_metadata(
-                data_path, meta_path,  networks=network, keep_loaded_data=keep_loaded_data)
-            logger.info(f'Loaded from existing metadata existing filelist')
-        except ValueError:
-            self.act_coll = NetworkCollection.from_scratch(
-                data_path, meta_path, networks=network, keep_loaded_data=keep_loaded_data)
-            logger.info(f"Created new metdadata")
+        self.collection = NetworkCollection(data_path,
+                                            meta_path=meta_path,
+                                            keep_loaded_data=keep_loaded_data,
+                                            networks=network, temp_root=temp_root)
 
     @property
     def grid(self):
-        return self.act_coll.grid
+        return self.collection.grid
 
     @property
     def networks(self):
-        return self.act_coll.networks
+        return self.collection.networks
 
     def load_all(self):
         # load data for all sensors into memory
-        self.act_coll.load_all()
+        self.collection.load_all()
 
     def __repr__(self):
         """
@@ -219,7 +215,7 @@ class ISMN_Interface():
             if there are multiple conditions, ALL have to be fulfilled.
             e.g. {'lc_2010': 10', 'climate_KG': 'Dfc'})
         """
-        return self.act_coll.get_dataset_ids(variable, min_depth=min_depth,
+        return self.collection.get_dataset_ids(variable, min_depth=min_depth,
             max_depth=max_depth, filter_static_vars=filter_static_vars)
 
     def read_ts(self, idx):# todo: load data?
@@ -237,7 +233,7 @@ class ISMN_Interface():
         timeseries : pandas.DataFrame
             of the read data
         """
-        station = self.act_coll.station4idx(idx)
+        station = self.collection.station4idx(idx)
         for se in station.iter_sensors():
             if se.name == idx:
                 return se.read_data()
@@ -270,12 +266,12 @@ class ISMN_Interface():
         """
         # todo: fix bug in pygeogrids that leads to always np.inf as max dist
         # what happens if there is no point within max dist if that works?
-        idx, d = self.act_coll.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
+        idx, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
 
         if idx is None: # todo: not sure what this looks like when pygeogrids is fixed.
             stat = None
         else:
-            net_name, stat_name = self.act_coll.file_collection.files.loc[idx, ['network', 'station']]
+            net_name, stat_name = self.collection.files.loc[idx, ['network', 'station']]
             stat = self.networks[net_name].stations[stat_name]
 
         if return_distance:
@@ -445,8 +441,8 @@ class ISMN_Interface():
         ids = self.get_dataset_ids(variable=variable, min_depth=min_depth,
             max_depth=max_depth, filter_static_vars=filter_static_vars)
 
-        min_obs_ts = self.act_coll.file_collection.files.loc[ids, 'timerange_from'].min()
-        max_obs_ts = self.act_coll.file_collection.files.loc[ids, 'timerange_to'].max()
+        min_obs_ts = self.collection.file_collection.files.loc[ids, 'timerange_from'].min()
+        max_obs_ts = self.collection.file_collection.files.loc[ids, 'timerange_to'].max()
 
         return min_obs_ts, max_obs_ts
 
@@ -527,7 +523,7 @@ class ISMN_Interface():
          variables : numpy.array
              array of variables available for the data
         """
-        return np.unique(self.act_coll.file_collection.files['variable'].values)
+        return np.unique(self.collection.file_collection.files['variable'].values)
 
 
     def print_landcover_dict(self):
@@ -557,7 +553,7 @@ if __name__ == '__main__':
 
     ts = ds.read_ts(1)
     mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
-    fig, ax, count = ds.plot_station_locations(variable='soil_moisture', min_depth=0, max_depth=0.5,
+    ds.plot_station_locations(variable='soil_moisture', min_depth=0, max_depth=0.5,
                                                stats_text=False, filename=r"C:\Temp\delete_me\map.png",
                                                check_only_sensor_depth_from=False)
     # ds.find_nearest_station(1,1)

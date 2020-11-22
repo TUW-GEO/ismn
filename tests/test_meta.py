@@ -6,6 +6,7 @@ import pytest
 import unittest
 import numpy as np
 
+# todo: test negative depth
 def test_MetaVar():
     var = MetaVar('myvar', 1.1, Depth(0, 1))
     assert str(var) == "myvar (0_1[m]): 1.1"

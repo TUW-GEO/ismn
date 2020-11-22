@@ -17,17 +17,25 @@ from tests.test_filecollection import cleanup
 
 testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
 
-
 class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_NetworkCollectionCeopSepUnzipped, cls).setUpClass()
 
         testdata_path_unzipped = os.path.join(testdata_root,
             'Data_seperate_files_20170810_20180809')
         # clean existing metadata
         cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
 
-        self.netcol = NetworkCollection(IsmnFileCollection(testdata_path_unzipped),
+        # build metadata once
+        NetworkCollection(testdata_path_unzipped, keep_loaded_data=False)
+
+        cls.testdata_path_unzipped = testdata_path_unzipped
+
+    def setUp(self) -> None:
+        # load metadata for each test
+        self.netcol = NetworkCollection(self.testdata_path_unzipped,
                                         keep_loaded_data=False)
 
         gpis, lons, lats = self.netcol.grid.get_grid_points()
@@ -35,7 +43,6 @@ class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
         for net in self.netcol.iter_networks():
             n_stats += net.n_stations()
         assert gpis.size == lons.size == lats.size == n_stats
-
 
     def test_station4idx(self):
         station = self.netcol.station4idx(0)
@@ -109,14 +116,22 @@ class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
 
 class Test_NetworkCollectionHeaderValuesUnzipped(Test_NetworkCollectionCeopSepUnzipped):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_NetworkCollectionHeaderValuesUnzipped, cls).setUpClass()
 
         testdata_path_unzipped = os.path.join(testdata_root,
             'Data_seperate_files_header_20170810_20180809')
         # clean existing metadata
         cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
 
-        self.netcol = NetworkCollection(IsmnFileCollection(testdata_path_unzipped),
+        # build metadata once
+        NetworkCollection(testdata_path_unzipped, keep_loaded_data=False)
+
+        cls.testdata_path_unzipped = testdata_path_unzipped
+
+    def setUp(self) -> None:
+        self.netcol = NetworkCollection(self.testdata_path_unzipped,
                                         keep_loaded_data=False)
 
         gpis, lons, lats = self.netcol.grid.get_grid_points()
@@ -128,7 +143,10 @@ class Test_NetworkCollectionHeaderValuesUnzipped(Test_NetworkCollectionCeopSepUn
 @pytest.mark.zip
 class Test_NetworkCollectionCeopSepZipped(Test_NetworkCollectionCeopSepUnzipped):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_NetworkCollectionCeopSepZipped, cls).setUpClass()
+
         testdata_path = os.path.join(testdata_root, 'zip_archives', 'ceop')
         testdata_zip_path = os.path.join(testdata_path,
             'Data_seperate_files_20170810_20180809.zip')
@@ -137,8 +155,14 @@ class Test_NetworkCollectionCeopSepZipped(Test_NetworkCollectionCeopSepUnzipped)
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        self.netcol = NetworkCollection(IsmnFileCollection(testdata_zip_path),
-                                        keep_loaded_data=False)
+        # build metadata once
+        NetworkCollection(testdata_zip_path, meta_path=metadata_path,
+                          keep_loaded_data=False)
+        cls.testdata_zip_path = testdata_zip_path
+
+    def setUp(self) -> None:
+        self.netcol = NetworkCollection(self.testdata_zip_path,
+                                        keep_loaded_data=True)
 
         gpis, lons, lats = self.netcol.grid.get_grid_points()
         n_stats = 0
@@ -149,7 +173,10 @@ class Test_NetworkCollectionCeopSepZipped(Test_NetworkCollectionCeopSepUnzipped)
 @pytest.mark.zip
 class Test_NetworkCollectionHeaderValuesZipped(Test_NetworkCollectionCeopSepUnzipped):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_NetworkCollectionHeaderValuesZipped, cls).setUpClass()
+
         testdata_path = os.path.join(testdata_root, 'zip_archives', 'header')
         testdata_zip_path = os.path.join(testdata_path,
             'Data_seperate_files_header_20170810_20180809.zip')
@@ -158,8 +185,15 @@ class Test_NetworkCollectionHeaderValuesZipped(Test_NetworkCollectionCeopSepUnzi
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        self.netcol = NetworkCollection(IsmnFileCollection(testdata_zip_path),
-                                        keep_loaded_data=False)
+        NetworkCollection(testdata_zip_path, meta_path=metadata_path,
+                          keep_loaded_data=False)
+
+        cls.testdata_zip_path = testdata_zip_path
+
+    def setUp(self) -> None:
+
+        self.netcol = NetworkCollection(self.testdata_zip_path,
+                                        keep_loaded_data=True)
 
         gpis, lons, lats = self.netcol.grid.get_grid_points()
         n_stats = 0

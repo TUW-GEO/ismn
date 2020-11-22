@@ -72,12 +72,17 @@ class NetworkCollection(object):
         if os.path.isfile(meta_csv_file):
             self.file_collection = IsmnFileCollection.from_metadata_csv(root, meta_csv_file)
         else:
-            self.file_collection = IsmnFileCollection.from_scratch(root, temp_root)
+            self.file_collection = IsmnFileCollection.from_scratch(
+                root, parallel=True, temp_root=temp_root)
             self.file_collection.to_metadata_csv(meta_csv_file)
 
         self.keep_loaded_data = keep_loaded_data
 
         self.networks, self.grid = self._collect_networks(networks)
+
+    @property
+    def files(self):
+        return self.file_collection.files
 
     def iter_networks(self):
         # Iterate through all networks
@@ -256,9 +261,8 @@ class NetworkCollection(object):
         return station, dist
 
 if __name__ == '__main__':
-    networks = NetworkCollection(r"C:\Temp\delete_me\ismn\testdata_ceop.zip",
-                                 meta_path=r"C:\Temp\delete_me\ismn\temp",
-                                 keep_loaded_data=True,
+    networks = NetworkCollection(r"D:\data-read\ISMN\global_20191024",
+                                 keep_loaded_data=False,
                                  networks=None)
 
 

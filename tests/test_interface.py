@@ -10,15 +10,21 @@ from ismn.interface import ISMN_Interface
 testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
 
 class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        super(Test_ISMN_Interface_CeopUnzipped, cls).setUpClass()
 
-    def setUp(self) -> None:
-        testdata_path_unzipped = os.path.join(testdata_root,
+        testdata = os.path.join(testdata_root,
             'Data_seperate_files_20170810_20180809')
-        metadata_path = os.path.join(testdata_path_unzipped, 'python_metadata')
+        metadata_path = os.path.join(testdata, 'python_metadata')
 
         cleanup(metadata_path)
+        ds = ISMN_Interface(testdata)
+        cls.testdata = testdata
 
-        self.ds = ISMN_Interface(testdata_path_unzipped)
+    def setUp(self) -> None:
+        self.ds = ISMN_Interface(self.testdata)
 
     def test_list(self):
         assert len(self.ds.list_networks()) == 1
@@ -104,22 +110,33 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
 
 class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_ISMN_Interface_HeaderValuesUnzipped, cls).setUpClass()
+
         testdata_path_unzipped = os.path.join(testdata_root,
             'Data_seperate_files_header_20170810_20180809')
         # clean existing metadata
-        cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
 
         metadata_path = os.path.join(testdata_path_unzipped, 'python_metadata')
 
         cleanup(metadata_path)
 
-        self.ds = ISMN_Interface(testdata_path_unzipped)
+        ISMN_Interface(testdata_path_unzipped)
+
+        cls.testdata = testdata_path_unzipped
+
+    def setUp(self) -> None:
+
+        self.ds = ISMN_Interface(self.testdata)
 
 @pytest.mark.zip
 class Test_ISMN_Interface_CeopZipped(Test_ISMN_Interface_CeopUnzipped):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_ISMN_Interface_CeopZipped, cls).setUpClass()
+
         testdata_path = os.path.join(testdata_root, 'zip_archives', 'ceop')
         testdata_zip_path = os.path.join(testdata_path,
             'Data_seperate_files_20170810_20180809.zip')
@@ -127,12 +144,20 @@ class Test_ISMN_Interface_CeopZipped(Test_ISMN_Interface_CeopUnzipped):
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        self.ds = ISMN_Interface(testdata_zip_path)
+        ISMN_Interface(testdata_zip_path)
+
+        cls.testdata_zip_path = testdata_zip_path
+
+    def setUp(self) -> None:
+        self.ds = ISMN_Interface(self.testdata_zip_path)
 
 @pytest.mark.zip
 class Test_ISMN_Interface_HeaderValuesZipped(Test_ISMN_Interface_CeopUnzipped):
 
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls):
+        super(Test_ISMN_Interface_HeaderValuesZipped, cls).setUpClass()
+
         testdata_path = os.path.join(testdata_root, 'zip_archives', 'header')
         testdata_zip_path = os.path.join(testdata_path,
             'Data_seperate_files_header_20170810_20180809.zip')
@@ -140,7 +165,13 @@ class Test_ISMN_Interface_HeaderValuesZipped(Test_ISMN_Interface_CeopUnzipped):
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        self.ds = ISMN_Interface(testdata_zip_path)
+        ISMN_Interface(testdata_zip_path)
+
+        cls.testdata_zip_path = testdata_zip_path
+
+    def setUp(self) -> None:
+
+        self.ds = ISMN_Interface(self.testdata_zip_path)
 
 if __name__ == '__main__':
     unittest.main()

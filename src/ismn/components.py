@@ -410,7 +410,7 @@ class Sensor(IsmnComponent):
         if self.filehandler is None:
             warnings.warn(f"No filehandler found for sensor {self.name}")
         else:
-            if not self.data:
+            if self.data is None:
                 data = self.filehandler.read_data()
 
                 if self.keep_loaded_data:
@@ -503,8 +503,9 @@ class Depth():
 
         self.extent = self.end - self.start
 
-        if self.extent < 0:
-            raise ValueError("End can not be smaller than start")
+        # todo: allow negative depths? i.e above surface, for Temperature?
+        # if self.extent < 0:
+        #     raise ValueError("End can not be smaller than start")
 
         if self.start == self.end:
             self.is_profile = False
@@ -647,3 +648,8 @@ class Depth():
 
         return flag
 
+if __name__ == '__main__':
+    d1 = Depth(0, 0.3)
+    d2 = Depth(-0.01, -0.1)
+
+    overlaps, perc = d1.overlap(d2, return_perc=True)
