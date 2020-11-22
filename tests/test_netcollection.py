@@ -10,7 +10,6 @@ import unittest
 import pytest
 
 from ismn.network_collection import NetworkCollection
-from ismn.file_collection import IsmnFileCollection
 from ismn.components import Depth
 
 from tests.test_filecollection import cleanup

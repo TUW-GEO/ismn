@@ -1,29 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import platform
-import sys
-
 from pathlib import Path
 from ismn.network_collection import NetworkCollection
 from ismn.file_collection import ISMNError
-from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn import tables
 
 from tempfile import gettempdir
 
-try:
-    import cartopy.crs as ccrs
-    import cartopy.feature as cfeature
-    if platform.system() == 'Darwin':
-          import matplotlib
-          matplotlib.use("TkAgg")
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Rectangle
-    plotlibs = True
-except ImportError:
-    warnings.warn("Could not import all plotting libs, plotting functions not available.")
-    plotlibs = False
 
 class ISMN_Interface():
     """
@@ -279,125 +263,15 @@ class ISMN_Interface():
         else:
             return stat
 
-    def plot_station_locations(self, variable=None, min_depth=-np.inf,
-                               max_depth=np.inf, stats_text=True,
-                               check_only_sensor_depth_from=False,
-                               markersize=1,
-                               filename=None):
-        # TODO: optionally indicate sensor count for each station in map directly (symbol, number)?
-        # TODO: fix similar colors for different networks, e.g. using sybols?
+    def plot_station_locations(self, *args, **kwargs):
         """
         Plots available stations on a world map in robinson projection.
 
         Parameters
-        ----------
-        variable : str, optional (default: None)
-            Show only stations that measure this variable, e.g. soil_moisture
-            If None is passed, no filtering for variable is performed.
-        min_depth : float, optional (default: -np.inf)
-            Minimum depth, only stations that have a valid sensor measuring the
-            passed variable (if one is selected) in this depth range are included.
-        max_depth : float, optional (default: -np.inf)
-            See description of min_depth. This is the bottom threshold for the
-            allowed depth.
-        stats_text : bool, optianal (default: False)
-            Include text of net/stat/sens counts in plot.
-        check_only_sensor_depth_from : bool, optional (default: False)
-            Ignores the sensors depth_to value and only checks if depth_from of
-            the sensor is in the passed depth_range (e.g. for cosmic ray probes).
-        markersize : int, optional (default: 1)
-            Size of the marker, might depend on the amount of stations you plot.
-        filename : str or Path, optional (default: None)
-            Filename where image is stored. If None is passed, no file is created.
-
-        Returns
-        -------
-        fig: matplotlib.Figure
-            created figure instance. If axes was given this will be None.
-        ax: matplitlib.Axes
-            used axes instance.
-        count : dict
-            Number of valid sensors and stations that contain at least one valid
-            sensor and networks that contain at least one valid station.
+        ---------
+        See description of NetworkCollection.plot_station_locations()
         """
-
-        if not plotlibs:
-            return
-
-        data_crs = ccrs.PlateCarree()
-
-        fig, ax = plt.subplots(1, 1)
-        ax = plt.axes(projection=ccrs.Robinson())
-        ax.coastlines(linewidth=0.5)
-        # show global map
-        ax.set_global()
-        ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor='gray')
-        if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
-            ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
-            colormap = plt.get_cmap('tab20')
-        else:
-            colormap = plt.get_cmap('Set1')
-        uniq_networks = self.list_networks()
-        colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
-        rect = []
-
-        counts = {'networks': 0, 'stations': 0, 'sensors': 0}
-        for j, (nw_name, nw) in enumerate(self.networks.items()):
-            netcolor = colormap(colorsteps[j])
-            station_count = 0
-            for station in nw.stations.values():
-                sensor_count = 0 # count number of valid sensors at station, indicate number in map?
-                for sensor in station.sensors.values():
-                    # could add filtering for other metadata here,
-                    # e.g. for landcover using the filter_meta_dict .. slow
-                    if sensor.eval(variable, depth=Depth(min_depth, max_depth),
-                                   filter_meta_dict=None,
-                                   check_only_sensor_depth_from=check_only_sensor_depth_from):
-                        sensor_count += 1
-                if sensor_count > 0:
-                    station_count += 1
-                    counts['sensors'] += sensor_count
-                    ax.plot(station.lon, station.lat, color=netcolor, markersize=markersize,
-                            marker='s', transform=data_crs)
-            if station_count > 0:
-                counts['networks'] += 1
-                counts['stations'] += station_count
-
-            rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
-
-        nrows = 8. if len(uniq_networks) > 8 else len(uniq_networks)
-
-        ncols = int(counts['networks'] / nrows)
-        if ncols == 0:
-            ncols = 1
-
-        handles, labels = ax.get_legend_handles_labels()
-        lgd = ax.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.1))
-
-        plt.legend(rect, uniq_networks.tolist(), loc='upper center', ncol=ncols,
-                   bbox_to_anchor=(0.5, -0.05), fontsize=4)
-
-        postfix_depth = "when only considering depth_from of the sensor" if check_only_sensor_depth_from else ''
-        depth_text =  f"between {min_depth} and {max_depth} m \n {postfix_depth}"
-        feedback = f"{counts['sensors']} valid sensors in {counts['stations']} stations " \
-                   f"in {counts['networks']} networks (of {len(uniq_networks)} potential networks) \n" \
-                   f"for {f'variable {variable}' if variable is not None else 'all variables'} " \
-                   f"{depth_text}"
-
-        if stats_text:
-            text = ax.text(0.5, 1.05, feedback, transform=ax.transAxes, fontsize='xx-small',
-                           horizontalalignment='center')
-        else:
-            text = None
-
-        fig.set_size_inches([6, 3.5 + 0.25 * nrows])
-
-        if filename is not None:
-            fig.savefig(filename, bbox_extra_artists=(lgd, text) if stats_text else (lgd),
-                        dpi=300)
-        else:
-            return fig, ax, counts
-
+        return self.collection.plot_station_locations(*args, **kwargs)
 
     def get_min_max_obs_timestamps(self, variable="soil moisture",
                                    min_depth=-np.inf, max_depth=np.inf,
@@ -553,9 +427,7 @@ if __name__ == '__main__':
 
     ts = ds.read_ts(1)
     mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
-    ds.plot_station_locations(variable='soil_moisture', min_depth=0, max_depth=0.5,
-                                               stats_text=False, filename=r"C:\Temp\delete_me\map.png",
-                                               check_only_sensor_depth_from=False)
+
     # ds.find_nearest_station(1,1)
     # ds.network_for_station('SilverSword')
     # ids = ds.get_dataset_ids('soil_moisture')

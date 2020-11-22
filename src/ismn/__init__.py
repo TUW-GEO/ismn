@@ -15,6 +15,8 @@ import os
 # path into src
 src_path = os.path.join(os.path.dirname(__file__), '..')
 
+from ismn.network_collection import NetworkCollection
+
 # path to tests dir, if it exists
 tests_path = os.path.join(src_path, '..', 'tests')
 if not os.path.exists(tests_path):

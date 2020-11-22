@@ -7,17 +7,18 @@ import unittest
 import numpy as np
 
 # todo: test negative depth
-def test_MetaVar():
-    var = MetaVar('myvar', 1.1, Depth(0, 1))
-    assert str(var) == "myvar (0_1[m]): 1.1"
-    assert tuple(var) == ('myvar', 1.1, 0, 1)
-    assert var == var
+class Test_MetaVar(unittest.TestCase):
+    def test_MetaVar(self):
+        var = MetaVar('myvar', 1.1, Depth(0, 1))
+        assert str(var) == "myvar (0.0_1.0[m]): 1.1"
+        assert tuple(var) == ('myvar', 1.1, 0, 1)
+        assert var == var
 
-    other = MetaVar('other', 99)
-    assert str(other) == "other (no depth): 99"
-    assert tuple(other) == ('other', 99, None, None)
+        other = MetaVar('other', 99)
+        assert str(other) == "other (no depth): 99"
+        assert tuple(other) == ('other', 99, None, None)
 
-    assert other != var
+        assert other != var
 
 class Test_MetaData(unittest.TestCase):
     def setUp(self) -> None:
