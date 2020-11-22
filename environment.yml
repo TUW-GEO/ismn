@@ -15,4 +15,5 @@ dependencies:
   - pip:
      - pygeogrids
      - configparser
+     - tqdm
      - more_itertools
