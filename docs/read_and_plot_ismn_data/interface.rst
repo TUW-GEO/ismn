@@ -8,12 +8,12 @@
 
 .. code:: python
 
-    path_to_ismn_data = "/data/CGLS/SQE_2016/cgls-validationreports/ISMN/raw/data_20160101_20161231/"
+    path_to_ismn_data = "/data/ISMN/raw/data_201912/"
 
 .. code:: python
 
     #initialize interface, this can take up to a few minutes the first
-    #time, since all metadata has to be collected
+    #time, since all metadata has to be collected.
     
     ismn_data = NetworkCollection(path_to_ismn_data)
     

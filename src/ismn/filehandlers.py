@@ -300,6 +300,8 @@ class DataFile(IsmnFile):
 
         self.file_type = 'undefined'
 
+        self.static_meta = static_meta
+        self.dyn_meta = None
         self.metadata = None
         if load_metadata:
             self.metadata = self.read_metadata(static_meta=static_meta,
@@ -656,10 +658,10 @@ class DataFile(IsmnFile):
             self.file_type = 'ceop'
             raise RuntimeError('CEOP format not supported')
         elif len(headr) == 15 and len(fname) >= 9:
-            metadata, depth = self._get_metadata_ceop_sep(elements)
+            file_meta, depth = self._get_metadata_ceop_sep(elements)
             self.file_type = 'ceop_sep'
         elif len(headr) < 14 and len(fname) >= 9:
-            metadata, depth = self._get_metadata_header_values(elements)
+            file_meta, depth = self._get_metadata_header_values(elements)
             self.file_type = 'header_values'
         else:
             raise IOError(f"Unknown file format found for: {self.file_path}")
@@ -670,7 +672,7 @@ class DataFile(IsmnFile):
         if static_meta is None:
             static_meta = self._get_static_metadata_from_csv()
 
-        metadata = metadata.merge(static_meta)
+        metadata = file_meta.merge(static_meta)
 
         if best_meta_for_sensor:
             depth = metadata['instrument'].depth

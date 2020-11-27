@@ -278,8 +278,7 @@ class NetworkCollection(object):
     def plot_station_locations(self, variable=None, min_depth=-np.inf,
                                max_depth=np.inf, stats_text=True,
                                check_only_sensor_depth_from=False,
-                               markersize=1,
-                               filename=None):
+                               markersize=1, filename=None):
         # TODO: optionally indicate sensor count for each station in map directly (symbol, number)?
         # TODO: fix similar colors for different networks, e.g. using sybols?
         """
@@ -379,7 +378,7 @@ class NetworkCollection(object):
         postfix_depth = "when only considering depth_from of the sensor" if check_only_sensor_depth_from else ''
         depth_text =  f"between {min_depth} and {max_depth} m \n {postfix_depth}"
         feedback = f"{counts['sensors']} valid sensors in {counts['stations']} stations " \
-                   f"in {counts['networks']} networks (of {len(uniq_networks)} potential networks) \n" \
+                   f"in {counts['networks']} networks (of {len(list(self.networks.keys()))} potential networks) \n" \
                    f"for {f'variable {variable}' if variable is not None else 'all variables'} " \
                    f"{depth_text}"
 
@@ -403,8 +402,8 @@ if __name__ == '__main__':
                                  keep_loaded_data=False,
                                  networks=None)
 
-    networks.plot_station_locations(variable='snow_depth', min_depth=0, max_depth=100,
-                                               stats_text=True, filename=r"C:\Temp\delete_me\map.png",
+    networks.plot_station_locations(variable='precipitation', min_depth=-np.inf, max_depth=np.inf,
+                                               stats_text=True, filename=r"C:\Temp\delete_me\map_rainf.png",
                                                check_only_sensor_depth_from=False)
 
 

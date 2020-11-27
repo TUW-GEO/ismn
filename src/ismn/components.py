@@ -217,8 +217,8 @@ class Station(IsmnComponent):
         Latitude coordinate.
     elev : float
         Elevation information.
-    static_variables : list
-        Static variable information
+    static_variables : MetaData
+        Station static variables
 
     Methods
     -------
@@ -243,7 +243,20 @@ class Station(IsmnComponent):
         self.elev = elev
         self.static_variables = static_variables
         self.sensors = {}
-        
+
+    def __repr__(self):
+        """
+        Provide basic station information.
+
+        Returns
+        -------
+        info : str
+            Basic station information.
+        """
+        info = 'Station {} has {} sensors.'.format(self.name,
+                                                   len(self.sensors.keys()))
+        return info
+
     def get_variables(self):
         """
         Get variables measured by all sensors at station.
