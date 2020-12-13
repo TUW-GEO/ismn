@@ -354,6 +354,12 @@ class MetaData():
             keys.append(var.name)
         return keys
 
+    def values(self) -> list :
+        values = []
+        for var in self.metadata:
+            values.append(var.val)
+        return values
+
     @classmethod
     def from_dict(cls, data:dict) -> 'MetaData':
         # Build Metadata from dict {name: (*args) ... }

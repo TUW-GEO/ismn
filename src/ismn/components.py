@@ -152,6 +152,10 @@ class Network(IsmnComponent):
             depth = Depth(-np.inf, np.inf)
 
         for station in self.stations.values():
+
+            if variable not in station.get_variables():
+                continue # shortcut if station does not measure var
+
             flag = False
             for sensor in station.sensors.values():
                 if (variable in [None, sensor.variable]) and \
@@ -291,12 +295,7 @@ class Station(IsmnComponent):
         variables : list
             List of variables that are observed.
         """
-        variables = []
-        for sensor in self.sensors.values():
-            if sensor.variable not in variables:
-                variables.append(sensor.variable)
-
-        return variables
+        return list(np.unique(np.array(self.metadata['variable'].values())))
 
     def get_depths(self, variable=None):
         """

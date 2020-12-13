@@ -226,7 +226,8 @@ class ISMN_Interface():
         # calls read_ts
         return self.read_ts(*args, **kwargs)
 
-    def find_nearest_station(self, lon, lat, return_distance=False, max_dist=np.inf):
+    def find_nearest_station(self, lon, lat, return_distance=False,
+                             max_dist=np.inf):
         """
         finds the nearest station available in downloaded data
         Parameters

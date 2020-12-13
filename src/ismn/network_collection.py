@@ -410,6 +410,8 @@ if __name__ == '__main__':
     coll = NetworkCollection("/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212",
                              keep_loaded_data=False,
                              networks=None)
+    for s in coll.networks['GROW'].iter_stations('soil_moisture'):
+        pass
 
     df = coll.networks['GROW'].stations['1e95h80r'].metadata.to_pd()
     # networks.load_all()

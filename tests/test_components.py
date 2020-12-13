@@ -134,7 +134,7 @@ class StationTest(unittest.TestCase):
         """
         Test deriving the variables of all sensors at setion
         """
-        assert self.station.get_variables()== ['sm', 'sm2']
+        assert self.station.get_variables() == ['sm', 'sm2']
 
     def test_get_depths(self):
         """
