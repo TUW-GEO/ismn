@@ -25,8 +25,8 @@ import os
 from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn.tables import *
-from ismn.filehandlers import DataFile
-from ismn.meta import MetaData, MetaVar
+from ismn.filehandlers import DataFile, StaticMetaFile
+from ismn.meta import MetaData, MetaVar, Depth
 
 import ismn
 
@@ -39,15 +39,13 @@ from tqdm import tqdm
 from typing import Union
 from multiprocessing import Pool, cpu_count
 
-class MetadataError(IOError):
-    pass
+"""
+The file collection / file list / sensor list contains all information about 
+the sensors to quickly rebuild a network collection.
+"""
 
-
-class ISMNError(Exception):
-    pass
-
-
-def build_filelist_from_csv(data_path, csv_path) -> pd.DataFrame:
+def build_filelist_from_csv(data_path,
+                            csv_path) -> pd.DataFrame:
     """
     Use a pre-build metadata csv file to load the filelist
 
@@ -68,10 +66,18 @@ def build_filelist_from_csv(data_path, csv_path) -> pd.DataFrame:
 
     metadata_df = metadata_df.reindex(sorted(metadata_df.columns), axis=1)
 
-    filelist = {'network': [], 'station': [], 'instrument': [],
-                'variable': [], 'sensor_depth_from': [], 'sensor_depth_to': [],
-                'timerange_from': [], 'timerange_to': [],
-                'file_path': [], 'file_type': [], 'filehandler': [], # file info, to reload file
+    # metadata items collected in the file list
+    filelist = {'network': [],
+                'station': [],
+                'instrument': [],
+                'variable': [],
+                'sensor_depth_from': [],
+                'sensor_depth_to': [],
+                'timerange_from': [],
+                'timerange_to': [],
+                'file_path': [],
+                'file_type': [],
+                'filehandler': [], # file info, to reload file
                }
 
     level = list(metadata_df.columns.names).index('name')
@@ -81,7 +87,7 @@ def build_filelist_from_csv(data_path, csv_path) -> pd.DataFrame:
     if 'file_type' in vars:
         vars.pop(vars.index('file_type'))
 
-    for i, row in enumerate(metadata_df.values):
+    for i, row in enumerate(metadata_df.values): #todo: slow!!
         metavars = []
 
         for j, metavar_name in enumerate(vars):
@@ -144,21 +150,41 @@ def _read_station_dir(
                 'timerange_to', 'file_path', 'file_type', 'filehandler']:
         filelist[var] = []
 
+
+    # read station metadata
+
+    csv = root.find_files(stat_dir, '*.csv')
+
+    try:
+        if len(csv) == 0:
+            raise IsmnFileError("Expected 1 csv file for station, found 0. "
+                                 "Use empty static metadata.")
+        else:
+            if len(csv) > 1:
+                logging.warn(f"Expected 1 csv file for station, found {len(csv)}. "
+                             f"Use first file in dir.")
+            static_meta_file = StaticMetaFile(root, csv[0], load_metadata=True)
+            station_meta = static_meta_file.metadata
+    except IsmnFileError:
+        station_meta = MetaData.from_dict(CSV_META_TEMPLATE)
+
+
     data_files = root.find_files(stat_dir, '*.stm')
-    static_meta = None
 
     for file_path in data_files:
         try:
             f = DataFile(root, file_path,
-                         static_meta=static_meta,
                          temp_root=temp_root)
         except IOError as e:
-            logger.error(f'Error loading ismn file: {e}')
+            logging.error(f'Error loading ismn file: {e}')
             continue
+
+        f.metadata.merge(station_meta, inplace=True)
 
         f.metadata = f.metadata.best_meta_for_depth(
             Depth(f.metadata['instrument'].depth.start,
                   f.metadata['instrument'].depth.end))
+
 
         filelist['network'].append(f.metadata['network'].val)
         filelist['station'].append(f.metadata['station'].val)
@@ -170,10 +196,14 @@ def _read_station_dir(
 
         filelist['timerange_from'].append(f.metadata['timerange_from'].val)
         filelist['timerange_to'].append(f.metadata['timerange_to'].val)
-        filelist['file_path'].append(str(PurePosixPath(f.file_path)))
+
+        filepath = str(PurePosixPath(f.file_path))
+        filelist['file_path'].append(filepath)
         filelist['file_type'].append(f.file_type)
 
         filelist['filehandler'].append(f)
+
+        logging.info(f"Processed file {filepath}")
 
     if proc_root:
         root.close()
@@ -181,7 +211,8 @@ def _read_station_dir(
     return filelist
 
 
-def build_filelist_from_data(root, parallel=True, temp_root=gettempdir()):
+def build_filelist_from_data(root, parallel=True, temp_root=gettempdir(),
+                             log_file=None):
     """
     Build the file list
     Iterate over all networks and station folders in the root directory
@@ -201,6 +232,13 @@ def build_filelist_from_data(root, parallel=True, temp_root=gettempdir()):
     temp_root : str or Path
         Root path where temporary files are stored.
     """
+    if log_file:
+        logging.basicConfig(filename=log_file, level=logging.INFO)
+
+    n_proc = 1 if not parallel else cpu_count()
+
+    logging.info(f"Collecting metadata with {n_proc} processes.")
+
     print(f"Processing metadata for all ismn stations into folder {root.path}."
           f" This may take a few minutes, but is only done once ...")
 
@@ -211,41 +249,26 @@ def build_filelist_from_data(root, parallel=True, temp_root=gettempdir()):
     root = root.path if root.zip else root
     args = [(root, d, temp_root) for d in process_stat_dirs]
 
-    starmap = False
+    pbar = tqdm(total=len(args), desc='Files Processed:')
 
-    if starmap:
-        with Pool(1 if not parallel else cpu_count()) as pool:
-            # jobs = pool.starmap_async(_read_station_dir, args, callback=update)
-            res = pool.starmap_async(_read_station_dir, args)
-            res.wait()
-            results = res.get()
+    results = []
+
+    def update(r):
+        pbar.update()
+        results.append(r)
+
+    with Pool(n_proc) as pool:
+        for arg in args:
+            pool.apply_async(_read_station_dir, arg, callback=update)
 
         pool.close()
         pool.join()
 
-    else:
-        pbar = tqdm(total=len(args), desc='Files Processed:')
-
-        results = []
-
-        def update(r):
-            pbar.update()
-            results.append(r)
-
-        with Pool(1 if not parallel else cpu_count()) as pool:
-            for arg in args:
-                pool.apply_async(_read_station_dir, arg, callback=update)
-
-            pool.close()
-            pool.join()
-
-    # result_list_tqdm = []
-    # for job in tqdm(jobs):
-    #     result_list_tqdm.append(job.get())
-
     df = [pd.DataFrame.from_dict(r) for r in results]
     df = pd.concat(df, axis=0, ignore_index=True, sort=False)
     df = df.sort_values(['network', 'station']).reset_index(drop=True)
+
+    logging.info(f"All processes finished.")
 
     return df
 
@@ -258,7 +281,9 @@ class IsmnFileCollection(object):
     to files for a certain network/variable etc.
     """
 
-    def __init__(self, root, filelist):
+    def __init__(self,
+                 root,
+                 filelist):
         """
         Use the @classmethods to create this object!
 
@@ -266,14 +291,15 @@ class IsmnFileCollection(object):
         ----------
         root : IsmnRoot
             Root object where data is stored.
-        filelist : pd.DataFarme, optional (Default: None)
-            A pre-built filelist to use, if None is give one from data_path is created.
+        filelist : pd.DataFrame
+            A pre-built filelist to use.
         """
         self.root = root
         self.files = filelist
 
     @classmethod
-    def from_scratch(cls, data_root, parallel=True, temp_root=gettempdir()):
+    def from_scratch(cls, data_root, parallel=True, log_path=None,
+                     temp_root=gettempdir()):
         """
         Parameters
         ----------
@@ -295,8 +321,12 @@ class IsmnFileCollection(object):
         if not os.path.exists(temp_root):
             os.makedirs(temp_root, exist_ok=True)
 
+        if (log_path is not None) and (not os.path.exists(log_path)):
+            os.makedirs(log_path, exist_ok=True)
+
         filelist = build_filelist_from_data(
-            root, parallel=parallel, temp_root=temp_root)
+            root, parallel=parallel, temp_root=temp_root,
+            log_file=os.path.join(log_path, f"{root.name}.log"))
 
         return cls(root, filelist=filelist)
 
@@ -340,7 +370,7 @@ class IsmnFileCollection(object):
 
         for i, (filehandler, file_path, file_type) in \
                 enumerate(zip(filehandlers, file_paths, file_types)):
-            df = filehandler.metadata.to_pd(True)
+            df = filehandler.metadata.to_pd(True, dropna=False)
             df['file_path'] = file_path
             df['file_type'] = file_type
             df.index = [i]
@@ -480,7 +510,7 @@ class IsmnFileCollection(object):
             f.close()
 
 if __name__ == '__main__':
-    root_path = r"C:\Temp\delete_me\ismn\testdata_ceop.zip"
+    root_path = "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
     fc = IsmnFileCollection.from_scratch(root_path)
     # fc.to_metadata_csv(r"C:\Temp\delete_me\ismn\testdata_ceop.csv")
 

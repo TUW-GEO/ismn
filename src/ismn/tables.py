@@ -3,6 +3,20 @@
 import numpy as np
 from collections import OrderedDict
 
+class MetadataError(IOError):
+    pass
+
+
+class ISMNError(Exception):
+    pass
+
+
+class IsmnFileError(IOError):
+    pass
+
+class DepthError(ValueError):
+    pass
+
 # ==============================================================================
 # Variable short names
 

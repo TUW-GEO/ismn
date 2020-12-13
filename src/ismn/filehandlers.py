@@ -22,22 +22,15 @@
 
 import os
 import pandas as pd
-from copy import deepcopy
-
-from collections import OrderedDict
 from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn import tables
+from ismn.tables import IsmnFileError
 from ismn.meta import MetaVar, MetaData
 
 from tempfile import gettempdir, TemporaryDirectory
 from pathlib import Path, PurePosixPath
-import warnings
-import subprocess
 
-
-class IsmnFileError(IOError):
-    pass
 
 class IsmnFile(object):
     """
@@ -54,7 +47,10 @@ class IsmnFile(object):
         will be created (and deleted).
     """
 
-    def __init__(self, root, file_path, temp_root=gettempdir()):
+    def __init__(self,
+                 root,
+                 file_path,
+                 temp_root=gettempdir()):
 
         if not isinstance(root, IsmnRoot):
             root = IsmnRoot(root)
@@ -69,39 +65,6 @@ class IsmnFile(object):
             os.makedirs(temp_root, exist_ok=True)
 
         self.temp_root = temp_root
-
-    @staticmethod
-    def tail(f, lines=1, _buffer=4098):
-        """Tail a file and get X lines from the end"""
-        # place holder for the lines found
-        lines_found = []
-
-        # block counter will be multiplied by buffer
-        # to get the block size from the end
-        block_counter = -1
-
-        # loop until we find X lines
-        while len(lines_found) < lines:
-            try:
-                f.seek(block_counter * _buffer, os.SEEK_END)
-            except IOError:  # either file is too small, or too many lines requested
-                f.seek(0)
-                lines_found = f.readlines()
-                break
-
-            lines_found = f.readlines()
-
-            # we found enough lines, get out
-            # Removed this line because it was redundant the while will catch
-            # it, I left it for history
-            # if len(lines_found) > lines:
-            #    break
-
-            # decrement the block counter to get the
-            # next X bytes
-            block_counter -= 1
-
-        return lines_found[-lines:]
 
     def close(self):
         self.root.close()
@@ -121,20 +84,31 @@ class StaticMetaFile(IsmnFile):
         Archive that contains the file to read
     file_path : Path or str
         Subpath to the file in the root. No leading slash!
+    load_metadata : bool, optional (default: True)
+        Load metadata during initialisation.
     temp_root : Path or str, optional (default : gettempdir())
         Root directory where a separate subdir for temporary files
         will be created (and deleted).
     """
 
-    def __init__(self, root, file_path, temp_root=gettempdir()):
+    def __init__(self,
+                 root,
+                 file_path,
+                 load_metadata=True,
+                 temp_root=gettempdir()):
 
         super(StaticMetaFile, self).__init__(root, file_path, temp_root)
 
         if self.file_path.suffix.lower() != '.csv':
             raise IsmnFileError(f'CSV file expected for StaticMetaFile object')
 
+        self.metadata = None
+
+        if load_metadata:
+            self.metadata = self.read_metadata()
+
     @staticmethod
-    def _read_field(data, fieldname:str, new_name=None) -> np.array:
+    def _read_field(data, fieldname: str, new_name=None) -> np.array:
         """
         Extract a field from the loaded csv metadata
         """
@@ -152,12 +126,12 @@ class StaticMetaFile(IsmnFile):
                 try:
                     val = float(val)
                 except ValueError:
-                    pass # value is actually a string, that's ok
+                    pass  # value is actually a string, that's ok
                 field_vars.append(MetaVar(name, val, d))
 
         return field_vars
 
-    def _read_csv(self, csvfile:Path) -> pd.DataFrame:
+    def _read_csv(self, csvfile: Path) -> pd.DataFrame:
         """ Load static metadata data frame from csv """
         try:
             data = pd.read_csv(csvfile, delimiter=";")
@@ -167,20 +141,21 @@ class StaticMetaFile(IsmnFile):
             logging.info('no header: {}'.format(csvfile))
             data = pd.read_csv(csvfile, delimiter=";", header=None)
             cols = list(data.columns.values)
-            cols[:len(tables.CSV_COLS)] = tables.CSV_COLS # todo: not safe
+            cols[:len(tables.CSV_COLS)] = tables.CSV_COLS  # todo: not safe
             data.columns = cols
             data.set_index('quantity_name', inplace=True)
 
         return data
 
-    def read_metadata(self):
+    def read_metadata(self) -> MetaData:
         """
         Read csv file containing static variables into data frame.
 
         Returns
         -------
-        data : MetaData
-            Data read from csv file.
+        depth : Depth
+            If a depth is passed, only the best fitting variables for the
+            depth are returned.
         """
         if self.root.zip:
             if not self.root.isopen: self.root.open()
@@ -231,10 +206,10 @@ class StaticMetaFile(IsmnFile):
 
         static_meta = {
             'saturation': self._read_field(data, 'saturation'),
-            'clay_fraction': self._read_field(data, 'clay fraction', new_name='clay_fraction'),
-            'sand_fraction': self._read_field(data, 'sand fraction', new_name='sand_fraction'),
-            'silt_fraction': self._read_field(data, 'silt fraction', new_name='silt_fraction'),
-            'organic_carbon': self._read_field(data, 'organic carbon', new_name='organic_carbon'),
+            'clay_fraction': self._read_field(data, 'clay fraction', tables.VARIABLE_LUT['cl_h']),
+            'sand_fraction': self._read_field(data, 'sand fraction', tables.VARIABLE_LUT['sa_h']),
+            'silt_fraction': self._read_field(data, 'silt fraction', tables.VARIABLE_LUT['si_h']),
+            'organic_carbon': self._read_field(data, 'organic carbon', tables.VARIABLE_LUT['oc_h']),
         }
 
         for name, vars in static_meta.items():
@@ -243,11 +218,12 @@ class StaticMetaFile(IsmnFile):
             else:
                 metavars.append(MetaVar(name, tables.CSV_META_TEMPLATE[name]))
 
-        return MetaData(metavars)
+        metadata = MetaData(metavars)
+
+        return metadata
 
 
 class DataFile(IsmnFile):
-
     """
     IsmnFile class represents a single ISMN data file.
     This represents only .stm data files not metadata csv files.
@@ -280,8 +256,6 @@ class DataFile(IsmnFile):
         Metadata information.
     data : numpy.ndarray
         Data stored in file.
-    static_meta : OrderedDict
-        Static meta data loaded from station csv file.
 
     Methods
     -------
@@ -293,60 +267,29 @@ class DataFile(IsmnFile):
         Read metadata from file name and first line of file.
     """
 
-    def __init__(self, root, file_path, load_metadata=True, static_meta=None,
+    def __init__(self,
+                 root,
+                 file_path,
+                 load_metadata=True,
                  temp_root=gettempdir()):
 
         super(DataFile, self).__init__(root, file_path, temp_root)
 
         self.file_type = 'undefined'
 
-        self.static_meta = static_meta
-        self.dyn_meta = None
         self.metadata = None
+
         if load_metadata:
-            self.metadata = self.read_metadata(static_meta=static_meta,
-                                               best_meta_for_sensor=True)
+            self.metadata = self.read_metadata(best_meta_for_sensor=True)
 
     def __getitem__(self, item):
         return self.metadata[item]
-
-    def _get_static_metadata_from_csv(self):
-        """
-        Read static metadata from csv file in the same directory as the ismn
-        data file.
-
-        Returns
-        -------
-        static_meta : MetaData
-            Dictionary of static metadata
-        """
-        csv = self.root.find_files(self.file_path.parent, '*.csv')
-
-        try:
-            if len(csv) == 0:
-                raise IsmnFileError("Expected 1 csv file for station, found 0. "
-                                     "Use empty static metadata.")
-            else:
-                if len(csv) > 1:
-                    warnings.warn(f"Expected 1 csv file for station, found {len(csv)}. "
-                                  f"Use first file in dir.")
-                static_meta_file = StaticMetaFile(self.root, csv[0])
-                static_meta = static_meta_file.read_metadata()
-        except IsmnFileError:
-            static_meta = MetaData.from_dict(tables.CSV_META_TEMPLATE)
-
-        return static_meta
 
     def _read_lines(self, filename):
         """
         Read fist and last line from file as list, skips empty lines.
         """
         with filename.open(mode='r', newline=None) as f:
-            # headr = f.readline().split()
-            # if len(headr) == 0:
-            #     headr = f.readline().split()
-            # scnd = f.readline().split()
-            # last = self.tail(f)[0].split()
             lines = f.read().splitlines()
             headr = lines[0].split()
 
@@ -495,9 +438,12 @@ class DataFile(IsmnFile):
         else:
             if self.root.zip:
                 if not self.root.isopen: self.root.open()
-                with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
+
+                with TemporaryDirectory(prefix='ismn',
+                                        dir=self.temp_root) as tempdir:
                     filename = self.root.extract_file(self.file_path, tempdir)
                     headr, secnd, last = self._read_lines(filename)
+
             else:
                 filename = self.root.path / self.file_path
                 headr, secnd, last = self._read_lines(filename)
@@ -548,9 +494,11 @@ class DataFile(IsmnFile):
                                       names=names, delim_whitespace=True,
                                       parse_dates=[[0, 1]])
         if self.root.zip:
+
             with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:
                 filename = self.root.extract_file(self.file_path, tempdir)
                 data = readf(filename)
+
         else:
             data = readf(self.root.path / self.file_path)
 
@@ -633,15 +581,12 @@ class DataFile(IsmnFile):
 
         return True
 
-    def read_metadata(self, static_meta=None, best_meta_for_sensor=True) -> MetaData:
+    def read_metadata(self, best_meta_for_sensor=True) -> MetaData:
         """
         Read metadata from file name and first line of file.
 
         Parameters
         ----------
-        static_meta : MetaData, optional (default: None)
-            Static meta data for the file, can be passed as a paramter e.g. if
-            it was already loaded before to reduce number of file accesses.
         best_meta_for_sensor : bool, optional (default: True)
             Compare the sensor depth to metadata that is available in multiple
             depth layers (e.g. static metadata variables). Find the variable
@@ -651,28 +596,21 @@ class DataFile(IsmnFile):
             headr, scnd, last, fname = self._get_elements_from_file()
         except Exception as e:
             raise IOError(f"Unknown file format found for: {self.file_path}")
-        
+
         elements = dict(headr=headr, scnd=scnd, last=last, fname=fname)
 
         if len(fname) == 5 and len(headr) == 16:
             self.file_type = 'ceop'
             raise RuntimeError('CEOP format not supported')
         elif len(headr) == 15 and len(fname) >= 9:
-            file_meta, depth = self._get_metadata_ceop_sep(elements)
+            metadata, depth = self._get_metadata_ceop_sep(elements)
             self.file_type = 'ceop_sep'
         elif len(headr) < 14 and len(fname) >= 9:
-            file_meta, depth = self._get_metadata_header_values(elements)
+            metadata, depth = self._get_metadata_header_values(elements)
             self.file_type = 'header_values'
         else:
             raise IOError(f"Unknown file format found for: {self.file_path}")
             # logger.warning(f"Unknown file type: {self.file_path} in {self.archive}")
-
-        # metadata.add('depth', None, depth)
-
-        if static_meta is None:
-            static_meta = self._get_static_metadata_from_csv()
-
-        metadata = file_meta.merge(static_meta)
 
         if best_meta_for_sensor:
             depth = metadata['instrument'].depth
@@ -682,9 +620,16 @@ class DataFile(IsmnFile):
 
         return self.metadata
 
+
 if __name__ == '__main__':
-    fileroot =  r"C:\Temp\delete_me\ismn\scan"
-    filepath = r"SCAN\BeasleyLake\SCAN_SCAN_BeasleyLake_sm_0.203200_0.203200_Hydraprobe-Analog-(2.5-Volt)_19780101_20191211.stm"
+    from timeit import timeit
 
-    filehandler = DataFile(fileroot, filepath)
+    fileroot = "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
+    filepath = "COSMOS/ARM-1/COSMOS_COSMOS_ARM-1_sm_0.000000_0.190000_Cosmic-ray-Probe_20170810_20180809.stm"
 
+    data_meta_file = DataFile(fileroot, filepath)
+    #
+    # fileroot =  "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
+    # filepath = "COSMOS/ARM-1/COSMOS_COSMOS_ARM-1_static_variables.csv"
+    #
+    # station_meta_file = StaticMetaFile(fileroot, filepath, depth=Depth(0,0.15))

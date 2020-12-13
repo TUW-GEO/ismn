@@ -9,26 +9,32 @@ import warnings
 from pathlib import Path, PurePosixPath
 from typing import Union
 
+
 def zip(func):
     def wrapper(cls, *args, **kwargs):
         if not cls.zip:
             raise IOError("Zip archive expected, use @dir functions instead.")
         return func(cls, *args, **kwargs)
+
     return wrapper
+
 
 def dir(func):
     def wrapper(cls, *args, **kwargs):
         if cls.zip:
             raise IOError("Unzipped archive expected, use @zip functions instead.")
         return func(cls, *args, **kwargs)
+
     return wrapper
+
 
 class IsmnRoot():
 
-    def __init__(self, path):
+    def __init__(self,
+                 path):
         """
         Connection to the zip resp. extracted zip archive downloaded from the
-        ismn website. This class only handles file accesses / requests made by the
+        ismn website. This class only handles file access / requests made by the
         readers, lists files in path and can extract files to temp folders for
         safe reading.
 
@@ -84,7 +90,7 @@ class IsmnRoot():
             subpath = PurePosixPath(subpath)
         else:
             assert (self.path / Path(subpath)).exists(), \
-            "Subpath does not exist in archive"
+                "Subpath does not exist in archive"
 
         return subpath
 
@@ -96,7 +102,7 @@ class IsmnRoot():
         return self.__cont
 
     @zip
-    def _scan_zip(self, station_subdirs:bool=True) -> OrderedDict:
+    def _scan_zip(self, station_subdirs: bool = True) -> OrderedDict:
         """
         Go through the archive and group station folders in archive
         by network folders. if scan_files is selected, group files by
@@ -123,7 +129,7 @@ class IsmnRoot():
         return self.cont
 
     @dir
-    def _scan_dir(self, station_subdirs:bool=True) -> OrderedDict:
+    def _scan_dir(self, station_subdirs: bool = True) -> OrderedDict:
         """
         Go through the archive and group station folders in archive
         by network folders
@@ -132,7 +138,7 @@ class IsmnRoot():
 
         for f in os.scandir(self.path):
             if f.is_dir():
-                if f.path == self.path:continue
+                if f.path == self.path: continue
                 net = os.path.relpath(f.path, self.path)
                 if net == '': continue
                 for stat in os.scandir(f.path):
@@ -149,7 +155,7 @@ class IsmnRoot():
         return self.cont
 
     @dir
-    def _find_files_dir(self, subpath:str=None, fn_templ:str='*.csv') -> list:
+    def _find_files_dir(self, subpath: str = None, fn_templ: str = '*.csv') -> list:
         """
         Find files in the archive or a subdirectory of the archive
         that match to the passed filename template.
@@ -164,7 +170,7 @@ class IsmnRoot():
         return filenames
 
     @zip
-    def _find_files_zip(self, subpath:str=None, fn_templ:str='*.csv') -> list:
+    def _find_files_zip(self, subpath: str = None, fn_templ: str = '*.csv') -> list:
         """
         Find files in zip archive that match the passed template and subdir.
         """
@@ -252,7 +258,7 @@ class IsmnRoot():
         ls = np.array(self.zip.namelist())
 
         ext = None
-        if str(file_in_archive) in ls: # single file was passed
+        if str(file_in_archive) in ls:  # single file was passed
             ext = self.zip.extract(member=str(file_in_archive), path=out_path)
 
         return Path(ext)
@@ -301,7 +307,7 @@ class IsmnRoot():
 
     def close(self):
         # close connection to data archive
-        if self.zip: # if not zip, connection is always open
+        if self.zip:  # if not zip, connection is always open
             self.zip.close()
             self.zip = None
             self.__isopen = False
@@ -311,6 +317,7 @@ class IsmnRoot():
 
     def __exit__(self, value_type, value, traceback):
         self.close()
+
 
 if __name__ == '__main__':
     path = r"C:\Temp\delete_me\ismn\testdata_ceop.zip"

@@ -22,8 +22,9 @@
 
 from ismn.components import *
 from ismn.base import IsmnRoot
-from ismn.file_collection import IsmnFileCollection
+from ismn.filecollection import IsmnFileCollection
 from ismn.tables import *
+from ismn.meta import Depth
 
 from tempfile import gettempdir
 from pathlib import Path
@@ -80,16 +81,19 @@ class NetworkCollection(object):
         meta_csv_filename = f'{root.name}.csv'
 
         if meta_path is None:
-            meta_csv_file = root.root_dir / 'python_metadata' / meta_csv_filename
+            meta_path = Path(root.root_dir) / 'python_metadata'
         else:
-            meta_csv_file = Path(meta_path) / meta_csv_filename
+            meta_path = Path(meta_path)
+
+        meta_csv_file = meta_path / meta_csv_filename
 
         if os.path.isfile(meta_csv_file):
-            self.file_collection = IsmnFileCollection.from_metadata_csv(root, meta_csv_file)
+            self.__file_collection = IsmnFileCollection.from_metadata_csv(
+                root, meta_csv_file)
         else:
-            self.file_collection = IsmnFileCollection.from_scratch(
-                root, parallel=True, temp_root=temp_root)
-            self.file_collection.to_metadata_csv(meta_csv_file)
+            self.__file_collection = IsmnFileCollection.from_scratch(
+                root, parallel=True, log_path=meta_path, temp_root=temp_root)
+            self.__file_collection.to_metadata_csv(meta_csv_file)
 
         self.keep_loaded_data = keep_loaded_data
 
@@ -97,7 +101,7 @@ class NetworkCollection(object):
 
     @property
     def files(self):
-        return self.file_collection.files
+        return self.__file_collection.files
 
     def iter_networks(self):
         # Iterate through all networks
@@ -125,17 +129,18 @@ class NetworkCollection(object):
         # build networks and fill them with stations and sensors and apply
         # filehandlers for data reading.
         if networks is not None:
-            filelist = self.file_collection.filter_col_val('network', networks)
+            filelist = self.__file_collection.filter_col_val('network', networks)
         else:
-            filelist = self.file_collection.files
+            filelist = self.files
 
         networks = {}
         points = []  # idx, lon, lat
 
-        for idx, row in filelist.iterrows():
+        for idx, row in filelist.iterrows(): # todo: slow iterrows??
             f = row['filehandler']
 
-            nw_name, st_name, instrument = f['network'].val, f['station'].val, f['instrument'].val
+            nw_name, st_name, instrument = f['network'].val, f['station'].val, \
+                                           f['instrument'].val
 
             if nw_name not in networks:
                 networks[nw_name] = Network(nw_name)
@@ -149,8 +154,12 @@ class NetworkCollection(object):
             # the senor name is the index in the list
             if idx not in networks[nw_name].stations[st_name].sensors:
                 networks[nw_name].stations[st_name]. \
-                    add_sensor(instrument, f['variable'].val, f['variable'].depth,
-                               f, name=idx, keep_loaded_data=self.keep_loaded_data)
+                    add_sensor(instrument,
+                               f['variable'].val,
+                               f['variable'].depth,
+                               filehandler=f, # todo: remove station meta from sensor
+                               name=idx,
+                               keep_loaded_data=self.keep_loaded_data)
                 points.append((idx, f['longitude'].val, f['latitude'].val))
 
         points = np.array(points)
@@ -398,12 +407,15 @@ class NetworkCollection(object):
 
 
 if __name__ == '__main__':
-    networks = NetworkCollection(r"D:\data-read\ISMN\global_20191024",
-                                 keep_loaded_data=False,
-                                 networks=None)
+    coll = NetworkCollection("/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212",
+                             keep_loaded_data=False,
+                             networks=None)
 
-    networks.plot_station_locations(variable='precipitation', min_depth=-np.inf, max_depth=np.inf,
-                                               stats_text=True, filename=r"C:\Temp\delete_me\map_rainf.png",
-                                               check_only_sensor_depth_from=False)
+    df = coll.networks['GROW'].stations['1e95h80r'].metadata.to_pd()
+    # networks.load_all()
+    #
+    # networks.plot_station_locations(variable='precipitation', min_depth=-np.inf, max_depth=np.inf,
+    #                                            stats_text=True, filename=r"C:\Temp\delete_me\map_rainf.png",
+    #                                            check_only_sensor_depth_from=False)
 
 

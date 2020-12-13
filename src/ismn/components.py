@@ -25,8 +25,9 @@ from pygeogrids import BasicGrid
 import numpy as np
 import warnings
 import logging
-
 import pandas as pd
+
+from ismn.meta import MetaData, Depth
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 class IsmnComponent: pass
+
 
 class Network(IsmnComponent):
     """
@@ -92,7 +94,7 @@ class Network(IsmnComponent):
         # get grid for all stations in network
         return BasicGrid(*self.coords)
 
-    def add_station(self, name, lon, lat, elev, static_variables=None):
+    def add_station(self, name, lon, lat, elev):
         """
         Add a station to the network.
 
@@ -106,12 +108,12 @@ class Network(IsmnComponent):
             Latitude coordinate.
         elev : float
             Elevation.
-        static_variables : list, optional
-            Static variable information (default: None).
         """
         if name not in self.stations:
-            self.stations[name] = Station(name, lon, lat, elev,
-                                          static_variables=static_variables)
+            self.stations[name] = Station(name,
+                                          lon,
+                                          lat,
+                                          elev)
         else:
             logger.warning('Station already exists: {}'.format(name))
 
@@ -152,14 +154,16 @@ class Network(IsmnComponent):
         for station in self.stations.values():
             flag = False
             for sensor in station.sensors.values():
-                if (variable in [None, sensor.variable]) and depth.encloses(sensor.depth):
+                if (variable in [None, sensor.variable]) and \
+                        depth.encloses(sensor.depth):
                     flag = True
                 if flag and filter_dict:
                     f = sensor.filehandler
                     if f is None:
-                        warnings.warn("Filehandler is None, can't filter by metadata")
+                        warnings.warn("No Filehandler, can't filter by metadata")
                     flag = sensor.filehandler.check_metadata(
-                        variable, depth.start, depth.end, filter_static_vars=filter_dict)
+                        variable, depth.start, depth.end,
+                        filter_static_vars=filter_dict)
             if flag:
                 yield station
 
@@ -183,8 +187,7 @@ class Network(IsmnComponent):
         info : str
             Basic network information.
         """
-        info = 'Network {} has {} stations.'.format(self.name,
-                                                    self.n_stations())
+        info = f'Network {self.name} has {self.n_stations()} stations.'
         return info
 
 
@@ -204,8 +207,6 @@ class Station(IsmnComponent):
         Latitude coordinate.
     elev : float
         Elevation information.
-    static_variables : list, optional
-        Static variable information (default: None).
 
     Attributes
     ----------
@@ -217,8 +218,6 @@ class Station(IsmnComponent):
         Latitude coordinate.
     elev : float
         Elevation information.
-    static_variables : MetaData
-        Station static variables
 
     Methods
     -------
@@ -236,12 +235,11 @@ class Station(IsmnComponent):
         Number of sensors.
     """
 
-    def __init__(self, name, lon, lat, elev, static_variables=None):
+    def __init__(self, name, lon, lat, elev):
         self.name = name
         self.lon = lon
         self.lat = lat
         self.elev = elev
-        self.static_variables = static_variables
         self.sensors = {}
 
     def __repr__(self):
@@ -253,9 +251,36 @@ class Station(IsmnComponent):
         info : str
             Basic station information.
         """
-        info = 'Station {} has {} sensors.'.format(self.name,
-                                                   len(self.sensors.keys()))
+        info = f'Station {self.name} has {len(self.sensors.keys())} sensors.'
         return info
+
+    @property
+    def metadata(self):
+        """
+        Collect the metadata from all sensors at station.
+        """
+        sens_meta = [s.metadata for s in self.sensors.values()]
+        station_meta = MetaData().merge(sens_meta, inplace=False)
+        return station_meta
+
+    def from_file_collection(self, file_collection, keep_loaded_data=False):
+        n = len(file_collection.index.size)
+        d = file_collection.to_dict('list')
+
+        assert (len(np.array(d['station'])) == 1) and \
+               (len(np.array(d['network']))), \
+            "Unique network and station names are expected"
+
+        for i in range(n):
+            depth = Depth(d['sensor_depth_from'][i],
+                          d['sensor_depth_to'][i])
+
+            self.add_sensor(d['instrument'][i],
+                            d['variable'][i],
+                            depth=depth,
+                            filehandler=d['filehandler'][i],
+                            name=None, # auto-generate
+                            keep_loaded_data=keep_loaded_data)
 
     def get_variables(self):
         """
@@ -294,8 +319,8 @@ class Station(IsmnComponent):
 
         return depths
 
-    def add_sensor(self, instrument, variable, depth, filehandler, name=None,
-                   keep_loaded_data=False):
+    def add_sensor(self, instrument, variable, depth, filehandler,
+                   name=None, keep_loaded_data=False):
         """
         Add sensor to station.
 
@@ -402,8 +427,8 @@ class Sensor(IsmnComponent):
         File handler (default: None).
     """
 
-    def __init__(self, instrument, variable, depth, name=None, filehandler=None,
-                 keep_loaded_data=False):
+    def __init__(self, instrument, variable, depth, name=None,
+                 filehandler=None, keep_loaded_data=False):
 
         self.instrument = instrument
         self.variable = variable
@@ -414,7 +439,19 @@ class Sensor(IsmnComponent):
         self.name = name if name is not None else self.__repr__()
 
     def __repr__(self):
-        return f"{self.instrument}_{self.variable}_{self.depth.start:1.6f}_{self.depth.end:1.6f}"
+        return f"{self.instrument}_{self.variable}_" \
+            f"{self.depth.start:1.6f}_{self.depth.end:1.6f}"
+
+    # @classmethod
+    # def from_file_collection(cls, row:pd.Series, keep_loaded_data=False):
+    #     # Build sensor from elements of a file collection row
+    #     depth = Depth(row['sensor_depth_from'], row['sensor_depth_to'])
+    #     return cls(row['instrument'], row['variable'], depth, None,
+    #                row['filehandler'], keep_loaded_data)
+
+    @property
+    def metadata(self):
+        return self.filehandler.metadata
 
     def read_data(self) -> pd.DataFrame:
         """
@@ -476,193 +513,21 @@ class Sensor(IsmnComponent):
             else:
                 # checks also if the metadata in file matches
                 flag = self.filehandler.check_metadata(
-                    variable, depth.start, depth.end, filter_static_vars=filter_meta_dict)
+                    variable, depth.start, depth.end,
+                    filter_static_vars=filter_meta_dict)
 
         return flag
 
-class Depth():
-
-    """
-    A class representing a depth (0=surface).
-
-    Parameters
-    ----------
-    start : float
-        Depth start.
-    end : float
-        Depth end.
-
-    Attributes
-    ----------
-    start : float
-        Depth start.
-    end : float
-        Depth end.
-
-    Methods
-    -------
-    __eq__(other)
-        Test if two Depth are equal.
-    enclose(other)
-        Test if other Depth encloses given Depth.
-    """
-
-    def __init__(self, start, end):
-
-        # todo: could add unit to depth?
-
-        self.start = float(start)
-        self.end = float(end)
-
-        self.extent = self.end - self.start
-
-        # todo: allow negative depths? i.e above surface, for Temperature?
-        # if self.extent < 0:
-        #     raise ValueError("End can not be smaller than start")
-
-        if self.start == self.end:
-            self.is_profile = False
-        else:
-            self.is_profile = True
-
-    def __str__(self):
-        return f"{self.start}_{self.end}[m]"
-
-    def __eq__(self, other):
-        """
-        Test if two Depth are equal.
-
-        Parameters
-        ----------
-        other : Depth
-            Depth.
-
-        Returns
-        -------
-        flag : bool
-            True if both depths are equal, False otherwise.
-        """
-        if (self.start == other.start) and (self.end == other.end):
-            flag = True
-        else:
-            flag = False
-
-        return flag
-
-    def __iter__(self):
-        for d in [self.start, self.end]:
-            yield d
-
-    def perc_overlap(self, other):
-        """
-        Estimate how much 2 depths correspond.
-        1 means that the are the same, 0 means that they have an infinitely
-        small correspondence (e.g. a single layer within a range, or 2 adjacent
-        depths). -1 means that they dont overlap.
-
-        Parameters
-        ----------
-        other : Depth
-            Second depth
-
-        Returns
-        -------
-        p : float
-            Normalised overlap range
-            <0 = no overlap, 0 = adjacent, >0 = overlap, 1 = equal
-        """
-        if self == other: # same depths
-            return 1
-        else:
-            r = max([self.end, other.end]) - min([self.start, other.start])
-            # Overlapping range normalised to the overall depth range r
-            p_f = abs(self.start - other.start) / r
-            p_t = abs(self.end - other.end) / r
-            p = 1 - p_f - p_t
-
-            if p < 0:
-                p = -1
-
-        return p
-
-    def overlap(self, other, return_perc=False):
-        """
-        Check if two depths overlap, (if the start of one depth is the same as
-        the end of the other, they overlap,
-        e.g. Depth(0, 0.1) and Depth(0.1, 0.2) do overlap.
-
-        Parameters
-        ----------
-        other : Depth
-            Other Depth
-        return_perc : bool, optional (default: False)
-            Returns how much the depths overlap. See func: perc_overlap()
-
-        Returns
-        -------
-        overlap : bool
-            True if Depths overlap
-        perc_overlap: float
-            Normalised overlap.
-        """
-        other_start_encl = self.encloses(Depth(other.start, other.start))
-        other_end_encl = self.encloses(Depth(other.end, other.end))
-
-        this_start_encl = other.encloses(Depth(self.start, self.start))
-        this_end_encl = other.encloses(Depth(self.end, self.end))
-
-        overlap = any([other_start_encl, other_end_encl,
-                       this_start_encl, this_end_encl])
-
-        if return_perc:
-            return overlap, self.perc_overlap(other)
-        else:
-            return overlap
-
-    def encloses(self, other):
-        """
-        Test if this Depth encloses other Depth.
-
-        Parameters
-        ----------
-        other : Depth
-            Depth.
-
-        Returns
-        -------
-        flag : bool
-            True if other depth surrounds given depth, False otherwise.
-        """
-        if (self.start <= other.start) and (self.end >= other.end):
-            flag = True
-        else:
-            flag = False
-
-        return flag
-
-    def enclosed(self, other):
-        """
-        Test if other Depth encloses this Depth.
-
-        Parameters
-        ----------
-        other : Depth
-            Depth.
-
-        Returns
-        -------
-        flag : bool
-            True if other depth surrounds given depth, False otherwise.
-        """
-        if (other.start <= self.start) and (other.end >= self.end):
-            flag = True
-        else:
-            flag = False
-
-        return flag
 
 if __name__ == '__main__':
-    d1 = Depth(0, 0.3)
-    d2 = Depth(-0.01, -0.1)
+    from ismn.filecollection import IsmnFileCollection
 
-    overlaps, perc = d1.overlap(d2, return_perc=True)
+    collection = IsmnFileCollection.from_metadata_csv(
+        "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809",
+        "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809/python_metadata/Data_seperate_files_20170810_20180809.csv")
+
+    s = Station('test', 1, 1, 1)
+    fh = collection.files.iloc[0]['filehandler']
+    d1 = Depth(0, 0.3)
+    s.add_sensor('inst', 'var', d1, filehandler=fh)
+    s.metadata

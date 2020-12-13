@@ -1,9 +1,223 @@
 # -*- coding: utf-8 -*-
-from ismn.components import Depth
 import numpy as np
 from typing import Optional, List, Any, Union
 import pandas as pd
-from collections import OrderedDict
+from ismn.tables import *
+
+class Depth():
+
+    """
+    A class representing a depth (0=surface).
+
+    Parameters
+    ----------
+    start : float
+        Depth start.
+    end : float
+        Depth end.
+
+    Attributes
+    ----------
+    start : float
+        Depth start.
+    end : float
+        Depth end.
+
+    Methods
+    -------
+    __eq__(other)
+        Test if two Depth are equal.
+    enclose(other)
+        Test if other Depth encloses given Depth.
+    """
+
+    def __init__(self, start, end):
+
+        # todo: could add unit to depth?
+
+        self.start = float(start)
+        self.end = float(end)
+
+        self.extent = self.end - self.start
+
+        if abs(start) > abs(end):
+            raise DepthError("Depth end can not be further from 0 than depth start")
+
+        if self.start == self.end:
+            self.is_profile = False
+        else:
+            self.is_profile = True
+
+    def __str__(self):
+        return f"{self.start}_{self.end}[m]"
+
+    def __eq__(self, other):
+        """
+        Test if two Depth are equal.
+
+        Parameters
+        ----------
+        other : Depth
+            Depth.
+
+        Returns
+        -------
+        flag : bool
+            True if both depths are equal, False otherwise.
+        """
+        if (self.start == other.start) and (self.end == other.end):
+            flag = True
+        else:
+            flag = False
+
+        return flag
+
+    def __iter__(self):
+        for d in [self.start, self.end]:
+            yield d
+
+    def __temp_pos_depths(self, other=None):
+        # Create temporary depths that are shifted to positive
+
+        shift = min([self.end, other.end] +
+                    [self.start, other.start] if other is not None else [])
+
+        if shift < 0: # no neg depths
+            # move both to pos range if necessary
+            if (self.start < 0) or (self.end < 0):
+                temp_d1 = Depth(self.end - shift, self.start - shift)
+            else:
+                temp_d1 = Depth(self.start - shift, self.end - shift)
+
+            if other is not None:
+                if (other.start < 0) or (other.end < 0):
+                    temp_d2 = Depth(other.end - shift, other.start - shift)
+                else:
+                    temp_d2 = Depth(other.start - shift, other.end - shift)
+            else:
+                temp_d2 = None
+        else:
+            temp_d1 = Depth(self.start, self.end)
+            temp_d2 = Depth(other.start, other.end) if other is not None else None
+
+        return temp_d1, temp_d2
+
+    def perc_overlap(self, other):
+        """
+        Estimate how much 2 depths correspond.
+        1 means that the are the same, 0 means that they have an infinitely
+        small correspondence (e.g. a single layer within a range, or 2 adjacent
+        depths). -1 means that they dont overlap.
+
+        Parameters
+        ----------
+        other : Depth
+            Second depth
+
+        Returns
+        -------
+        p : float
+            Normalised overlap range
+            <0 = no overlap, 0 = adjacent, >0 = overlap, 1 = equal
+        """
+        if self == other: # same depths
+            return 1
+        else:
+            # shift depths to pos ranges.
+            temp_d1, temp_d2 = self.__temp_pos_depths(other)
+
+            r = max([temp_d1.end, temp_d2.end]) - min([temp_d1.start, temp_d2.start])
+
+            # Overlapping range normalised to the overall depth range r
+            p_f = abs(temp_d1.start - temp_d2.start) / r
+            p_t = abs(temp_d1.end - temp_d2.end) / r
+            p = 1 - p_f - p_t
+
+            p = round(p, 7)
+
+            if p < 0:
+                p = -1
+
+        return p
+
+    def overlap(self, other, return_perc=False):
+        """
+        Check if two depths overlap, (if the start of one depth is the same as
+        the end of the other, they overlap,
+        e.g. Depth(0, 0.1) and Depth(0.1, 0.2) do overlap.
+
+        Parameters
+        ----------
+        other : Depth
+            Other Depth
+        return_perc : bool, optional (default: False)
+            Returns how much the depths overlap. See func: perc_overlap()
+
+        Returns
+        -------
+        overlap : bool
+            True if Depths overlap
+        perc_overlap: float
+            Normalised overlap.
+        """
+        other_start_encl = self.encloses(Depth(other.start, other.start))
+        other_end_encl = self.encloses(Depth(other.end, other.end))
+
+        this_start_encl = other.encloses(Depth(self.start, self.start))
+        this_end_encl = other.encloses(Depth(self.end, self.end))
+
+        overlap = any([other_start_encl, other_end_encl,
+                       this_start_encl, this_end_encl])
+
+        if return_perc:
+            return overlap, self.perc_overlap(other)
+        else:
+            return overlap
+
+    def encloses(self, other):
+        """
+        Test if this Depth encloses other Depth.
+
+        Parameters
+        ----------
+        other : Depth
+            Depth.
+
+        Returns
+        -------
+        flag : bool
+            True if other depth surrounds given depth, False otherwise.
+        """
+        temp_d1, temp_d2 = self.__temp_pos_depths(other)
+        if (temp_d1.start <= temp_d2.start) and (temp_d1.end >= temp_d2.end):
+            flag = True
+        else:
+            flag = False
+
+        return flag
+
+    def enclosed(self, other):
+        """
+        Test if other Depth encloses this Depth.
+
+        Parameters
+        ----------
+        other : Depth
+            Depth.
+
+        Returns
+        -------
+        flag : bool
+            True if other depth surrounds given depth, False otherwise.
+        """
+        temp_d1, temp_d2 = self.__temp_pos_depths(other)
+
+        if (temp_d2.start <= temp_d1.start) and (temp_d2.end >= temp_d1.end):
+            flag = True
+        else:
+            flag = False
+
+        return flag
 
 class MetaVar():
     """
@@ -31,8 +245,8 @@ class MetaVar():
         self.depth = depth
 
     def __str__(self):
-        return f"{self.name} ({str(self.depth) if self.depth else 'no depth'}):" \
-               f" {self.val}"
+        d = str(self.depth) if self.depth else 'no depth'
+        return f"{self.name} ({d}): {self.val}"
 
     def __iter__(self):
         yield self.name; yield self.val
@@ -47,8 +261,13 @@ class MetaVar():
             assert self.val == other.val
             assert self.depth == other.depth
             return True
-        except AssertionError:
+        except (AssertionError, AttributeError):
             return False
+
+    @property
+    def empty(self) -> bool:
+        # Check if Var has a valid value
+        return pd.isnull(self.val) # np.nan or None
 
 class MetaData():
     """
@@ -73,7 +292,9 @@ class MetaData():
         for var in self.metadata:
             yield var
 
-    def __getitem__(self, item:Union[str,int,list]) -> Union['MetaData',MetaVar, None]:
+    def __getitem__(self,
+                    item:Union[str,int,list]) \
+            -> Union['MetaData', MetaVar, None]:
         # get all variables with the selected name
         if not isinstance(item, list):
             if isinstance(item, int):
@@ -149,31 +370,74 @@ class MetaData():
         return cls(vars)
 
 
-    def to_pd(self, transpose=False) -> pd.DataFrame:
+    def to_pd(self, transpose=False, dropna=True) -> pd.DataFrame:
         # df = pd.DataFrame.from_dict(self.to_dict(always_depth=True)).fillna(np.nan)
         # df.index = ['val', 'depth_from', 'depth_to']
         # return pd.DataFrame(df.T.stack(dropna=False)).T
-        var_names = self.keys()
         args = ['val', 'depth_from', 'depth_to']
 
-        if len(np.unique(var_names)) != len(var_names):
-            raise ValueError("Found duplicate values, conversion to pandas not supported.")
+        #if len(np.unique(var_names)) != len(var_names):
+        #    raise ValueError("Found duplicate values, conversion to pandas not supported.")
 
-        values = list(sum([tuple(self[var])[1:] for var in var_names], ()))
+        var_names, values = [], []
+        for var_name in np.unique(self.keys()):
+            var = self[var_name]
+            if isinstance(var, MetaVar):
+                values.append(tuple(var)[1:])
+                var_names.append(var_name)
+            else:
+                for v in var:
+                    values.append(tuple(v)[1:])
+                    var_names.append(var_name)
+
+        values = list(sum(values, ()))
 
         index = pd.MultiIndex.from_product([var_names, args], names=['name', 'meta_args'])
 
         df = pd.DataFrame(index=index, data=values).fillna(np.nan)
+        df = df.rename(columns={0: 'data'})
 
-        return df if not transpose else df.T
+        if dropna:
+            df.dropna(inplace=True)
 
-    def merge(self, other:'MetaData', inplace=False) -> Optional['MetaData']:
-        # Merge two metadata sets
+        return df.loc[:, 'data'] if not transpose else df.T
+
+    def merge(self, other, inplace=False, exclude_empty=True):
+        """
+        Merge two or more metadata sets, i.e. take all variables from other(s)
+        that are not in this metadata, and add them.
+
+        Parameters
+        ----------
+        other: MetaData or List[MetaData]
+            Other MetaData Collection or a list of MetaData, e.g. from multiple
+            sensors.
+        inplace: bool, optional (default: False)
+            Replace self.metadata with the merged meteadata, if False then
+            the merged metadata is returned
+        exclude_empty : bool, optional (default: True
+            Variables where the value is NaN are ignored during merging.
+
+        Returns
+        -------
+        merged: MetaData or None
+            The merged metadata (if inplace is False)
+        """
+
+        if isinstance(other, MetaData):
+            other = [other]
+        merged = MetaData()
+
+        for m in [self, *other]:
+            for v in m.metadata:
+                if (not v.empty if exclude_empty else True) and\
+                        (v not in merged):
+                    merged.add(v.name, v.val, v.depth)
+
         if inplace:
-            self.metadata += other.metadata
+            self.metadata = merged
         else:
-            vars = self.metadata + other.metadata
-            return MetaData(vars)
+            return merged
 
     def add(self, name, val, depth: Depth = None):
         """
@@ -231,55 +495,36 @@ class MetaData():
 
         return MetaData(best_vars)
 
-    def get_formatted(self, format='list'):
-        """
-        Return metadata for file in different formats such as list, dataframe,
-        dict and structured array.
 
-        Parameters
-        ----------
-        format : str, optional (default: 'list')
-            Name of the format, one of 'struct', 'dict', 'pandas', 'list'
 
-        Returns
-        -------
-        formatted_meta : Any
-            Metadata in the selected format.
-        """
-        raise NotImplementedError
-            #     meta = deepcopy(self.metadata)
-            #
-            #     depth = meta.pop('depth')
-            #
-            #     meta['depth_from'], meta['depth_to'] = depth.start, depth.end
-            #
-            #     meta['archive'] = self.root.path
-            #     meta['filepath'] = self.file_path
-            #
-            #     if format.lower() == 'struct':
-            #         return np.array([tuple(meta.values())],
-            #                         [(k, object) for k in meta.keys()])
-            #     elif format.lower() == 'dict':
-            #         return meta
-            #     elif format.lower() == 'pandas':
-            #         return pd.Series(meta)
-            #     elif format.lower() == 'list':
-            #         return tuple(list(meta.values()))
-            #     else:
-            #         raise NotImplementedError(f"Format {format} is not (yet) implemented")
 
 if __name__ == '__main__':
-    var1 = MetaVar('station', 'bla1')
-    var2 = MetaVar('sand_fraction', 9000, Depth(0, 0.1))
-    var3 = MetaVar('sand_fraction', 1, Depth(0.05, 0.1))
-    var4 = MetaVar('sand_fraction', 1, Depth(0.1, 0.3))
-    var5 = MetaVar('sand_fraction', 1, Depth(0.5, 1.))
 
-    meta = MetaData([var1, var2])
-    df = meta.to_pd()
-    a = meta.to_dict()
-    d = meta.best_meta_for_depth(Depth(0,0.5))
+    d1 = Depth(0.1,-0.2)
+    d2 = Depth(-0.1,-0.3)
 
+    p = d1.perc_overlap(d2)
+
+
+
+    var11 = MetaVar('station', 'bla1')
+    var12 = MetaVar('station', 'bla2')
+    var13 = MetaVar('sand_fraction', 9000, Depth(0, 0.1))
+
+    var21 = MetaVar('station', 'bla1')
+    var22 = MetaVar('sand_fraction', 1, Depth(0.05, 0.1))
+    var23 = MetaVar('sand_fraction', 1, Depth(0.1, 0.3))
+
+    var32 = MetaVar('depvar', 123, Depth(0,-1))
+    var33 = MetaVar('station', 'bla2', Depth(0,-1))
+
+    meta1 = MetaData([var11, var12, var13])
+    meta2 = MetaData([var21, var22, var23])
+    meta3 = MetaData([var32, var33])
+
+    meta3.best_meta_for_depth(Depth(0, -0.5))
+    merged = meta1.merge([meta2, meta3])
+    merged.to_pd()
 
     #dd = d.to_dict()
 

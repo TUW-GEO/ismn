@@ -29,6 +29,7 @@ import unittest
 
 from ismn.components import Network, Station, Sensor, Depth
 from pygeogrids.grids import BasicGrid
+from ismn.tables import DepthError
 
 rpath = os.path.join(os.path.dirname(__file__), 'test_data')
 
@@ -178,7 +179,8 @@ class SensorTest(unittest.TestCase):
         subpath = os.path.join("COSMOS", "Barrow-ARM",
             "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
 
-        self.sensor = Sensor(instrument, variable, d, filehandler=DataFile(root, subpath))
+        self.sensor = Sensor(instrument, variable, d,
+                             filehandler=DataFile(root, subpath))
 
     def test_sensor_attributes(self):
         """
@@ -241,6 +243,18 @@ class DepthTest(unittest.TestCase):
         other = Depth(0, 0.05)
         assert self.d == other
 
+    def test_invalid(self):
+        try:
+            Depth(0.5,0.1)
+            raise AssertionError
+        except DepthError:
+            pass
+        try:
+            Depth(-0.5, -0.1)
+            raise AssertionError
+        except DepthError:
+            pass
+
     def test_enclose(self):
         """
         Test if other depth encloses depth.
@@ -252,6 +266,32 @@ class DepthTest(unittest.TestCase):
         other = Depth(0, 0.1)
         assert not self.d.encloses(other)
         assert not other.enclosed(self.d)
+
+        other = Depth(-0.1,-0.2)
+        assert not self.d.encloses(other)
+        assert not self.d.enclosed(other)
+
+
+def test_perc_overlap(self):
+        other = Depth(0.05, 0.1)
+        assert self.d.overlap(other) == True
+        assert self.d.perc_overlap(other) == 0.
+
+        other = Depth(0.03, 0.05)
+        assert self.d.overlap(other) == True
+        assert self.d.perc_overlap(other) == round(0.02/0.05, 7)
+
+        other = Depth(0,0.05)
+        assert self.d.overlap(other) == True
+        assert self.d.perc_overlap(other) == 1.
+
+        other = Depth(-0.01, -0.05)
+        assert self.d.overlap(other) == False
+        assert self.d.perc_overlap(other) == -1
+
+        other = Depth(0.01, -0.01)
+        assert self.d.overlap(other) == True
+        assert self.d.perc_overlap(other) == round(0.01/0.06, 7)
 
 if __name__ == '__main__':
     unittest.main()

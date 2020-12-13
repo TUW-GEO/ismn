@@ -52,9 +52,6 @@ class Test_MetaData(unittest.TestCase):
 
         assert len(self.dat) == 5
 
-        with pytest.raises(ValueError):
-            self.dat.to_pd() # conversion to dict with two vars of same name not supported
-
         # no depths overlap
         best_meta_9_10 = self.dat.best_meta_for_depth(Depth(9,10))
         assert sorted(best_meta_9_10.keys()) == sorted(['second', '4'])

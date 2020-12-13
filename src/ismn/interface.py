@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from ismn.network_collection import NetworkCollection
-from ismn.file_collection import ISMNError
+from ismn.filecollection import ISMNError
 from ismn.components import *
 from ismn import tables
 
@@ -315,8 +315,8 @@ class ISMN_Interface():
         ids = self.get_dataset_ids(variable=variable, min_depth=min_depth,
             max_depth=max_depth, filter_static_vars=filter_static_vars)
 
-        min_obs_ts = self.collection.file_collection.files.loc[ids, 'timerange_from'].min()
-        max_obs_ts = self.collection.file_collection.files.loc[ids, 'timerange_to'].max()
+        min_obs_ts = self.collection.files.loc[ids, 'timerange_from'].min()
+        max_obs_ts = self.collection.files.loc[ids, 'timerange_to'].max()
 
         return min_obs_ts, max_obs_ts
 
@@ -397,7 +397,7 @@ class ISMN_Interface():
          variables : numpy.array
              array of variables available for the data
         """
-        return np.unique(self.collection.file_collection.files['variable'].values)
+        return np.unique(self.collection.files['variable'].values)
 
 
     def print_landcover_dict(self):

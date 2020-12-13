@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 
 from pathlib import Path
 import numpy as np
-from ismn.file_collection import IsmnFileCollection
+from ismn.filecollection import IsmnFileCollection
 
 testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
 
