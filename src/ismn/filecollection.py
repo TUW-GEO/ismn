@@ -297,6 +297,9 @@ class IsmnFileCollection(object):
         self.root = root
         self.files = filelist
 
+    def __repr__(self):
+        return self.files
+
     @classmethod
     def from_scratch(cls, data_root, parallel=True, log_path=None,
                      temp_root=gettempdir()):

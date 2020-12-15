@@ -48,8 +48,14 @@ class Depth():
         else:
             self.is_profile = True
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}([{self.start}, {self.end}])"
+
+    def __getitem__(self, item:int):
+        return [self.start, self.end][item]
+
     def __str__(self):
-        return f"{self.start}_{self.end}[m]"
+        return f"{self.start} to {self.end} [m]"
 
     def __eq__(self, other):
         """
@@ -244,6 +250,13 @@ class MetaVar():
         self.val = val
         self.depth = depth
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}([{self.name}, {self.val}, " \
+            f"{None.__repr__() if not self.depth else self.depth.__repr__()}])"
+
+    def __getitem__(self, item:int):
+        return [self.name, self.val, self.depth][item]
+
     def __str__(self):
         d = str(self.depth) if self.depth else 'no depth'
         return f"{self.name} ({d}): {self.val}"
@@ -292,6 +305,11 @@ class MetaData():
         for var in self.metadata:
             yield var
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}([\n" + \
+               ",\n".join(['  ' + var.__repr__() for var in self.metadata]) + \
+               "\n])"
+
     def __getitem__(self,
                     item:Union[str,int,list]) \
             -> Union['MetaData', MetaVar, None]:
@@ -310,17 +328,6 @@ class MetaData():
         else:
             items = [v for v in self.metadata if v.name in item]
             return MetaData(items)
-
-    def __str__(self):
-        names, depths = [], []
-        for var in self.metadata:
-            names.append(var.name)
-            if var.depth is not None:
-                depth = str(var.depth)
-            else:
-                depth = "no depth"
-            depths.append(depth)
-        return ", ".join([f"{name} ({depth})" for name, depth in zip(names, depths)])
 
     def __contains__(self, item:Union[MetaVar, str]):
         if isinstance(item, MetaVar):
@@ -510,7 +517,6 @@ if __name__ == '__main__':
     d2 = Depth(-0.1,-0.3)
 
     p = d1.perc_overlap(d2)
-
 
 
     var11 = MetaVar('station', 'bla1')

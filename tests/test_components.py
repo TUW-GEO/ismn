@@ -107,6 +107,7 @@ class StationTest(unittest.TestCase):
         se_name = '{}_{}_{:1.6f}_{:1.6f}'.format(
             name, variable, d.start, d.end)
 
+
         self.station.add_sensor(name, variable, d, None)
 
         assert self.station.sensors[se_name].variable == 'sm'
@@ -160,6 +161,7 @@ class StationTest(unittest.TestCase):
 
         assert self.station.n_sensors() == 1
 
+
 class SensorTest(unittest.TestCase):
 
     # todo: test reading sensor metadata?
@@ -171,8 +173,7 @@ class SensorTest(unittest.TestCase):
         instrument = 'Cosmic-ray-Probe'
         d = Depth(0, 0.21)
         variable = 'soil_moisture'
-        name = '{}_{}_{:1.6f}_{:1.6f}'.format(
-            instrument, variable, d.start, d.end)
+
 
         root = os.path.join(
             rpath, "Data_seperate_files_20170810_20180809")
@@ -181,6 +182,11 @@ class SensorTest(unittest.TestCase):
 
         self.sensor = Sensor(instrument, variable, d,
                              filehandler=DataFile(root, subpath))
+
+        name = '{}_{}_{:1.6f}_{:1.6f}'.format(
+            instrument, variable, d.start, d.end)
+
+        assert self.sensor.name == name
 
     def test_sensor_attributes(self):
         """
@@ -201,12 +207,6 @@ class SensorTest(unittest.TestCase):
         # fails because of depth
         assert not self.sensor.eval('soil_moisture', Depth(0,0.05),
                                     check_only_sensor_depth_from=False)
-
-        # test based on metadata
-        assert self.sensor.eval('soil_moisture', Depth(0,1),
-                                filter_meta_dict={'lc_2010': 210, 'climate_KG': 'ET'})
-        assert not self.sensor.eval('soil_moisture', Depth(0,1),
-                                    filter_meta_dict={'lc_2010': 999})
 
     def test_read_data(self):
         """ Test reading the actual data """

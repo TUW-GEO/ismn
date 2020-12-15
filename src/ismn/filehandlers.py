@@ -66,6 +66,12 @@ class IsmnFile(object):
 
         self.temp_root = temp_root
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.root.path / self.file_path})"
+
+    def __getitem__(self, item:int):
+        return [self.root, self.file_path][item]
+
     def close(self):
         self.root.close()
 
@@ -281,9 +287,6 @@ class DataFile(IsmnFile):
 
         if load_metadata:
             self.metadata = self.read_metadata(best_meta_for_sensor=True)
-
-    def __getitem__(self, item):
-        return self.metadata[item]
 
     def _read_lines(self, filename):
         """
@@ -628,8 +631,8 @@ if __name__ == '__main__':
     filepath = "COSMOS/ARM-1/COSMOS_COSMOS_ARM-1_sm_0.000000_0.190000_Cosmic-ray-Probe_20170810_20180809.stm"
 
     data_meta_file = DataFile(fileroot, filepath)
-    #
-    # fileroot =  "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
-    # filepath = "COSMOS/ARM-1/COSMOS_COSMOS_ARM-1_static_variables.csv"
-    #
-    # station_meta_file = StaticMetaFile(fileroot, filepath, depth=Depth(0,0.15))
+
+    fileroot =  "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
+    filepath = "COSMOS/ARM-1/COSMOS_COSMOS_ARM-1_static_variables.csv"
+
+    station_meta_file = StaticMetaFile(fileroot, filepath)

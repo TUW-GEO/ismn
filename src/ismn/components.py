@@ -28,6 +28,7 @@ import logging
 import pandas as pd
 
 from ismn.meta import MetaData, Depth
+from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +77,20 @@ class Network(IsmnComponent):
 
     def __init__(self, name):
         self.name = name
-        self.stations = {}
+        self.stations = OrderedDict([])
         # todo: using station dicts means that duplicate station names are not possible
+
+    def __repr__(self):
+        """
+        Provide basic network information.
+
+        Returns
+        -------
+        info : str
+            Basic network information.
+        """
+        # {self.__class__.__name__}(
+        return f"{self.name}({list(self.stations.keys())})"
 
     @property
     def coords(self) -> (list, list):
@@ -182,17 +195,7 @@ class Network(IsmnComponent):
         """
         return len(self.stations)
 
-    def __repr__(self):
-        """
-        Provide basic network information.
 
-        Returns
-        -------
-        info : str
-            Basic network information.
-        """
-        info = f'Network {self.name} has {self.n_stations()} stations.'
-        return info
 
 
 class Station(IsmnComponent):
@@ -244,7 +247,7 @@ class Station(IsmnComponent):
         self.lon = lon
         self.lat = lat
         self.elev = elev
-        self.sensors = {}
+        self.sensors = OrderedDict([])
 
     def __repr__(self):
         """
@@ -255,8 +258,7 @@ class Station(IsmnComponent):
         info : str
             Basic station information.
         """
-        info = f'Station {self.name} has {len(self.sensors.keys())} sensors.'
-        return info
+        return f"{self.name}({[s.name for s in self.sensors.values()]})"
 
     @property
     def metadata(self):
@@ -450,7 +452,7 @@ class Sensor(IsmnComponent):
 
     @property
     def metadata(self):
-        return self.filehandler.metadata
+        return None if self.filehandler is None else self.filehandler.metadata
 
     def read_data(self) -> pd.DataFrame:
         """
