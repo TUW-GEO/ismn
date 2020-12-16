@@ -19,11 +19,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Set up package managers
-        run: |
-          echo $CONDA/bin >> $GITHUB_PATH
-          $CONDA/bin/conda  config --set always_yes yes --set changeps1 no
-          $CONDA/bin/conda update -q conda
-          python -m pip install --upgrade pip
+      run: |
+        echo $CONDA/bin >> $GITHUB_PATH
+        $CONDA/bin/conda  config --set always_yes yes --set changeps1 no
+        $CONDA/bin/conda update -q conda
+        python -m pip install --upgrade pip
     - name: Install dependencies
       run: |
         $CONDA/bin/conda install python=${{ matrix.python-version }}
