@@ -17,3 +17,5 @@ dependencies:
      - configparser
      - tqdm
      - more_itertools
+     - pytest
+     - pytest-cov

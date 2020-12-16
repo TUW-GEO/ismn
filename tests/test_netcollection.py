@@ -113,6 +113,14 @@ class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
         #https://github.com/TUW-GEO/pygeogrids/issues/64
         #assert station == None
 
+    def test_eval_sensor_metadata(self):
+        # test based on metadata
+        station = self.netcol.networks['COSMOS'].stations['Barrow-ARM']
+        assert station.sensors[1].eval('soil_moisture', Depth(0,1),
+                filter_meta_dict={'lc_2010': 210, 'climate_KG': 'ET'})
+        assert not station.sensors[1].eval('soil_moisture', Depth(0,1),
+                                                      filter_meta_dict={'lc_2010': 999})
+
 class Test_NetworkCollectionHeaderValuesUnzipped(Test_NetworkCollectionCeopSepUnzipped):
 
     @classmethod

@@ -67,8 +67,10 @@ class IsmnRoot():
         else:
             return self.path
 
-    def __repr__(self) -> str:
-        return f"{'Zip' if self.zip else 'Extracted'} Archive: {str(self.path)}"
+    def __repr__(self):
+        type_ = type(self)
+        zip = "Zip" if self.zip else "Unzipped"
+        return f"{type_.__module__}.{type_.__qualname__} {zip} at {self.path}"
 
     def __contains__(self, filepath) -> bool:
         """ Check if files exists in archive """
@@ -320,6 +322,6 @@ class IsmnRoot():
 
 
 if __name__ == '__main__':
-    path = r"C:\Temp\delete_me\ismn\testdata_ceop.zip"
+    path = "/home/wolfgang/code/ismn/tests/test_data/zip_archives/format_header_values/Data_SMOSMANIA.zip"
     ds = IsmnRoot(path)
     cont = ds.scan()
