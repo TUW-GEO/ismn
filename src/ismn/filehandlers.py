@@ -67,11 +67,71 @@ class IsmnFile(object):
 
         self.temp_root = temp_root
 
+        self.metadata = MetaData()
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.root.path / self.file_path})"
 
     def __getitem__(self, item:int):
         return [self.root, self.file_path][item]
+
+
+    def check_metadata(self, variable=None, allowed_depth=None,
+                       filter_meta_dict=None) -> bool:
+        """
+        Evaluate whether the file complies with the passed metadata requirements
+
+        Parameters
+        ----------
+        variable : str, optional (default: None)
+            Name of the required variable measured, e.g. soil_moisture
+        allowed_depth : Depth, optional (default: None)
+            Depth range that is allowed, depth in metadata must be within this
+            range.
+        filter_meta_dict: dict, optional (default: None)
+            Additional metadata keys and values for which the file list is filtered
+            e.g. {'station': 'stationname'} to filter for a station name.
+
+        Returns
+        -------
+        valid : bool
+            Whether the metadata complies with the passed conditions or not.
+        """
+
+        lc_cl = list(tables.CSV_META_TEMPLATE.keys())
+
+        if variable:
+            if not (self.metadata['variable'].val == variable):
+                return False
+
+        if allowed_depth is not None:
+            try:
+                sensor_depth = self.metadata['instrument'].depth
+            except AttributeError:
+                sensor_depth = self.metadata['variable'].depth
+
+            if not allowed_depth.encloses(sensor_depth):
+                return False
+
+        if filter_meta_dict:
+            fil_lc_cl = [True]
+            for k in filter_meta_dict.keys():
+                vs = self.metadata[k]
+                if isinstance(vs, MetaVar):
+                    vs = [vs]
+
+                eval = False
+                for v in vs:
+                    eval = v.val == filter_meta_dict[k]
+                    if eval is True:
+                        break
+                fil_lc_cl.append(eval)
+
+            if not all(fil_lc_cl):
+                return False
+
+        return True
+
 
     def close(self):
         self.root.close()
@@ -108,8 +168,6 @@ class StaticMetaFile(IsmnFile):
 
         if self.file_path.suffix.lower() != '.csv':
             raise IsmnFileError(f'CSV file expected for StaticMetaFile object')
-
-        self.metadata = None
 
         if load_metadata:
             self.metadata = self.read_metadata()
@@ -160,9 +218,8 @@ class StaticMetaFile(IsmnFile):
 
         Returns
         -------
-        depth : Depth
-            If a depth is passed, only the best fitting variables for the
-            depth are returned.
+        metadata : MetaData
+            Static metadata read from csv file.
         """
         if self.root.zip:
             if not self.root.isopen: self.root.open()
@@ -533,57 +590,6 @@ class DataFile(IsmnFile):
         else:
             raise IOError(f"Unknown file format found for: {self.file_path}")
             # logger.warning(f"Unknown file type: {self.file_path}")
-
-    def check_metadata(self, variable, min_depth=0, max_depth=0.1,
-                       filter_static_vars=None) -> bool:
-        """
-        Evaluate whether the file complies with the passed metadata requirements
-
-        Parameters
-        ----------
-        variable : str
-            Name of the required variable measured, e.g. soil_moisture
-        min_depth : float, optional (default: 0)
-            Minimum depth that the measurement should have.
-        max_depth : float, optional (default: 0.1)
-            Maximum depth that the measurement should have.
-        filter_static_vars: dict
-            Additional metadata keys and values for which the file list is filtered
-            e.g. {'lc_2010': 10} to filter for a landcover class.
-
-        Returns
-        -------
-        valid : bool
-            Whether the metadata complies with the passed conditions or not.
-        """
-
-        if min_depth is None:
-            min_depth = -np.inf
-        if max_depth is None:
-            max_depth = np.info
-
-        lc_cl = list(tables.CSV_META_TEMPLATE.keys())
-
-        if not (self.metadata['variable'].val == variable):
-            return False
-
-        sensor_depth = self.metadata['instrument'].depth
-
-        if not Depth(min_depth, max_depth).encloses(sensor_depth):
-            return False
-
-        if filter_static_vars:
-            fil_lc_cl = [True]
-            for k in filter_static_vars.keys():
-                if k not in lc_cl:
-                    raise ValueError(f"{k} is not a valid metadata variable, "
-                                     f"select one of {lc_cl}")
-                fil_lc_cl.append(self.metadata[k].val == filter_static_vars[k])
-
-            if not all(fil_lc_cl):
-                return False
-
-        return True
 
     def read_metadata(self, best_meta_for_sensor=True) -> MetaData:
         """

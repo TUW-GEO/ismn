@@ -8,7 +8,7 @@ import os
 import unittest
 
 from ismn.filehandlers import DataFile
-from ismn.meta import MetaData
+from ismn.meta import MetaData, Depth
 
 from pathlib import Path
 from datetime import datetime
@@ -43,18 +43,19 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
 
     def test_metadata(self):
         """ test reading the loaded metadata for a file (incl. static meta) """
-        lc = self.file.metadata['lc_2010'].val
-        assert lc == 210
 
-        flag = self.file.check_metadata(self.variable, self.depth_from, self.depth_to,
-                                        filter_static_vars={'lc_2010': lc})
+        assert self.file.check_metadata()
+        assert not self.file.check_metadata(filter_meta_dict={'network': 'WRONGNAME'})
+
+        flag = self.file.check_metadata(self.variable, allowed_depth=Depth(0,0.21),
+                                        filter_meta_dict={'longitude': self.longitude,
+                                                          'variable': self.variable})
         assert flag == True
 
-        flag = self.file.check_metadata('nonexistingvar', 0, 0.1,
-                                        filter_static_vars={'lc_2010': lc})
+        flag = self.file.check_metadata('nonexistingvar', Depth(0,0.1))
         assert flag == False
 
-        flag = self.file.check_metadata(self.variable, 98., 99.)
+        flag = self.file.check_metadata(self.variable, Depth(98., 99.))
         assert flag == False
 
         assert self.file.metadata['station'].val == self.station_name
@@ -65,12 +66,9 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
         assert self.file.metadata['longitude'].val == self.longitude
         assert self.file.metadata['latitude'].val == self.latitude
         assert self.file.metadata['variable'].val == self.variable
-        assert self.file.metadata['sand_fraction'].val == 34.
-        assert self.file.metadata['sand_fraction'].depth.start == 0.
-        assert self.file.metadata['sand_fraction'].depth.end == 0.3
-        assert self.file.metadata['timerange_from'].val == datetime(2017,8,10,0)
-        assert self.file.metadata['timerange_to'].val == datetime(2018,8,9,8)
 
+        self.file.check_metadata(filter_meta_dict={'timerange_from' : datetime(2017,8,10,0),
+                                                   'timerange_to' : datetime(2018,8,9,8)})
 
     def test_data(self):
         """ test reading the actual data for a file """
@@ -86,35 +84,14 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
         assert data_is[f"{self.variable}_orig_flag"] == \
                self.data_should_201708113[f"{self.variable}_orig_flag"]
 
-
     def test_metadata_for_depth(self):
         """ Check finding best matching metadata for file """
-        print(self.file.root.path)
         bestmeta = self.file.read_metadata(best_meta_for_sensor=True)
         allmeta = self.file.read_metadata(best_meta_for_sensor=False)
 
-        assert len([k for k in allmeta.keys() if k == 'saturation']) > 1
-        assert len([k for k in bestmeta.keys() if k == 'saturation']) == 1
+        assert bestmeta == allmeta # no vars with multiple depths
 
-        assert bestmeta['saturation'].depth.start == bestmeta['sand_fraction'].depth.start == 0.
-        assert bestmeta['saturation'].depth.end == bestmeta['sand_fraction'].depth.end ==  0.3
-
-        assert allmeta['saturation'][0].depth == bestmeta['saturation'].depth
-
-        assert allmeta['saturation'][1].depth.start == 0.3
-        assert allmeta['saturation'][1].depth.end == 1.0
-
-        additional_metadata = MetaData.from_dict({'somevar' : 'test'},)
-
-
-        addmeta = self.file.read_metadata(static_meta=additional_metadata,
-                                          best_meta_for_sensor=False)
-
-        assert addmeta['somevar'].val == 'test'
-
-        for var in addmeta.metadata:
-            if var.name == 'somevar': continue # todo: add variable drop() to metadata?
-            assert var in allmeta
+        assert 'saturation' not in allmeta
 
 
 class Test_DataFileCeopSepZipped(Test_DataFileCeopSepUnzipped):

@@ -153,10 +153,12 @@ class Network(IsmnComponent):
 
         Parameters
         ----------
-        variable : str, optional
+        variable : str, optional (default: None)
             Observed variable.
-        depth : Depth, optional
+        depth : Depth, optional (default: None)
             Sensing depth.
+        filter_dict : dict, optional (default: None)
+            Metadata to use for filtering
 
         Yields
         ------
@@ -180,6 +182,7 @@ class Network(IsmnComponent):
                     f = sensor.filehandler
                     if f is None:
                         warnings.warn("No Filehandler, can't filter by metadata")
+
                     flag = sensor.filehandler.check_metadata(
                         variable, depth.start, depth.end,
                         filter_static_vars=filter_dict)
