@@ -45,11 +45,6 @@ class Network(IsmnComponent):
     A network is described by a distinct name and can be composed of
     multiple stations.
 
-    Parameters
-    ----------
-    name : str
-        Network name.
-
     Attributes
     ----------
     name : str
@@ -74,7 +69,14 @@ class Network(IsmnComponent):
         Number of stations.
     """
 
-    def __init__(self, name):
+    def __init__(self,
+                 name):
+        """
+        Parameters
+        ----------
+        name : str
+            Network name.
+        """
         self.name = name
         self.stations = {}
         # todo: using station dicts means that duplicate station names are not possible
@@ -201,17 +203,6 @@ class Station(IsmnComponent):
     A station is described by a distinct name and location.
     Multiple sensors at various depths can be part of a station.
 
-    Parameters
-    ----------
-    name : str
-        Station name.
-    lon : float
-        Longitude coordinate.
-    lat : float
-        Latitude coordinate.
-    elev : float
-        Elevation information.
-
     Attributes
     ----------
     name : str
@@ -240,6 +231,19 @@ class Station(IsmnComponent):
     """
 
     def __init__(self, name, lon, lat, elev):
+        """
+        Parameters
+        ----------
+        name : str
+            Station name.
+        lon : float
+            Longitude coordinate.
+        lat : float
+            Latitude coordinate.
+        elev : float
+            Elevation information.
+        """
+
         self.name = name
         self.lon = lon
         self.lat = lat
@@ -283,7 +287,7 @@ class Station(IsmnComponent):
                             d['variable'][i],
                             depth=depth,
                             filehandler=d['filehandler'][i],
-                            name=None, # auto-generate
+                            name=None, # auto-generate name
                             keep_loaded_data=keep_loaded_data)
 
     def get_variables(self):
@@ -399,19 +403,6 @@ class Sensor(IsmnComponent):
     """
     A Sensor with ground observations.
 
-    Parameters
-    ----------
-    instrument : str
-        Instrument name.
-    variable : str
-        Observed variable.
-    depth : Depth
-        Sensing depth.
-    name : str or int, optional (default: None)
-        Id or Name of the sensor. If None is passed, a name is generated.
-    filehandler : IsmnFile, optional
-        File handler (default: None).
-
     Attributes
     ----------
     name : str
@@ -428,6 +419,20 @@ class Sensor(IsmnComponent):
 
     def __init__(self, instrument, variable, depth, name=None,
                  filehandler=None, keep_loaded_data=False):
+        """
+        Parameters
+        ----------
+        instrument : str
+            Instrument name.
+        variable : str
+            Observed variable.
+        depth : Depth
+            Sensing depth.
+        name : str or int, optional (default: None)
+            Id or Name of the sensor. If None is passed, a name is generated.
+        filehandler : IsmnFile, optional
+            File handler (default: None).
+        """
 
         self.instrument = instrument
         self.variable = variable
@@ -440,13 +445,6 @@ class Sensor(IsmnComponent):
     def __repr__(self):
         return f"{self.instrument}_{self.variable}_" \
             f"{self.depth.start:1.6f}_{self.depth.end:1.6f}"
-
-    # @classmethod
-    # def from_file_collection(cls, row:pd.Series, keep_loaded_data=False):
-    #     # Build sensor from elements of a file collection row
-    #     depth = Depth(row['sensor_depth_from'], row['sensor_depth_to'])
-    #     return cls(row['instrument'], row['variable'], depth, None,
-    #                row['filehandler'], keep_loaded_data)
 
     @property
     def metadata(self):

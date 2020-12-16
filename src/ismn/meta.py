@@ -1,27 +1,25 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 from typing import Optional, List, Any, Union
 import pandas as pd
 from ismn.tables import *
 
+"""
+TODO:
+- Add unit for depths?
+"""
+
+
 class Depth():
-
     """
-    A class representing a depth (0=surface).
-
-    Parameters
-    ----------
-    start : float
-        Depth start.
-    end : float
-        Depth end.
+    A class representing a depth
+    0: surface, >0: Below surface, <0: Above surface.
 
     Attributes
     ----------
     start : float
-        Depth start.
+        Depth start. Upper boundary of a layer.
     end : float
-        Depth end.
+        Depth end. Lower boundary of a layer.
 
     Methods
     -------
@@ -32,8 +30,14 @@ class Depth():
     """
 
     def __init__(self, start, end):
-
-        # todo: could add unit to depth?
+        """
+        Parameters
+        ----------
+        start : float
+            Depth start. Upper boundary of a layer.
+        end : float
+            Depth end. Lower boundary of a layer.
+        """
 
         self.start = float(start)
         self.end = float(end)
@@ -82,7 +86,7 @@ class Depth():
         shift = min([self.end, other.end] +
                     [self.start, other.start] if other is not None else [])
 
-        if shift < 0: # no neg depths
+        if shift < 0:  # no neg depths
             # move both to pos range if necessary
             if (self.start < 0) or (self.end < 0):
                 temp_d1 = Depth(self.end - shift, self.start - shift)
@@ -120,10 +124,10 @@ class Depth():
             Normalised overlap range
             <0 = no overlap, 0 = adjacent, >0 = overlap, 1 = equal
         """
-        if self == other: # same depths
+        if self == other:  # same depths
             return 1
         else:
-            # shift depths to pos ranges.
+            # shift depths to pos ranges, flip start/end so that formulas work.
             temp_d1, temp_d2 = self.__temp_pos_depths(other)
 
             r = max([temp_d1.end, temp_d2.end]) - min([temp_d1.start, temp_d2.start])
@@ -157,7 +161,7 @@ class Depth():
         -------
         overlap : bool
             True if Depths overlap
-        perc_overlap: float
+        perc_overlap: float, optional
             Normalised overlap.
         """
         other_start_encl = self.encloses(Depth(other.start, other.start))
@@ -176,17 +180,17 @@ class Depth():
 
     def encloses(self, other):
         """
-        Test if this Depth encloses other Depth.
+        Test if this Depth encloses other Depth. Reverse of enclosed().
 
         Parameters
         ----------
         other : Depth
-            Depth.
+            Check if other is enclosed by self.
 
         Returns
         -------
         flag : bool
-            True if other depth surrounds given depth, False otherwise.
+            True if other depth is surrounded by given depth, False otherwise.
         """
         temp_d1, temp_d2 = self.__temp_pos_depths(other)
         if (temp_d1.start <= temp_d2.start) and (temp_d1.end >= temp_d2.end):
@@ -198,12 +202,12 @@ class Depth():
 
     def enclosed(self, other):
         """
-        Test if other Depth encloses this Depth.
+        Test if other Depth encloses this Depth. Reverse of encloses().
 
         Parameters
         ----------
         other : Depth
-            Depth.
+            Check if self is enclosed by other.
 
         Returns
         -------
@@ -219,14 +223,16 @@ class Depth():
 
         return flag
 
+
 class MetaVar():
     """
     Meta Variable is a simple combination of a name, a value
-    and a depth (optional)
+    and a depth (optional).
     """
+
     def __init__(self,
-                 name : str,
-                 val : Any,
+                 name: str,
+                 val: Any,
                  depth: Depth = None):
         """
         A named value that can be representative of a depth.
@@ -249,11 +255,14 @@ class MetaVar():
         return f"{self.name} ({d}): {self.val}"
 
     def __iter__(self):
-        yield self.name; yield self.val
+        yield self.name;
+        yield self.val
         if self.depth is None:
-            yield None; yield None
+            yield None;
+            yield None
         else:
-            yield self.depth.start; yield self.depth.end
+            yield self.depth.start;
+            yield self.depth.end
 
     def __eq__(self, other):
         try:
@@ -267,13 +276,15 @@ class MetaVar():
     @property
     def empty(self) -> bool:
         # Check if Var has a valid value
-        return pd.isnull(self.val) # np.nan or None
+        return pd.isnull(self.val)  # np.nan or None
+
 
 class MetaData():
     """
     MetaData contains multiple MetaVars as a list (there can be multiple
     vars with the same name, e.g. for different depths)
     """
+
     def __init__(self,
                  vars: List[MetaVar] = None):
         """
@@ -293,9 +304,9 @@ class MetaData():
             yield var
 
     def __getitem__(self,
-                    item:Union[str,int,list]) \
+                    item: Union[str, int, list]) \
             -> Union['MetaData', MetaVar, None]:
-        # get all variables with the selected name
+        # get all variables with the selected name or at the selected index
         if not isinstance(item, list):
             if isinstance(item, int):
                 return self.metadata[item]
@@ -322,7 +333,7 @@ class MetaData():
             depths.append(depth)
         return ", ".join([f"{name} ({depth})" for name, depth in zip(names, depths)])
 
-    def __contains__(self, item:Union[MetaVar, str]):
+    def __contains__(self, item: Union[MetaVar, str]):
         if isinstance(item, MetaVar):
             for var in self.metadata:
                 if var == item:
@@ -347,21 +358,21 @@ class MetaData():
 
         return True
 
-    def keys(self) -> list :
+    def keys(self) -> list:
         # get only variable names
         keys = []
         for var in self.metadata:
             keys.append(var.name)
         return keys
 
-    def values(self) -> list :
+    def values(self) -> list:
         values = []
         for var in self.metadata:
             values.append(var.val)
         return values
 
     @classmethod
-    def from_dict(cls, data:dict) -> 'MetaData':
+    def from_dict(cls, data: dict) -> 'MetaData':
         # Build Metadata from dict {name: (*args) ... }
         vars = []
         for k, v in data.items():
@@ -375,15 +386,26 @@ class MetaData():
                 vars.append(MetaVar(k, *v))
         return cls(vars)
 
+    def to_pd(self, transpose=False, dropna=True):
+        """
+        Convert metadata to a pandas DataFrame.
 
-    def to_pd(self, transpose=False, dropna=True) -> pd.DataFrame:
-        # df = pd.DataFrame.from_dict(self.to_dict(always_depth=True)).fillna(np.nan)
-        # df.index = ['val', 'depth_from', 'depth_to']
-        # return pd.DataFrame(df.T.stack(dropna=False)).T
+        Parameters
+        ----------
+        transpose : bool, optional (default: False)
+            Organise variables in columns instead of rows.
+        dropna : bool, optional (default: True)
+            Drop NaNs, e.g. when no depth is assigned or a variable is empty
+            the corresponding rows/cols will be excluded from the returned
+            data frame.
+
+        Returns
+        -------
+        df : pd.DataFrame
+            Metadata collection as a data frame.
+        """
+
         args = ['val', 'depth_from', 'depth_to']
-
-        #if len(np.unique(var_names)) != len(var_names):
-        #    raise ValueError("Found duplicate values, conversion to pandas not supported.")
 
         var_names, values = [], []
         for var_name in np.unique(self.keys()):
@@ -436,7 +458,7 @@ class MetaData():
 
         for m in [self, *other]:
             for v in m.metadata:
-                if (not v.empty if exclude_empty else True) and\
+                if (not v.empty if exclude_empty else True) and \
                         (v not in merged):
                     merged.add(v.name, v.val, v.depth)
 
@@ -489,29 +511,24 @@ class MetaData():
                     if p > best_p:
                         best_p = p
                         best_var = v
-                if depth.overlap(best_var.depth): # only add if best var overlaps
+                if depth.overlap(best_var.depth):  # only add if best var overlaps
                     best_vars.append(best_var)
             else:
-                if var.depth is None: # if var has no depth, use it
+                if var.depth is None:  # if var has no depth, use it
                     best_vars.append(var)
-                elif depth.overlap(var.depth): # need overlap
+                elif depth.overlap(var.depth):  # need overlap
                     best_vars.append(var)
                 else:
-                    pass # ignore var only if there is a depth but no overlap
+                    pass  # ignore var only if there is a depth but no overlap
 
         return MetaData(best_vars)
 
 
-
-
 if __name__ == '__main__':
-
-    d1 = Depth(0.1,-0.2)
-    d2 = Depth(-0.1,-0.3)
+    d1 = Depth(0.1, -0.2)
+    d2 = Depth(-0.1, -0.3)
 
     p = d1.perc_overlap(d2)
-
-
 
     var11 = MetaVar('station', 'bla1')
     var12 = MetaVar('station', 'bla2')
@@ -521,8 +538,8 @@ if __name__ == '__main__':
     var22 = MetaVar('sand_fraction', 1, Depth(0.05, 0.1))
     var23 = MetaVar('sand_fraction', 1, Depth(0.1, 0.3))
 
-    var32 = MetaVar('depvar', 123, Depth(0,-1))
-    var33 = MetaVar('station', 'bla2', Depth(0,-1))
+    var32 = MetaVar('depvar', 123, Depth(0, -1))
+    var33 = MetaVar('station', 'bla2', Depth(0, -1))
 
     meta1 = MetaData([var11, var12, var13])
     meta2 = MetaData([var21, var22, var23])
@@ -532,5 +549,4 @@ if __name__ == '__main__':
     merged = meta1.merge([meta2, meta3])
     merged.to_pd()
 
-    #dd = d.to_dict()
-
+    # dd = d.to_dict()

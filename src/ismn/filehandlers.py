@@ -34,7 +34,8 @@ from pathlib import Path, PurePosixPath
 
 class IsmnFile(object):
     """
-    General base class for data and static metadata files in ismn archive.
+    General base class for data and static metadata files (station csv file)
+    in ismn archive.
 
     Parameters
     ----------
@@ -140,7 +141,7 @@ class StaticMetaFile(IsmnFile):
             # set columns manually
             logging.info('no header: {}'.format(csvfile))
             data = pd.read_csv(csvfile, delimiter=";", header=None)
-            cols = list(data.columns.values)
+            cols = list(data.columns)
             cols[:len(tables.CSV_COLS)] = tables.CSV_COLS  # todo: not safe
             data.columns = cols
             data.set_index('quantity_name', inplace=True)
