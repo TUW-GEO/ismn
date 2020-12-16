@@ -268,13 +268,13 @@ class MetaVar():
         return f"{self.name} ({d}): {self.val}"
 
     def __iter__(self):
-        yield self.name;
+        yield self.name
         yield self.val
         if self.depth is None:
-            yield None;
+            yield None
             yield None
         else:
-            yield self.depth.start;
+            yield self.depth.start
             yield self.depth.end
 
     def __eq__(self, other):

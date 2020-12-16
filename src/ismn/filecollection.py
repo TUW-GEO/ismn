@@ -233,6 +233,8 @@ def build_filelist_from_data(root, parallel=True, temp_root=gettempdir(),
         Root path where temporary files are stored.
     """
     if log_file:
+        if not os.path.exists(os.path.dirname(log_file)):
+            os.makedirs(os.path.dirname(log_file))
         logging.basicConfig(filename=log_file, level=logging.INFO)
 
     n_proc = 1 if not parallel else cpu_count()
@@ -298,7 +300,7 @@ class IsmnFileCollection(object):
         self.files = filelist
 
     def __repr__(self):
-        return self.files
+        return f"{self.__class__.__name__} (N={self.files.index.size}) for {self.root}"
 
     @classmethod
     def from_scratch(cls, data_root, parallel=True, log_path=None,
@@ -324,12 +326,14 @@ class IsmnFileCollection(object):
         if not os.path.exists(temp_root):
             os.makedirs(temp_root, exist_ok=True)
 
-        if (log_path is not None) and (not os.path.exists(log_path)):
-            os.makedirs(log_path, exist_ok=True)
+        if log_path is not None:
+            log_file = os.path.join(log_path, f"{root.name}.log")
+        else:
+            log_file = None
 
         filelist = build_filelist_from_data(
             root, parallel=parallel, temp_root=temp_root,
-            log_file=os.path.join(log_path, f"{root.name}.log"))
+            log_file=log_file)
 
         return cls(root, filelist=filelist)
 
@@ -513,7 +517,7 @@ class IsmnFileCollection(object):
             f.close()
 
 if __name__ == '__main__':
-    root_path = "/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
+    root_path = r"H:\code\ismn\tests\test_data\Data_seperate_files_20170810_20180809"
     fc = IsmnFileCollection.from_scratch(root_path)
     # fc.to_metadata_csv(r"C:\Temp\delete_me\ismn\testdata_ceop.csv")
 

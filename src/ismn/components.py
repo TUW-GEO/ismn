@@ -198,8 +198,6 @@ class Network(IsmnComponent):
         return len(self.stations)
 
 
-
-
 class Station(IsmnComponent):
 
     """
@@ -433,7 +431,8 @@ class Sensor(IsmnComponent):
         name : str or int, optional (default: None)
             Id or Name of the sensor. If None is passed, a name is generated.
         filehandler : IsmnFile, optional
-            File handler (default: None).
+            File handler that allows access to observation data and
+            sensor metadata (default: None).
         """
 
         self.instrument = instrument

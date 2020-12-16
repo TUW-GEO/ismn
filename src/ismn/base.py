@@ -322,6 +322,6 @@ class IsmnRoot():
 
 
 if __name__ == '__main__':
-    path = "/home/wolfgang/code/ismn/tests/test_data/zip_archives/format_header_values/Data_SMOSMANIA.zip"
+    path = r"H:\code\ismn\tests\test_data\zip_archives\ceop\Data_seperate_files_20170810_20180809.zip"
     ds = IsmnRoot(path)
     cont = ds.scan()
