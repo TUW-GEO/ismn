@@ -92,7 +92,7 @@ class Depth():
         shift = min([self.end, other.end] +
                     [self.start, other.start] if other is not None else [])
 
-        if shift < 0:  # no neg depths
+        if np.isfinite(shift) and (shift < 0):  # no neg depths
             # move both to pos range if necessary
             if (self.start < 0) or (self.end < 0):
                 temp_d1 = Depth(self.end - shift, self.start - shift)

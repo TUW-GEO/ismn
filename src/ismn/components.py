@@ -92,7 +92,7 @@ class Network(IsmnComponent):
             Basic network information.
         """
         # {self.__class__.__name__}(
-        return f"{self.name}({list(self.stations.keys())})"
+        return f"Stations in '{self.name}': {list(self.stations.keys())}"
 
     @property
     def coords(self) -> (list, list):
@@ -260,7 +260,7 @@ class Station(IsmnComponent):
         info : str
             Basic station information.
         """
-        return f"{self.name}({[s.name for s in self.sensors.values()]})"
+        return f"Sensors at '{self.name}': {[s.name for s in self.sensors.values()]}"
 
     @property
     def metadata(self):
@@ -299,7 +299,8 @@ class Station(IsmnComponent):
         variables : list
             List of variables that are observed.
         """
-        return list(np.unique(np.array(self.metadata['variable'].values())))
+        #return list(np.unique(np.array(self.metadata['variable'].values())))
+        return list(np.unique([s.variable for s in self.sensors.values()]))
 
     def get_depths(self, variable=None):
         """
@@ -449,7 +450,7 @@ class Sensor(IsmnComponent):
 
     @property
     def metadata(self):
-        return None if self.filehandler is None else self.filehandler.metadata
+        return MetaData() if self.filehandler is None else self.filehandler.metadata
 
     def read_data(self) -> pd.DataFrame:
         """
