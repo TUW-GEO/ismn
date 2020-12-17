@@ -8,6 +8,7 @@ and filtering the filelist.
 import os
 import unittest
 import pytest
+import logging
 
 from ismn.network_collection import NetworkCollection
 from ismn.components import Depth
@@ -42,6 +43,9 @@ class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
         for net in self.netcol.iter_networks():
             n_stats += net.n_stations()
         assert gpis.size == lons.size == lats.size == n_stats
+
+    def tearDown(self) -> None:
+        logging.shutdown()
 
     def test_station4idx(self):
         station = self.netcol.station4idx(0)
@@ -108,7 +112,7 @@ class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
                 assert net.stations[station.name].lon == should_lon
                 assert net.stations[station.name].lat == should_lat
 
-        station, dist = self.netcol.get_nearest_station(0, 0, max_dist=100)
+        #station, dist = self.netcol.get_nearest_station(0, 0, max_dist=100)
         # todo: when fixed in pygeogrids this should return nothing...
         #https://github.com/TUW-GEO/pygeogrids/issues/64
         #assert station == None
@@ -119,7 +123,7 @@ class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
         assert station.sensors[1].eval('soil_moisture', Depth(0,1),
                 filter_meta_dict={'lc_2010': 210, 'climate_KG': 'ET'})
         assert not station.sensors[1].eval('soil_moisture', Depth(0,1),
-                                                      filter_meta_dict={'lc_2010': 999})
+                    filter_meta_dict={'lc_2010': 999})
 
 class Test_NetworkCollectionHeaderValuesUnzipped(Test_NetworkCollectionCeopSepUnzipped):
 

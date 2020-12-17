@@ -170,7 +170,7 @@ class Network(IsmnComponent):
 
         for station in self.stations.values():
 
-            if variable not in station.get_variables():
+            if (variable is not None) and (variable not in station.get_variables()):
                 continue # shortcut if station does not measure var
 
             flag = False
@@ -515,8 +515,8 @@ class Sensor(IsmnComponent):
             else:
                 # checks also if the metadata in file matches
                 flag = self.filehandler.check_metadata(
-                    variable, depth.start, depth.end,
-                    filter_static_vars=filter_meta_dict)
+                    variable, allowed_depth=depth,
+                    filter_meta_dict=filter_meta_dict)
 
         return flag
 

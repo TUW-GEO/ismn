@@ -20,10 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
-
 from ismn.base import IsmnRoot
-from ismn.components import *
 from ismn.tables import *
 from ismn.filehandlers import DataFile, StaticMetaFile
 from ismn.meta import MetaData, MetaVar, Depth
@@ -32,6 +29,8 @@ import ismn
 
 pkg_version = ismn.__version__
 
+import os
+import logging
 import pandas as pd
 from tempfile import gettempdir
 from pathlib import Path, PurePosixPath
@@ -133,10 +132,11 @@ def build_filelist_from_csv(data_path,
 def _read_station_dir(
         root: Union[IsmnRoot, Path, str],  # Path for reading from zip, avoid serialisation error
         stat_dir: Union[Path, str],
-        temp_root: Path) -> dict:
+        temp_root: Path) -> (dict, list):
     """
     Parallelizable function to read metadata for files in station dir
     """
+    infos = []
 
     if not isinstance(root, IsmnRoot):
         proc_root = True
@@ -150,7 +150,6 @@ def _read_station_dir(
                 'timerange_to', 'file_path', 'file_type', 'filehandler']:
         filelist[var] = []
 
-
     # read station metadata
 
     csv = root.find_files(stat_dir, '*.csv')
@@ -161,7 +160,7 @@ def _read_station_dir(
                                  "Use empty static metadata.")
         else:
             if len(csv) > 1:
-                logging.warn(f"Expected 1 csv file for station, found {len(csv)}. "
+                infos.append(f"Expected 1 csv file for station, found {len(csv)}. "
                              f"Use first file in dir.")
             static_meta_file = StaticMetaFile(root, csv[0], load_metadata=True)
             station_meta = static_meta_file.metadata
@@ -176,7 +175,7 @@ def _read_station_dir(
             f = DataFile(root, file_path,
                          temp_root=temp_root)
         except IOError as e:
-            logging.error(f'Error loading ismn file: {e}')
+            infos.append(f'Error loading ismn file: {e}')
             continue
 
         f.metadata.merge(station_meta, inplace=True)
@@ -203,12 +202,12 @@ def _read_station_dir(
 
         filelist['filehandler'].append(f)
 
-        logging.info(f"Processed file {filepath}")
+        infos.append(f"Processed file {filepath}")
 
     if proc_root:
         root.close()
 
-    return filelist
+    return filelist, infos
 
 
 def build_filelist_from_data(root, parallel=True, temp_root=gettempdir(),
@@ -233,9 +232,10 @@ def build_filelist_from_data(root, parallel=True, temp_root=gettempdir(),
         Root path where temporary files are stored.
     """
     if log_file:
-        if not os.path.exists(os.path.dirname(log_file)):
-            os.makedirs(os.path.dirname(log_file))
-        logging.basicConfig(filename=log_file, level=logging.INFO)
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        logging.basicConfig(filename=log_file, level=logging.INFO,
+                            format='%(levelname)s %(asctime)s %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
 
     n_proc = 1 if not parallel else cpu_count()
 
@@ -256,12 +256,15 @@ def build_filelist_from_data(root, parallel=True, temp_root=gettempdir(),
     results = []
 
     def update(r):
-        pbar.update()
+        r, infos = r
+        for i in infos: logging.info(i)
         results.append(r)
+        pbar.update()
 
     with Pool(n_proc) as pool:
         for arg in args:
-            pool.apply_async(_read_station_dir, arg, callback=update)
+            pool.apply_async(_read_station_dir, arg, callback=update,
+                             error_callback=logging.error)
 
         pool.close()
         pool.join()

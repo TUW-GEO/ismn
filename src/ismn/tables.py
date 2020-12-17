@@ -17,6 +17,7 @@ class IsmnFileError(IOError):
 class DepthError(ValueError):
     pass
 
+
 # ==============================================================================
 # Variable short names
 

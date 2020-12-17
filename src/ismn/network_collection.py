@@ -139,28 +139,29 @@ class NetworkCollection(object):
         for idx, row in filelist.iterrows(): # todo: slow iterrows??
             f = row['filehandler']
 
-            nw_name, st_name, instrument = f['network'].val, f['station'].val, \
-                                           f['instrument'].val
+            nw_name, st_name, instrument = f.metadata['network'].val, \
+                                           f.metadata['station'].val, \
+                                           f.metadata['instrument'].val
 
             if nw_name not in networks:
                 networks[nw_name] = Network(nw_name)
 
             if st_name not in networks[nw_name].stations:
                 networks[nw_name].add_station(st_name,
-                                              f['longitude'].val,
-                                              f['latitude'].val,
-                                              f['elevation'].val)
+                                              f.metadata['longitude'].val,
+                                              f.metadata['latitude'].val,
+                                              f.metadata['elevation'].val)
 
             # the senor name is the index in the list
             if idx not in networks[nw_name].stations[st_name].sensors:
                 networks[nw_name].stations[st_name]. \
                     add_sensor(instrument,
-                               f['variable'].val,
-                               f['variable'].depth,
+                               f.metadata['variable'].val,
+                               f.metadata['variable'].depth,
                                filehandler=f, # todo: remove station meta from sensor
                                name=idx,
                                keep_loaded_data=self.keep_loaded_data)
-                points.append((idx, f['longitude'].val, f['latitude'].val))
+                points.append((idx, f.metadata['longitude'].val, f.metadata['latitude'].val))
 
         points = np.array(points)
 
@@ -407,7 +408,7 @@ class NetworkCollection(object):
 
 
 if __name__ == '__main__':
-    coll = NetworkCollection("/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212",
+    coll = NetworkCollection(r"D:\data-read\ISMN\global_20191024",
                              keep_loaded_data=False,
                              networks=None)
     for s in coll.networks['GROW'].iter_stations('soil_moisture'):

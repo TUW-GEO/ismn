@@ -44,13 +44,20 @@ class Depth():
 
         self.extent = self.end - self.start
 
-        if abs(start) > abs(end):
-            raise DepthError("Depth end can not be further from 0 than depth start")
-
-        if self.start == self.end:
-            self.is_profile = False
+        if self.across0:
+            if self.start > 0:
+                raise DepthError("Start must be negative for Depths across 0")
         else:
-            self.is_profile = True
+            if abs(start) > abs(end):
+                raise DepthError("Depth end can not be further from 0"
+                                 " than depth start")
+    @property
+    def is_profile(self):
+        return False if self.start == self.end else True
+
+    @property
+    def across0 (self):
+        return True if (self.start * self.end) < 0 else False
 
     def __repr__(self):
         return f"{self.__class__.__name__}([{self.start}, {self.end}])"
@@ -94,13 +101,13 @@ class Depth():
 
         if np.isfinite(shift) and (shift < 0):  # no neg depths
             # move both to pos range if necessary
-            if (self.start < 0) or (self.end < 0):
+            if ((self.start < 0) or (self.end < 0)) and (not self.across0):
                 temp_d1 = Depth(self.end - shift, self.start - shift)
             else:
                 temp_d1 = Depth(self.start - shift, self.end - shift)
 
             if other is not None:
-                if (other.start < 0) or (other.end < 0):
+                if ((other.start < 0) or (other.end < 0)) and (not other.across0):
                     temp_d2 = Depth(other.end - shift, other.start - shift)
                 else:
                     temp_d2 = Depth(other.start - shift, other.end - shift)
