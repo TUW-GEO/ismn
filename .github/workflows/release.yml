@@ -1,0 +1,64 @@
+# This workflow will draft a release for the package on tagged commits only.
+# On success it will build distribution packages and publish them on a public
+# python package index.
+# For more information see:
+# https://github.com/chezou/tabula-py/blob/master/.github/workflows/pythonpublish.yml#L35
+# https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
+# https://github.com/actions/create-release
+# https://github.com/pypa/gh-action-pypi-publish
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      # todo: on TUW-GEO URL only?
+
+name: Release Package
+jobs:
+  release:
+    name: Create Package Release 📦
+    runs-on: ubuntu-latest
+    steps: # see also https://github.com/actions/create-release
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Create Release
+        # id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body_path: ./CHANGELOG.rst
+          draft: false
+          prerelease: false
+  publish:
+    name: Upload to Pypi 🚀
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{ github.repository }} # add TUW repo to be sure?
+          ref: ${{ github.ref }} # make sure to checkout tag
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - name: Build
+        shell: bash -l {0}
+        run: |
+          python setup.py --version
+          python setup.py sdist
+          pip install wheel && python setup.py bdist_wheel
+      - name: Publish distribution to Test PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.1
+        with:
+          skip_existing: true
+          verbose: true
+          verify_metadata: true
+          packages_dir: dist/
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }} # todo: change token for real pypi
+          repository_url: https://test.pypi.org/legacy/ # todo: delete for real pypi

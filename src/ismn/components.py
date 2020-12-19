@@ -41,137 +41,6 @@ logger.addHandler(ch)
 
 class IsmnComponent: pass
 
-class NetworkCollection(IsmnComponent):
-    """
-    A NetworkCollection holds multiple networks and provides functionality
-    to perform access to components from multiple networks.
-    A grid is added that contains all stations to perform spatial searches.
-    """
-    def __init__(self, networks):
-
-        """
-        Create network collection from previously loaded IsmnFileCollection.
-
-        Parameters
-        ----------
-        networks : list[Network or str]
-            List of Networks that build the collection
-        """
-
-        self.networks = OrderedDict([])
-        lons = []
-        lats = []
-        for net in networks:
-            self.networks[net.name] = net
-            net_lons, net_lats = net.coords
-            lons += net_lons
-            lats += net_lats
-
-        self.grid = BasicGrid(lons, lats)
-
-    def __repr__(self):
-        strs = []
-        for net in self.networks.values():
-            strs.append(f"{net.name}: {list(net.stations.keys())}")
-        return ', \n'.join(strs)
-
-    def __getitem__(self, item:Union[int,str]):
-        if isinstance(item, int):
-            item = list(self.networks.keys())[item]
-        return self.networks[item]
-
-    def iter_networks(self):
-        # Iterate through all networks
-        for network in self.networks.values():
-            yield network
-
-    def station4idx(self, idx):
-        """
-        Get the station object for the passed gpi.
-
-        Parameters
-        ----------
-        idx : int
-            Point index in self.grid, resp. line index in file list.
-
-        Returns
-        -------
-        station : Station
-            Station at gpi.
-        """
-        if idx not in self.grid.activegpis:
-            raise ValueError("Index does not exist in loaded grid")
-
-        lon, lat = self.grid.gpi2lonlat(idx)
-        for net in self.iter_networks():
-            for stat in net.iter_stations():
-                if (stat.lon == lon) and (stat.lat == lat):
-                    return stat
-
-    def get_nearest_station(self, lon, lat, max_dist=np.inf):
-        """
-        Get nearest station for given longitude/latitude coordinates.
-        Parameters
-        ----------
-        lon : float
-            Longitude coordinate.
-        lat : float
-            Latitude coordinate.
-        max_dist : float, optional
-            Maximum search distance (default: numpy.inf).
-
-        Returns
-        -------
-        station : Station
-            Station.
-        dist : float
-            Distance in meter.
-        """
-        gpi, dist = self.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
-        station = self.station4idx(gpi)
-
-        return station, dist
-
-    # def get_sensors(self, network=None, station=None, variable=None,
-    #                 depth=None, filter_static_vars=None):
-    #     """
-    #     Yield all sensors for a specific network and/or station and/or
-    #     variable and/or depth.
-    #
-    #     Parameters
-    #     ----------
-    #     network : str, optional
-    #         Network name (default: None).
-    #     station : str, optional
-    #         Station name (default: None).
-    #     variable : str, optional
-    #         Variable name (default: None).
-    #     depth : Depth, optional (default: None)
-    #         Sensing depth.
-    #     filter_static_vars: dict, optional (default: None)
-    #         Additional metadata keys and values for which the file list is filtered
-    #         e.g. {'lc_2010': 10} to filter for a landcover class.
-    #         if there are multiple conditions, ALL have to be fulfilled.
-    #         e.g. {'lc_2010': 10', 'climate_KG': 'Dfc'})
-    #
-    #     Yield
-    #     -----
-    #     sensor : Sensor
-    #         Sensor.
-    #     """
-    #     if depth is None:
-    #         depth = Depth(-np.inf, np.inf)
-    #
-    #     for n in self.networks.values():
-    #         if network not in [None, n.name]:
-    #             continue
-    #         for st in n.stations.values():
-    #             if station not in [None, st.name]:
-    #                 continue
-    #             for se in st.sensors.values():
-    #                 if se.eval(variable, depth, filter_static_vars):
-    #                     yield se
-
 class Network(IsmnComponent):
     """
     A network is described by a distinct name and can be composed of
@@ -284,48 +153,46 @@ class Network(IsmnComponent):
         else:
             logger.warning('Station not found {}'.format(name))
 
-    def iter_stations(self, variable=None, depth=None, filter_dict=None):
+    def iter_stations(self, *eval_args, **eval_kwargs):
         """
         Get all stations having at least one sensor observing
         a specific variable and/or sensing depth.
 
         Parameters
         ----------
-        variable : str, optional (default: None)
-            Observed variable.
-        depth : Depth, optional (default: None)
-            Sensing depth.
-        filter_dict : dict, optional (default: None)
-            Metadata to use for filtering
+        see Sensor.eval()
 
         Yields
         ------
         station : Station
             Station.
         """
-        if depth is None:
-            depth = Depth(-np.inf, np.inf)
-
         for station in self.stations.values():
-
-            if (variable is not None) and (variable not in station.get_variables()):
-                continue # shortcut if station does not measure var
-
-            flag = False
             for sensor in station.sensors.values():
-                if (variable in [None, sensor.variable]) and \
-                        depth.encloses(sensor.depth):
-                    flag = True
-                if flag and filter_dict:
-                    f = sensor.filehandler
-                    if f is None:
-                        warnings.warn("No Filehandler, can't filter by metadata")
+                if sensor.eval(*eval_args, **eval_kwargs):
+                    yield station
+                    break
 
-                    flag = sensor.filehandler.check_metadata(
-                        variable, depth.start, depth.end,
-                        filter_static_vars=filter_dict)
-            if flag:
-                yield station
+    def iter_sensors(self, *eval_args, **eval_kwargs):
+        """
+        Get all sensors in all stations in the network that comply with the
+        passed parameters.
+
+        Parameters
+        ----------
+        see Sensor.eval()
+
+        Yields
+        ------
+        station : Station
+            Station.
+        sensor : Sensor
+            Sensor at Station
+        """
+        for station in self.stations.values():
+            for sensor in station.sensors.values():
+                if sensor.eval(*eval_args, **eval_kwargs):
+                    yield station, sensor
 
     def n_stations(self):
         """
@@ -621,7 +488,8 @@ class Sensor(IsmnComponent):
     def eval(self, variable=None, depth=None, filter_meta_dict=None,
              check_only_sensor_depth_from=False):
         """
-        Evaluate whether the sensor complies with the passed metadata requirements.
+        Evaluate whether the sensor complies with the passed metadata
+        requirements.
 
         Parameters
         ----------
@@ -666,6 +534,108 @@ class Sensor(IsmnComponent):
 
         return flag
 
+
+class NetworkCollection(IsmnComponent):
+    """
+    A NetworkCollection holds multiple networks and provides functionality
+    to perform access to components from multiple networks.
+    A grid is added that contains all stations to perform spatial searches.
+    """
+    def __init__(self, networks):
+
+        """
+        Create network collection from previously loaded IsmnFileCollection.
+
+        Parameters
+        ----------
+        networks : list[Network or str]
+            List of Networks that build the collection
+        """
+
+        self.networks = OrderedDict([])
+        lons = []
+        lats = []
+        for net in networks:
+            self.networks[net.name] = net
+            net_lons, net_lats = net.coords
+            lons += net_lons
+            lats += net_lats
+
+        self.grid = BasicGrid(lons, lats)
+
+    def __repr__(self, indent=0):
+        strs = []
+        for net in self.networks.values():
+            strs.append(" " * indent + f"{net.name}: {list(net.stations.keys())}")
+        return ', \n'.join(strs)
+
+    def __getitem__(self, item:Union[int,str]):
+        if isinstance(item, int):
+            item = list(self.networks.keys())[item]
+        return self.networks[item]
+
+    def iter_networks(self) -> Network:
+        # Iterate through all networks
+        for nw in self.networks.values():
+            yield nw
+
+    def iter_stations(self, *eval_args, **eval_kwargs) -> (Network, Station):
+        # Iterate through (all/filtered) networks and stations
+        for nw in self.networks.values():
+            for stat in nw.iter_stations(*eval_args, **eval_kwargs):
+                yield nw, stat
+
+    def iter_sensors(self, *eval_args, **eval_kwargs) -> (Network, Station, Sensor):
+        # Iterate through (all/filtered) networks, stations, sensors
+        for nw in self.networks.values():
+            for stat, sen in nw.iter_sensors(*eval_args, **eval_kwargs):
+                yield nw, stat, sen
+
+    def station4idx(self, idx):
+        """
+        Get the station object for the passed gpi.
+
+        Parameters
+        ----------
+        idx : int
+            Point index in self.grid, resp. line index in file list.
+
+        Returns
+        -------
+        station : Station
+            Station at gpi.
+        """
+        if idx not in self.grid.activegpis:
+            raise ValueError("Index does not exist in loaded grid")
+
+        lon, lat = self.grid.gpi2lonlat(idx)
+        for net, stat in self.iter_stations():
+            if (stat.lon == lon) and (stat.lat == lat):
+                return stat
+
+    def get_nearest_station(self, lon, lat, max_dist=np.inf):
+        """
+        Get nearest station for given longitude/latitude coordinates.
+        Parameters
+        ----------
+        lon : float
+            Longitude coordinate.
+        lat : float
+            Latitude coordinate.
+        max_dist : float, optional
+            Maximum search distance (default: numpy.inf).
+
+        Returns
+        -------
+        station : Station
+            Station.
+        dist : float
+            Distance in meter.
+        """
+        gpi, dist = self.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
+        station = self.station4idx(gpi)
+
+        return station, dist
 
 if __name__ == '__main__':
 

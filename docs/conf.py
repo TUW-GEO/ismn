@@ -85,7 +85,7 @@ project = u'ismn'
 copyright = u'2020, TU Wien'
 
 # The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
+# |version| and |release.yml|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
@@ -149,7 +149,7 @@ html_theme_options = {
 # html_theme_path = []
 
 # The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
+# "<project> v<release.yml> documentation".
 try:
     from ismn import __version__ as version
 except ImportError:

@@ -121,8 +121,9 @@ class IsmnFile(object):
                     vs = [vs]
 
                 eval = False
+                ref_list = np.atleast_1d(filter_meta_dict[k]).tolist()
                 for v in vs:
-                    eval = v.val == filter_meta_dict[k]
+                    eval = v.val in ref_list
                     if eval is True:
                         break
                 fil_lc_cl.append(eval)

@@ -68,9 +68,10 @@ class IsmnRoot():
             return self.path
 
     def __repr__(self):
-        type_ = type(self)
-        zip = "Zip" if self.zip else "Unzipped"
-        return f"{type_.__module__}.{type_.__qualname__} {zip} at {self.path}"
+        """ Simplified representation of objact as string """
+        _type = type(self)
+        _zip = "Zip" if self.zip else "Unzipped"
+        return f"{_type.__module__}.{_type.__qualname__} {_zip} at {self.path}"
 
     def __contains__(self, filepath) -> bool:
         """ Check if files exists in archive """

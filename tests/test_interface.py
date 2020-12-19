@@ -8,6 +8,8 @@ import logging
 
 from tests.test_filecollection import cleanup
 from ismn.interface import ISMN_Interface
+from ismn.meta import Depth
+
 testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
 
 class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
@@ -37,8 +39,8 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert len(self.ds.list_sensors(station='Barrow-ARM')) == 1
 
     def test_network_for_station(self):
-        assert self.ds.network_for_station('Barrow-ARM') == ['COSMOS']
-        assert self.ds.network_for_station('ARM-1') == ['COSMOS']
+        assert self.ds.network_for_station('Barrow-ARM') == 'COSMOS'
+        assert self.ds.network_for_station('ARM-1') == 'COSMOS'
 
     def test_stations_that_measure(self):
         for s in self.ds.stations_that_measure('soil_moisture'):
@@ -55,10 +57,23 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert ids == [0]
 
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=99,
-                                      filter_static_vars={'lc_2010': 210})
+                                      filter_meta_dict={'lc_2010': 210})
         assert ids == [1]
 
         ids = self.ds.get_dataset_ids('novar')
+        assert len(ids) == 0
+
+        ids = self.ds.get_dataset_ids('soil_moisture', 0., 0.19) # should get 1
+        assert len(ids) == 1
+
+        ids = self.ds.get_dataset_ids('soil_moisture', 0., 1.) # should get 2
+        assert len(ids) == 2
+
+        ids = self.ds.get_dataset_ids('soil_moisture', 0., 1.,
+                                      filter_meta_dict={'lc_2010': 210}) # should get 1
+        assert len(ids) == 1
+
+        ids = self.ds.get_dataset_ids('nonexisting') # should get 0
         assert len(ids) == 0
 
     def test_read_ts(self):
@@ -87,8 +102,8 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
 
     def test_get_min_max_obs_timestamps(self):
         tmin, tmax = self.ds.get_min_max_obs_timestamps('soil_moisture', max_depth=0.19)
-        assert tmin.to_pydatetime() == datetime(2017, 8, 10, 0)
-        assert tmax.to_pydatetime() == datetime(2018, 8, 9, 23)
+        assert tmin == datetime(2017, 8, 10, 0)
+        assert tmax == datetime(2018, 8, 9, 23)
 
     def test_get_static_var_val(self):
         vals = self.ds.get_static_var_vals('soil_moisture', max_depth=0.19)
@@ -109,34 +124,23 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
 
     def test_get_var(self):
         vars = self.ds.get_variables()
-        assert vars == 'soil_moisture'
+        assert vars == ['soil_moisture']
 
-    def test_get_dataset_ids(self):
-        ids = self.netcol.get_dataset_ids('soil_moisture', 0., 0.19) # should get 1
-        assert len(ids) == 1
-
-        ids = self.netcol.get_dataset_ids('soil_moisture', 0., 1.) # should get 2
-        assert len(ids) == 2
-
-        ids = self.netcol.get_dataset_ids('soil_moisture', 0., 1.,
-            filter_static_vars={'lc_2010': 210}) # should get 1
-        assert len(ids) == 1
-
-        ids = self.netcol.get_dataset_ids('nonexisting') # should get 0
-        assert len(ids) == 0
 
     def test_get_sensors(self):
         i = 0
-        for se in self.netcol.get_sensors('COSMOS'):
-            data = se.read_data()
-            # check if the networks is COSMOS or station in [ARM, Barrow-ARM]
-            assert not data.empty
-            # check something for that one station
-            i += 1
+        for nw, station in self.ds.collection.iter_stations(
+                filter_meta_dict={'network': 'COSMOS'}):
+            for se in station.iter_sensors():
+                data = se.read_data()
+                # check if the networks is COSMOS or station in [ARM, Barrow-ARM]
+                assert not data.empty
+                # check something for that one station
+                i += 1
         assert i == 2
 
         i = 0
-        for se in self.netcol.get_sensors(station='Barrow-ARM'):
+        for se in self.ds.networks['COSMOS'].stations['Barrow-ARM'].iter_sensors():
             data = se.read_data()
             assert not data.empty
             # check something for that one station
@@ -144,25 +148,29 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert i == 1
 
         i = 0
-        for se in self.netcol.get_sensors(depth=Depth(0,1)):
-            data = se.read_data()
+        for net, stat, sens in self.ds.collection.iter_sensors(
+                depth=Depth(0,1),
+                filter_meta_dict={'station': ['Barrow-ARM', 'ARM-1']}):
+            data = sens.read_data()
             assert not data.empty
             i +=1
         assert i == 2
 
-        for se in self.netcol.get_sensors(variable='nonexisting'):
-            raise ValueError("Found sensor, although none should exist")
+
+        for nw, station in self.ds.collection.iter_stations():
+            for se in station.iter_sensors(variable='nonexisting'):
+                raise ValueError("Found sensor, although none should exist")
 
     def test_get_nearest_station(self):
         should_lon, should_lat = -156.62870, 71.32980
 
-        station, dist = self.netcol.get_nearest_station(should_lon, should_lat)
+        station, dist = self.ds.collection.get_nearest_station(should_lon, should_lat)
         assert dist == 0
         assert station.lon == should_lon
         assert station.lat == should_lat
-        gpi, dist = self.netcol.grid.find_nearest_gpi(int(should_lon),int(should_lat))
+        gpi, dist = self.ds.collection.grid.find_nearest_gpi(int(should_lon),int(should_lat))
         assert dist != 0
-        for net in self.netcol.iter_networks():
+        for net in self.ds.collection.iter_networks():
             if station.name in net.stations.keys():
                 assert net.stations[station.name].lon == should_lon
                 assert net.stations[station.name].lat == should_lat
