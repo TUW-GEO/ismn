@@ -307,7 +307,6 @@ class Station(IsmnComponent):
         variables : list
             List of variables that are observed.
         """
-        #return list(np.unique(np.array(self.metadata['variable'].values())))
         return list(np.unique([s.variable for s in self.sensors.values()]))
 
     def get_depths(self, variable=None):

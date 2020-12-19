@@ -234,7 +234,7 @@ class ISMN_Interface():
         else:
             return network_with_station[0]
 
-    def stations_that_measure(self, variable):
+    def stations_that_measure(self, variable, **eval_kwargs):
         """
         Goes through all stations and returns those that measure the specified
         variable
@@ -268,7 +268,7 @@ class ISMN_Interface():
         ISMN_station : Station
         """
         for network in self.networks.values(): # type: Network
-            for station in network.iter_stations(variable, depth=None):
+            for station in network.iter_stations(variable, **eval_kwargs):
                 yield station
 
     def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
@@ -551,8 +551,8 @@ class ISMN_Interface():
 
         return t_min, t_max
 
-    def get_static_var_vals(self, variable='soil_moisture', min_depth=0, max_depth=10,
-                            static_var_name='lc_2010'):
+    def get_static_var_vals(self, variable='soil_moisture', min_depth=0,
+                            max_depth=10, static_var_name='lc_2010'):
         """
         Get unique meta values for the selected static variable in the active
         networks.
@@ -660,10 +660,11 @@ class ISMN_Interface():
 
 
 if __name__ == '__main__':
-    ds = ISMN_Interface("/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212")
+    path = r"D:\data-read\ISMN\global_20191024"
+    ds = ISMN_Interface(path)
     mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
     ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
-    ds.plot_station_locations('soil_moisture', 0., 0.1, filename="/home/wolfgang/data-write/temp/plot.png")
+    # ds.plot_station_locations('soil_moisture', 0., 0.1, filename="/home/wolfgang/data-write/temp/plot.png")
     netname = ds.network_for_station('Villevielle')
     ts = ds.read_ts(1)
     print(ts)
