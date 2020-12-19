@@ -27,14 +27,42 @@ This module tests the ISMN components.
 import os
 import unittest
 
-from ismn.components import Network, Station, Sensor, Depth
+from ismn.components import NetworkCollection, Network, Station, Sensor, Depth
 from pygeogrids.grids import BasicGrid
-from ismn.tables import DepthError
 
 rpath = os.path.join(os.path.dirname(__file__), 'test_data')
 
 from ismn.filehandlers import DataFile
 
+class NetCollTest(unittest.TestCase):
+
+    def setUp(self) -> None:
+        """
+        Setup test data.
+        """
+        net1 = Network('Net1')
+        net1.add_station('station_1_1', 0, 0, 0)
+        net1.stations['station_1_1'].add_sensor('sens_1_1_1', 'var1', Depth(0.5, 1), None)
+        net1.stations['station_1_1'].add_sensor('sens_1_1_2', 'var1', Depth(1 ,2), None)
+
+        net2 = Network('Net2')
+        net2.add_station('station_2_1', 1, 1, 1)
+        net2.stations['station_2_1'].add_sensor('sens_2_1_1', 'var1', Depth(0.5, 1), None)
+        net2.stations['station_2_1'].add_sensor('sens_2_1_2', 'var1', Depth(1 ,2), None)
+
+        self.collection = NetworkCollection([net1, net2])
+
+    def test_grid(self):
+        assert self.collection.grid.gpi2lonlat(0) == (0, 0)
+        assert self.collection.grid.gpi2lonlat(1) == (1, 1)
+
+    def test_station4idx(self):
+        assert self.collection.station4idx(0).name == 'station_1_1'
+        assert self.collection.station4idx(1).name == 'station_2_1'
+
+    def test_get_nearest_station(self):
+        assert self.collection.get_nearest_station(0.1,0.1)[0].name == 'station_1_1'
+        assert self.collection.get_nearest_station(1,1)[0].name == 'station_2_1'
 
 class NetworkTest(unittest.TestCase):
 

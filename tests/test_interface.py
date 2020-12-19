@@ -4,6 +4,7 @@ import os
 from tempfile import TemporaryDirectory
 from datetime import datetime
 import pytest
+import logging
 
 from tests.test_filecollection import cleanup
 from ismn.interface import ISMN_Interface
@@ -25,6 +26,9 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
 
     def setUp(self) -> None:
         self.ds = ISMN_Interface(self.testdata)
+
+    def tearDown(self) -> None:
+        logging.shutdown()
 
     def test_list(self):
         assert len(self.ds.list_networks()) == 1
@@ -107,6 +111,66 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         vars = self.ds.get_variables()
         assert vars == 'soil_moisture'
 
+    def test_get_dataset_ids(self):
+        ids = self.netcol.get_dataset_ids('soil_moisture', 0., 0.19) # should get 1
+        assert len(ids) == 1
+
+        ids = self.netcol.get_dataset_ids('soil_moisture', 0., 1.) # should get 2
+        assert len(ids) == 2
+
+        ids = self.netcol.get_dataset_ids('soil_moisture', 0., 1.,
+            filter_static_vars={'lc_2010': 210}) # should get 1
+        assert len(ids) == 1
+
+        ids = self.netcol.get_dataset_ids('nonexisting') # should get 0
+        assert len(ids) == 0
+
+    def test_get_sensors(self):
+        i = 0
+        for se in self.netcol.get_sensors('COSMOS'):
+            data = se.read_data()
+            # check if the networks is COSMOS or station in [ARM, Barrow-ARM]
+            assert not data.empty
+            # check something for that one station
+            i += 1
+        assert i == 2
+
+        i = 0
+        for se in self.netcol.get_sensors(station='Barrow-ARM'):
+            data = se.read_data()
+            assert not data.empty
+            # check something for that one station
+            i += 1
+        assert i == 1
+
+        i = 0
+        for se in self.netcol.get_sensors(depth=Depth(0,1)):
+            data = se.read_data()
+            assert not data.empty
+            i +=1
+        assert i == 2
+
+        for se in self.netcol.get_sensors(variable='nonexisting'):
+            raise ValueError("Found sensor, although none should exist")
+
+    def test_get_nearest_station(self):
+        should_lon, should_lat = -156.62870, 71.32980
+
+        station, dist = self.netcol.get_nearest_station(should_lon, should_lat)
+        assert dist == 0
+        assert station.lon == should_lon
+        assert station.lat == should_lat
+        gpi, dist = self.netcol.grid.find_nearest_gpi(int(should_lon),int(should_lat))
+        assert dist != 0
+        for net in self.netcol.iter_networks():
+            if station.name in net.stations.keys():
+                assert net.stations[station.name].lon == should_lon
+                assert net.stations[station.name].lat == should_lat
+
+        #station, dist = self.netcol.get_nearest_station(0, 0, max_dist=100)
+        # todo: when fixed in pygeogrids this should return nothing...
+        #https://github.com/TUW-GEO/pygeogrids/issues/64
+        #assert station == None
 
 class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
 

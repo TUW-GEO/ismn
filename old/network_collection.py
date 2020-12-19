@@ -29,7 +29,6 @@ from ismn.meta import Depth
 from tempfile import gettempdir
 from pathlib import Path
 import os
-import pandas as pd
 
 import sys
 import platform
@@ -60,9 +59,9 @@ class NetworkCollection(object):
 
         Parameters
         ----------
-        filelist : pd.DataFrame
-            DataFrame that contains the files to read.
-            As in IsmnFileCollection.files or as returned by the filter functions.
+        data_path : str or Path
+            Path to ISMN data to read, either to a zip archive or to the extracted
+            directory.
         networks : list or str, optional (default: None)
             List of network names to activate.
         meta_path : str or Path
@@ -115,8 +114,8 @@ class NetworkCollection(object):
         loaded at once.
         """
         if not self.keep_loaded_data:
-            raise ValueError("Can only load all data when storing to memory is allowed. "
-                             "Pass keep_loaded=True when creating the NetworkCollection.")
+            raise IOError("Can only load all data when storing to memory is allowed. "
+                          "Pass keep_loaded_data=True when creating the NetworkCollection.")
 
         for net in self.iter_networks():
             for stat in net.iter_stations():
