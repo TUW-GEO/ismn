@@ -1,51 +1,47 @@
-# -*- coding: utf-8 -*-
 
-import pandas as pd
-from datetime import datetime
-import numpy as np
-from ismn.components import Depth
-from ismn.meta import MetaVar, MetaData
-from ismn.filehandlers import DataFile
+import os
+import timeit
 
 
+def read_lines(filename):
+    """
+    Read fist and last line from file as list, skips empty lines.
+    """
+    with open(filename, mode='rb', newline=None) as f:
+        lines = f.read().splitlines()
+        headr = lines[0].split()
 
-metavars = ['saturation', 'lc_2010', 'network', 'timerange_from', 'timerange_to',
-            'somevar1', 'somevar2', 'somevar3', 'somevar4', 'somevar5', 'somevar6']
-args = ['val', 'depth_from', 'depth_to']
+        last, scnd = [], []
+        i = 1
+        while (not last) or (not scnd):
+            if not last:
+                last = lines[-i].split()
+            if not scnd:
+                scnd = lines[i].split()
+            i += 1
 
-values1 =[1, 0, 0.1, 'lc', None, None, 'netname', None, None, datetime(2000,1,1), None, None,
-          datetime(2000,1,1), None, None, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1]
+    print(headr, scnd, last)
 
-index = pd.MultiIndex.from_product([metavars, args], names=['name', 'meta_args'])
+def faster(filename):
+    with open(filename, "rb") as f:
+        lines = f.read().splitlines()
+        headr = lines[0].split()
 
-
-df = pd.DataFrame(index=index, data=values1).fillna(np.nan).T
-
-dfs = [df, df.drop(columns=['network'])] + [df]*3000
-
-data = pd.concat(dfs, axis=0, ignore_index=True)
-
-row = data.iloc[0]
-
-metavars = []
-
-for idx, row in data.iterrows():
-    print(idx)
-    for metavar_name in row.index.get_level_values('name'):
-        var = row.loc[metavar_name]
-        depth_from, depth_to = var['depth_from'], var['depth_to']
-
-        if np.all(np.isnan(np.array([depth_from, depth_to]))):
-            depth = None
-        else:
-            depth = Depth(depth_from, depth_to)
-
-        metavar = MetaVar(metavar_name, var['val'], depth)
-        metavars.append(metavar)
+        scnd = []
+        i = 1
+        while (not scnd):
+            if not scnd:
+                scnd = lines[i].split()
+        f.seek(-2, os.SEEK_END)
+        while f.read(1) != b'\n':
+            f.seek(-2, os.SEEK_CUR)
+        last = f.readline()
+    print(headr, scnd, last)
 
 
-    metadata = MetaData(metavars)
-    filehandler = DataFile(r"C:\Temp\delete_me\ismn\scan",
-             "SCAN/BeasleyLake/SCAN_SCAN_BeasleyLake_p_0.000000_0.000000_Pulse-Count_19780101_20191211.stm",
-             load_metadata=False)
-    filehandler.metadata = metadata
+
+if __name__ == '__main__':
+    filename = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212/SCAN/RogersFarm#1/SCAN_SCAN_RogersFarm#1_ts_1.016000_1.016000_Hydraprobe-Analog-(2.5-Volt)_19500101_20201220.stm"
+    #read_lines(filename)
+    faster(filename)
+

@@ -351,7 +351,7 @@ class DataFile(IsmnFile):
         """
         Read fist and last line from file as list, skips empty lines.
         """
-        with filename.open(mode='r', newline=None) as f:
+        with filename.open(mode='rb', newline=None) as f:
             lines = f.read().splitlines()
             headr = lines[0].split()
 
@@ -364,6 +364,10 @@ class DataFile(IsmnFile):
                     scnd = lines[i].split()
                 i += 1
 
+        headr = [s.decode('ascii') for s in headr]
+        scnd = [s.decode('ascii') for s in scnd]
+        last = [s.decode('ascii') for s in last]
+        
         return headr, scnd, last
 
     def _get_metadata_ceop_sep(self, elements=None):

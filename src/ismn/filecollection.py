@@ -520,8 +520,8 @@ class IsmnFileCollection(object):
             f.close()
 
 if __name__ == '__main__':
-    root_path = r"H:\code\ismn\tests\test_data\Data_seperate_files_20170810_20180809"
-    fc = IsmnFileCollection.from_scratch(root_path)
+    root_path = r"/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212"
+    fc = IsmnFileCollection.from_scratch(root_path, log_path='/home/wolfgang/data-write/temp')
     # fc.to_metadata_csv(r"C:\Temp\delete_me\ismn\testdata_ceop.csv")
 
     # fc = IsmnFileCollection.from_metadata_csv(root_path,
