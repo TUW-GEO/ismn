@@ -9,11 +9,12 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Install and Test 🐍
-    runs-on: "ubuntu-latest"
+    name: Install and Test (${{ matrix.os }}) 🐍
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ['3.6', '3.7']
+        os: ["ubuntu-latest", "windows-latest"]
 
     steps:
       - uses: actions/checkout@v2
