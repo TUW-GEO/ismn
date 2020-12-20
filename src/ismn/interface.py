@@ -86,7 +86,7 @@ class ISMN_Interface():
             self.__file_collection = IsmnFileCollection.from_metadata_csv(
                 self.root, meta_csv_file)
         else:
-            self.__file_collection = IsmnFileCollection.from_scratch(
+            self.__file_collection = IsmnFileCollection.build_from_scratch(
                 self.root, parallel=True, log_path=meta_path, temp_root=temp_root)
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
@@ -101,7 +101,7 @@ class ISMN_Interface():
         filehandlers for data reading.
         """
         if networks is not None:
-            filelist = self.__file_collection.filter_col_val('network', networks)
+            filelist = self.__file_collection.filter_networks('network', networks)
         else:
             filelist = self.__file_collection.files
 
@@ -662,9 +662,9 @@ class ISMN_Interface():
 if __name__ == '__main__':
     path = r"D:\data-read\ISMN\global_20191024"
     ds = ISMN_Interface(path)
-    mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
-    ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
-    # ds.plot_station_locations('soil_moisture', 0., 0.1, filename="/home/wolfgang/data-write/temp/plot.png")
-    netname = ds.network_for_station('Villevielle')
-    ts = ds.read_ts(1)
-    print(ts)
+    # mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
+    # ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
+    # # ds.plot_station_locations('soil_moisture', 0., 0.1, filename="/home/wolfgang/data-write/temp/plot.png")
+    # netname = ds.network_for_station('Villevielle')
+    # ts = ds.read_ts(1)
+    # print(ts)
