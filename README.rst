@@ -2,8 +2,10 @@
 ismn
 ====
 
-.. image:: https://travis-ci.org/TUW-GEO/ismn.svg?branch=master
-    :target: https://travis-ci.org/TUW-GEO/ismn
+
+
+.. image:: https://github.com/wpreimes/ismn/workflows/build/badge.svg
+    :target: https://github.com/wpreimes/ismn/actions?query=workflow%3Abuild
 
 .. image:: https://coveralls.io/repos/TUW-GEO/ismn/badge.png?branch=master
   :target: https://coveralls.io/r/TUW-GEO/ismn?branch=master
