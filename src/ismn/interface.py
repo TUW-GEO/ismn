@@ -95,21 +95,16 @@ class ISMN_Interface():
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
 
-    def __collect_networks(self, networks:list=None) -> list:
+    def __collect_networks(self, network_names:list=None) -> list:
         """
         Build networks and fill them with stations and sensors and apply
         filehandlers for data reading.
         """
-        if networks is not None:
-            filelist = self.__file_collection.filter_networks('network', networks)
-        else:
-            filelist = self.__file_collection.files
-
         networks = OrderedDict([])
         # points = []  # idx, lon, lat
 
-        for idx, row in filelist.iterrows(): # todo: slow iterrows??
-            f = row['filehandler']
+        for idx, f in enumerate(self.__file_collection.iter_files(network_names)):
+            print(idx, f)
 
             nw_name, st_name, instrument = f.metadata['network'].val, \
                                            f.metadata['station'].val, \
@@ -660,8 +655,10 @@ class ISMN_Interface():
 
 
 if __name__ == '__main__':
-    path = r"D:\data-read\ISMN\global_20191024"
+    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212"
     ds = ISMN_Interface(path)
+
+    ds.plot_station_locations()
     # mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
     # ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
     # # ds.plot_station_locations('soil_moisture', 0., 0.1, filename="/home/wolfgang/data-write/temp/plot.png")

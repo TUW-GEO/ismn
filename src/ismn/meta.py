@@ -287,10 +287,11 @@ class MetaVar():
     def __eq__(self, other):
         try:
             assert self.name == other.name
-            assert self.val == other.val
+            assert (self.val == other.val) | \
+                   np.all(pd.isna([self.val, other.val]))
             assert self.depth == other.depth
             return True
-        except (AssertionError, AttributeError):
+        except (AssertionError, AttributeError, TypeError):
             return False
 
     @property

@@ -37,7 +37,7 @@ from pathlib import Path, PurePosixPath
 from tqdm import tqdm
 from typing import Union
 from multiprocessing import Pool, cpu_count
-from collections import defaultdict
+from operator import itemgetter
 
 """
 The file collection / file list / sensor list contains all information about 
@@ -92,8 +92,9 @@ def _read_station_dir(
                   f.metadata['instrument'].depth.end))
 
         network = f.metadata['network'].val
+        station = f.metadata['station'].val
 
-        filelist.append((network, f))
+        filelist.append((network, station, f))
 
         infos.append(f"Processed file {file_path}")
 
@@ -104,11 +105,11 @@ def _read_station_dir(
 
 class IsmnFileCollection(object):
     """
-    The IsmnFileCollection class contains a pandas data frame with all ismn files
+    The IsmnFileCollection class contains a list of file handlers to access data
     in the given data directory. The file list can be loaded from a previously
-    stored item, or built by iterating over all files in the data root.
-    This class also contains function to filter the file list for faster access
-    to files for a certain network/variable etc.
+    stored csv file, or built by iterating over all files in the data root.
+    This class also contains function to load filehandlers for certain networks
+    only.
     """
 
     def __init__(self,
@@ -122,7 +123,7 @@ class IsmnFileCollection(object):
         root : IsmnRoot
             Root object where data is stored.
         filelist : OrderedDict
-            A collection of filehandler, grouped by network.
+            A collection of filehandler stored in lists with network name as key.
         """
         self.root = root
         self.files = filelist
@@ -176,19 +177,19 @@ class IsmnFileCollection(object):
         for net_dir, stat_dirs in root.cont.items():
             process_stat_dirs += list(stat_dirs)
 
-        root = root.path if root.zip else root
-        args = [(root, d, temp_root) for d in process_stat_dirs]
+        args = [(root.path if root.zip else root, d, temp_root)
+                for d in process_stat_dirs]
 
         pbar = tqdm(total=len(args), desc='Files Processed:')
 
         fl_elements = []
 
         def update(r):
-            net_fh, infos = r
+            net_stat_fh, infos = r
             for i in infos:
                 logging.info(i)
-            for f in net_fh:
-                fl_elements.append(f)
+            for elements in net_stat_fh:
+                fl_elements.append(elements)
             pbar.update()
 
         with Pool(n_proc) as pool:
@@ -199,11 +200,14 @@ class IsmnFileCollection(object):
             pool.close()
             pool.join()
 
-        filelist = defaultdict(list)
-        for i, j in fl_elements:
-            filelist[i].append(j)
+        fl_elements.sort(key=itemgetter(0,1)) # sort by net name, stat name
 
-        filelist = OrderedDict(sorted(filelist.items()))
+        # to ensure alphabetical order... not sure if necessary, slow?
+        filelist = OrderedDict([])
+        for net, stat, fh in fl_elements:
+            if net not in filelist.keys():
+                filelist[net] = []
+            filelist[net].append(fh)
 
         logging.info(f"All processes finished.")
 
@@ -222,13 +226,19 @@ class IsmnFileCollection(object):
             Csv file where the metadata is stored.
         """
         if isinstance(data_root, IsmnRoot):
-            data_root = data_root.path
+            root = data_root
         else:
-            data_root = Path(data_root)
+            root = IsmnRoot(data_root)
 
         print(f"Found existing ismn metadata in {meta_csv_file}.")
 
-        metadata_df = pd.read_csv(meta_csv_file, index_col=0, header=[0, 1], low_memory=False)
+        metadata_df = pd.read_csv(meta_csv_file, index_col=0, header=[0, 1],
+                                  low_memory=False)
+
+        # parse date cols as datetime
+        for col in ['timerange_from', 'timerange_to']:
+            metadata_df[col, 'val'] = pd.to_datetime(metadata_df[col, 'val'])
+
         file_paths = metadata_df.loc[:, 'file_path'].values[:, 0]
         file_types = metadata_df.loc[:, 'file_type'].values[:, 0]
         metadata_df = metadata_df.drop(columns=['file_path', 'file_type'], level='name')
@@ -244,7 +254,7 @@ class IsmnFileCollection(object):
 
         filelist = OrderedDict([])
 
-        for i, row in enumerate(metadata_df.values):  # todo: slow!! parallelise?
+        for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
             metavars = []
 
             for j, metavar_name in enumerate(vars):
@@ -261,7 +271,7 @@ class IsmnFileCollection(object):
                 metavars.append(metavar)
 
             metadata = MetaData(metavars)
-            f = DataFile(root=data_root,
+            f = DataFile(root=root,
                          file_path=str(PurePosixPath(file_paths[i])),
                          load_metadata=False)
             f.metadata = metadata
@@ -274,7 +284,7 @@ class IsmnFileCollection(object):
             
             filelist[network].append(f)
 
-        return cls(IsmnRoot(data_root), filelist=filelist)
+        return cls(root, filelist=filelist)
 
     def to_metadata_csv(self, meta_csv_file):
         """
@@ -306,14 +316,34 @@ class IsmnFileCollection(object):
         os.makedirs(Path(os.path.dirname(meta_csv_file)), exist_ok=True)
         metadata_df.to_csv(meta_csv_file)
 
+    def iter_files(self, networks=None):
+        """
+        Iterator over files for networks
+
+        Parameters
+        ----------
+        networks : list, optioal (default: None)
+            Name of networks to get files for, or None to use all networks.
+
+        Yields
+        -------
+        file : DataFile
+            Filehandler with metadata
+        """
+
+        for net, files in self.files.items():
+            if (networks is None) or (net in networks):
+                for f in files:
+                    yield f
+
     def close(self):
         # close root and all filehandlers
         self.root.close()
-        for f in self.files['filehandler'].values:
+        for f in self.iter_files():
             f.close()
 
 if __name__ == '__main__':
-    root_path = r"D:\data-read\ISMN\global_20191024"
+    root_path = r"/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
     fc = IsmnFileCollection.build_from_scratch(root_path)
     fc.to_metadata_csv(r"C:\Temp\test\test.csv")
     #files = IsmnFileCollection.from_metadata_csv(root_path, r"C:\Temp\test\test.csv")
