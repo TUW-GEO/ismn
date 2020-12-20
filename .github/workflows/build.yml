@@ -9,7 +9,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Install and Test (${{ matrix.os }}) 🐍
+    name: Build py${{ matrix.python-version }} @ ${{ matrix.os }} 🐍
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
