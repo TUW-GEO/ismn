@@ -101,10 +101,8 @@ class ISMN_Interface():
         filehandlers for data reading.
         """
         networks = OrderedDict([])
-        # points = []  # idx, lon, lat
 
         for idx, f in enumerate(self.__file_collection.iter_files(network_names)):
-            print(idx, f)
 
             nw_name, st_name, instrument = f.metadata['network'].val, \
                                            f.metadata['station'].val, \
@@ -128,11 +126,6 @@ class ISMN_Interface():
                                filehandler=f, # todo: remove station meta from sensor
                                name=idx,
                                keep_loaded_data=self.keep_loaded_data)
-                #points.append((idx, f.metadata['longitude'].val, f.metadata['latitude'].val))
-
-        #points = np.array(points)
-
-        #grid = BasicGrid(points[:, 1], points[:, 2], gpis=points[:,0])
 
         return list(networks.values()) # , grid
 
@@ -142,7 +135,6 @@ class ISMN_Interface():
                f"{' '* indent}{self.root}\n" + \
                f"-" * (len(str(self.root)) + indent) + "\n" \
                f"networks:\n{self.collection.__repr__(indent)}"
-
 
     @property
     def networks(self):
