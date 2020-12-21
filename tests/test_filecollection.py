@@ -34,7 +34,7 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
             'Data_seperate_files_20170810_20180809')
         cleanup(os.path.join(testdata_path_unzipped, 'python_metadata'))
         print('Setup from scratch')
-        cls.coll = IsmnFileCollection.from_scratch(Path(testdata_path_unzipped), parallel=True)
+        cls.coll = IsmnFileCollection.build_from_scratch(Path(testdata_path_unzipped), parallel=True)
 
     def setUp(self) -> None:
         pass
@@ -45,35 +45,33 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
     def test_filelist(self):
         # cecks content of file collection
 
-        cols_should = ['network', 'station', 'instrument', 'variable',
-                       'sensor_depth_from', 'sensor_depth_to',
-                       'file_path', 'file_type',
-                       'timerange_from', 'timerange_to', 'filehandler']
+        assert list(self.coll.files.keys()) == ['COSMOS']
 
-        assert all([c in cols_should for c in self.coll.files.columns])
+        files = [f for f in self.coll.iter_files()]
 
-        assert Path(self.coll.files.iloc[1]['file_path']).parts == \
+        assert Path(files[1].file_path).parts == \
                ("COSMOS", "Barrow-ARM",
                     "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
-        assert self.coll.files.iloc[1]['instrument'] == 'Cosmic-ray-Probe'
-        assert self.coll.files.iloc[1]['variable'] == 'soil_moisture'
-        assert self.coll.files.iloc[1]['sensor_depth_from'] == 0.0
-        assert self.coll.files.iloc[1]['sensor_depth_to'] == 0.21
+
+        assert files[1].metadata['instrument'].val == 'Cosmic-ray-Probe'
+        assert files[1].metadata['variable'].val == 'soil_moisture'
+        assert files[1].metadata['variable'].depth.start == 0.0
+        assert files[1].metadata['variable'].depth.end == 0.21
 
         # check some values that are in file list AND in metadata of filehandler
-        assert self.coll.files.iloc[1].filehandler.metadata['station'].val == 'Barrow-ARM'
-        assert self.coll.files.iloc[1].filehandler.metadata['instrument'].depth.start ==\
-               self.coll.files.iloc[1]['sensor_depth_from']
-        assert self.coll.files.iloc[1].filehandler.metadata['instrument'].depth.end ==\
-               self.coll.files.iloc[1]['sensor_depth_to']
+        assert files[1].metadata['station'].val == 'Barrow-ARM'
+        assert files[1].metadata['instrument'].depth.start ==\
+               files[1].metadata['variable'].depth.start
+        assert files[1].metadata['instrument'].depth.end ==\
+               files[1].metadata['variable'].depth.end
 
         # read data using a filehandler
-        data = self.coll.files.iloc[1]['filehandler'].read_data()
+        data = files[1].read_data()
 
-        assert self.coll.files.iloc[1]['timerange_from'] == data.index[0]
-        assert self.coll.files.iloc[1]['timerange_to'] == data.index[-1]
+        assert files[1].metadata['timerange_from'].val == data.index[0]
+        assert files[1].metadata['timerange_to'].val == data.index[-1]
 
-        assert self.coll.files.iloc[1]['variable'] in data.columns
+        assert files[1].metadata['variable'].val in data.columns
         assert len(data.index) == 7059
 
 
@@ -87,63 +85,11 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
             other = IsmnFileCollection.from_metadata_csv(
                 self.coll.root.path, os.path.join(temp, 'meta.csv'))
 
-        for coll in self.coll.files.columns:
-            if coll == 'filehandler': continue
-            assert np.all(other.files[coll] == self.coll.files[coll]), \
-            f"{coll} of filelists do not match"
+        for thisfile, otherfile in zip(self.coll.iter_files(), other.iter_files()):
+            assert thisfile.file_path == otherfile.file_path, "Paths dont match"
+            assert thisfile.root.path == otherfile.root.path, "Paths dont match"
+            assert thisfile.metadata == otherfile.metadata, "Meta dont match"
 
-    def test_filter_column(self):
-        # test filtering the collection data frame directly (fast)
-        filtered_station = self.coll.filter_col_val(col='station', vals=['Barrow-ARM'])
-        assert np.all(filtered_station['station'] == 'Barrow-ARM')
-
-        filtered_all = self.coll.filter_col_val(col='network', vals=['COSMOS'])
-        # as only cosmos in testdata, get same list again.
-        for col in self.coll.files.columns:
-            if col == 'filehandler': continue
-            assert np.all(filtered_all[col] == self.coll.files[col]), \
-                f"{col} of filelists do not match"
-
-    def test_filter_depth(self):
-        # filter filelist for files in a certain depth range (fast)
-        fil = self.coll.filter_depth(0, 1, return_index=False) # should get both
-        assert all((fil.index == [0,1]) & (fil['network'] == ['COSMOS'] * 2))
-        idx = self.coll.filter_depth(0, 0.19, return_index=True) # should get first
-        assert (len(idx) == 1) & (idx[0] == 0)
-        idx = self.coll.filter_depth(0, 0.01, return_index=True) # should get None
-        assert len(idx) == 0
-
-    def filter_metadata(self):
-        # filter filelist by metadata in each file handler (slow)
-
-        # filtering for network, station, etc can be done with both functions
-        # but using the filter_col function is faster as it avoids iterating over
-        # all filehandlers
-        filtered = self.coll.filter_metadata({'station': 'Barrow-ARM'},
-                                             return_index=False)
-        assert np.all(filtered.index.values == \
-            self.coll.filter_col_val('station', 'Barrow-ARM', return_index=True))
-
-        # filtering for elements that are NOT in the filelist can only be done
-        # with this function:
-        filtered = self.coll.filter_metadata({'lc_2010': 210, 'climate_KG': 'ET'})
-        assert len(filtered.index) == 1
-        for col in [c for c in filtered.columns if c not in ['filehandler']]:
-            assert filtered.loc[1, col] == self.coll.files.loc[1, col], \
-                f"{col} of filelists do not match"
-
-        idx = self.coll.filter_metadata({'lc_2010': 9999}, filelist=filtered,
-                                        return_index=True)
-        assert len(idx) == 0
-        idx = self.coll.filter_metadata({'lc_2010': 210}, filelist=filtered,
-                                        return_index=True)
-        assert len(idx) == 1
-
-        try:
-            self.coll.filter_metadata({'wrong_name': 123})
-            raise AssertionError("Expected error not raised.")
-        except ValueError: # should raise ValueError
-            pass
 
 class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
@@ -157,7 +103,7 @@ class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped
         metadata_path = os.path.join(testdata_path_unzipped, 'python_metadata')
         cleanup(metadata_path)
 
-        cls.coll = IsmnFileCollection.from_scratch(testdata_path_unzipped)
+        cls.coll = IsmnFileCollection.build_from_scratch(testdata_path_unzipped)
 
 @pytest.mark.zip
 class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
@@ -173,7 +119,7 @@ class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        cls.coll = IsmnFileCollection.from_scratch(testdata_zip_path)
+        cls.coll = IsmnFileCollection.build_from_scratch(testdata_zip_path)
 
 @pytest.mark.zip
 class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
@@ -187,7 +133,7 @@ class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
         metadata_path = os.path.join(testdata_path, 'python_metadata')
         cleanup(metadata_path)
 
-        cls.coll = IsmnFileCollection.from_scratch(testdata_zip_path)
+        cls.coll = IsmnFileCollection.build_from_scratch(testdata_zip_path)
 
 if __name__ == '__main__':
     unittest.main()

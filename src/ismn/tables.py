@@ -53,9 +53,9 @@ CSV_META_TEMPLATE_SURF_VAR = OrderedDict([
     ('lc_2000', np.nan),
     ('lc_2005', np.nan),
     ('lc_2010', np.nan),
-    ('lc_insitu', ''),
-    ('climate_KG', ''),
-    ('climate_insitu', ''),
+    ('lc_insitu', 'unknown'),
+    ('climate_KG', 'unknown'),
+    ('climate_insitu', 'unknown'),
     ])
 CSV_META_TEMPLATE_GROUND_VAR = OrderedDict([
     ('saturation', np.nan),
