@@ -1,46 +1,32 @@
-# This workflow will draft a release for the package on tagged commits only.
-# On success it will build distribution packages and publish them on a public
-# python package index (pypi).
+name: pypi
 
-# For more information see:
-# https://github.com/chezou/tabula-py/blob/master/.github/workflows/pythonpublish.yml#L35
-# https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
-# https://github.com/actions/create-release
-# https://github.com/pypa/gh-action-pypi-publish
+# This workflow uploads a release to pypi. A released must be triggered
+# via github (releases) and will include a version number tag (leading 'v'!!)
+# This will NOT repeat testing, draft a release only from tested branches!
 
-name: release
+env:
+  # RELEASE_ACCOUNT: Only tagged commits in repo under this account are published
+  # Additional safety measure so that publishing from a fork is never possible.
+  RELEASE_ACCOUNT: 'wpreimes'
 
 on:
+  release:
+    types: [released]
   push:
-    # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-      # todo: on TUW-GEO URL only?
+      - v*
 
 jobs:
-  release:
-    name: Create Package Release 📦
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body_path: ./CHANGELOG.rst
-          draft: false
-          prerelease: false
   publish:
     name: Upload to Pypi 🚀
-    needs: release
+    # needs original repo (TUW-GEO) and tagged commit (v*)
+    if: startsWith(github.ref, 'refs/tags/v') && startsWith(github.repository, '$RELEASE_ACCOUNT/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${{ github.repository }} # add TUW repo to be sure?
-          ref: ${{ github.ref }} # make sure to checkout tag
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref }}
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
