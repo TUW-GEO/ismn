@@ -27,9 +27,10 @@ import numpy as np
 import warnings
 import logging
 import pandas as pd
+from collections import OrderedDict
 
 from ismn.meta import MetaData, Depth
-from collections import OrderedDict
+from ismn.const import deprecated
 
 logger = logging.getLogger(__name__)
 
@@ -41,169 +42,143 @@ logger.addHandler(ch)
 
 class IsmnComponent: pass
 
-class Network(IsmnComponent):
+class Sensor(IsmnComponent):
     """
-    A network is described by a distinct name and can be composed of
-    multiple stations.
+    A Sensor with insitu observations.
 
     Attributes
     ----------
+    instrument : str
+        Instrument name.
+    variable : str
+        Observed variable.
+    depth : Depth
+        Sensing depth.
     name : str
-        Network name.
-    stations : List[Station]
-        Stations belonging to the network. If a string is passed, an empty
-        station is added.
-    coords : list, list
-        Station lats and lons
-    grid : BasicGrid
-        Staton locations as grid
-
-    Methods
-    -------
-    add_station(name, lon, lat, elev, static_variables=None)
-        Add station to network.
-    remove_station(name)
-        Remove station from network.
-    iter_stations(variable=None, depth=None)
-        Get all stations having at least one sensor observing
-        a specific variable and/or sensing depth.
-    n_stations()
-        Number of stations.
+        Name of the sensor.
+    filehandler : IsmnFile
+        File handler object to read data.
+    keep_loaded_data : bool
+        Keep data in memory after loading.
+    data : pd.DataFrame
+        Container for data in memory (if it is being kept)
     """
 
-    def __init__(self,
-                 name,
-                 stations=None):
+    def __init__(self, instrument, variable, depth, name=None,
+                 filehandler=None, keep_loaded_data=False):
         """
+        Initialise Sensor object.
+
         Parameters
         ----------
-        name : str
-            Network name.
+        instrument : str
+            Instrument name.
+        variable : str
+            Observed variable.
+        depth : Depth
+            Sensing depth.
+        name : str or int, optional (default: None)
+            Id or Name of the sensor. If None is passed, a name is generated.
+        filehandler : DataFile, optional
+            File handler that allows access to observation data and
+            sensor metadata via its read_data() function (default: None).
+        keep_loaded_data : bool, optional (default: False)
+            Keep data for a file in memory once it is loaded. This makes subsequent
+            calls of data faster (if e.g. a station is accessed multiple times)
+            but can fill up memory if multiple networks are loaded.
         """
-        self.name = name
-        self.stations = OrderedDict([])
 
-        if stations is not None:
-            for s in stations:
-                self.stations[s.name] = s
-
-        # todo: using station dicts means that duplicate station names are not possible
+        self.instrument = instrument
+        self.variable = variable
+        self.depth = depth
+        self.filehandler = filehandler
+        self.keep_loaded_data = keep_loaded_data
+        self.data = None
+        self.name = name if name is not None else self.__repr__()
 
     def __repr__(self):
+        return f"{self.instrument}_{self.variable}_" \
+               f"{self.depth.start:1.6f}_{self.depth.end:1.6f}"
+
+    @property
+    def metadata(self) -> MetaData:
+        return MetaData() if self.filehandler is None \
+            else self.filehandler.metadata
+
+    def read_data(self):
         """
-        Provide basic network information.
+        Load data from filehandler for this Sensor by calling read_data().
 
         Returns
         -------
-        info : str
-            Basic network information.
+        data : pd.DataFrame
+            Insitu time series for this sensor, loaded from file or memory
+            (if it was loaded and kept before).
         """
-        # {self.__class__.__name__}(
-        return f"Stations in '{self.name}': {list(self.stations.keys())}"
-
-    @property
-    def coords(self) -> (list, list):
-        # get lists of lats and lons for all stations in the network
-        lons, lats = [], []
-        for name, stat in self.stations.items():
-            lons.append(stat.lon)
-            lats.append(stat.lat)
-
-        return lons, lats
-
-    @property
-    def grid(self):
-        # get grid for all stations in network
-        return BasicGrid(*self.coords)
-
-    def add_station(self, name, lon, lat, elev):
-        """
-        Add a station to the network.
-
-        Parameters
-        ----------
-        name : str
-            Station name.
-        lon : float
-            Longitude coordinate.
-        lat : float
-            Latitude coordinate.
-        elev : float
-            Elevation.
-        """
-        if name not in self.stations:
-            self.stations[name] = Station(name,
-                                          lon,
-                                          lat,
-                                          elev)
+        if self.filehandler is None:
+            logging.warning(f"No filehandler found for sensor {self.name}")
         else:
-            logger.warning('Station already exists: {}'.format(name))
+            if self.data is None:
+                data = self.filehandler.read_data()
 
-    def remove_station(self, name):
+                if self.keep_loaded_data:
+                    self.data = data
+
+                return data
+            else:
+                return self.data
+
+    def eval(self, variable=None, depth=None, filter_meta_dict=None,
+             check_only_sensor_depth_from=False):
         """
-        Remove station from network.
+        Evaluate whether the sensor complies with the passed metadata
+        requirements.
 
         Parameters
         ----------
-        name : str
-            Station name.
-        """
-        if name in self.stations:
-            del self.stations[name]
-        else:
-            logger.warning('Station not found {}'.format(name))
-
-    def iter_stations(self, *eval_args, **eval_kwargs):
-        """
-        Get all stations having at least one sensor observing
-        a specific variable and/or sensing depth.
-
-        Parameters
-        ----------
-        see Sensor.eval()
-
-        Yields
-        ------
-        station : Station
-            Station.
-        """
-        for station in self.stations.values():
-            for sensor in station.sensors.values():
-                if sensor.eval(*eval_args, **eval_kwargs):
-                    yield station
-                    break
-
-    def iter_sensors(self, *eval_args, **eval_kwargs):
-        """
-        Get all sensors in all stations in the network that comply with the
-        passed parameters.
-
-        Parameters
-        ----------
-        see Sensor.eval()
-
-        Yields
-        ------
-        station : Station
-            Station.
-        sensor : Sensor
-            Sensor at Station
-        """
-        for station in self.stations.values():
-            for sensor in station.sensors.values():
-                if sensor.eval(*eval_args, **eval_kwargs):
-                    yield station, sensor
-
-    def n_stations(self):
-        """
-        Number of stations.
+        variable : str, optional (default: None)
+            Check if the variable name matches, e.g. soil_moisture
+        depth : Depth, optional (default: None)
+            Check if the passed depth encloses the sensor depth.
+        filter_meta_dict : dict, optional (default: None)
+            Additional metadata keys and values for which the file list is filtered
+            e.g. {'lc_2010': [10, 130]} or
+                 {'climate_kg': 'Dwa', 'lc_2010': [10, 130] }
+            to filter for a multiple landcover classes and a climate class.
+        check_only_sensor_depth_from : bool, optional (default: False)
+            Ignores the sensors depth_to value and only checks if depth_from of
+            the sensor is in the passed depth (e.g. for cosmic ray probes).
 
         Returns
         -------
-        n : int
-            Number of stations in the network.
+        flag : bool
+            Indicates weather metadata for this Sensor matches with the passed
+            requirements.
         """
-        return len(self.stations)
+
+        if depth is None:
+            depth = Depth(-np.inf, np.inf)
+
+        flag = False
+        
+        if check_only_sensor_depth_from:
+            d = Depth(self.depth.start, self.depth.start)
+        else:
+            d = self.depth 
+
+        if (variable in [None, self.variable]) and depth.encloses(d):
+            flag = True
+
+        if flag and filter_meta_dict:
+            if self.filehandler is None:
+                warnings.warn("No filehandle found, can't filter by metadata.")
+            else:
+                # checks also if the metadata in file matches
+                flag = self.filehandler.check_metadata(
+                    variable, allowed_depth=depth,
+                    filter_meta_dict=filter_meta_dict)
+
+        return flag
 
 
 class Station(IsmnComponent):
@@ -217,30 +192,19 @@ class Station(IsmnComponent):
     name : str
         Station name.
     lon : float
-        Longitude coordinate.
+        Longitude coordinate of station and all sensors at station.
     lat : float
-        Latitude coordinate.
+        Latitude coordinate of station and all sensors at station.
     elev : float
-        Elevation information.
-
-    Methods
-    -------
-    get_variables()
-        Get variables measured by all sensors at station.
-    get_depths(variable)
-        Get depths of sensors measuring at station.
-    add_sensor(instrument, variable, depth, filehandler)
-        Add sensor to station.
-    remove_sensor(name)
-        Remove sensor from station.
-    iter_sensors(variable=None, depth=None)
-        Get all sensors for variable and/or depth information.
-    n_sensors()
-        Number of sensors.
+        Elevation information of station.
+    sensors : OrderedDict
+        Collection of Sensors and their names.
     """
 
     def __init__(self, name, lon, lat, elev):
         """
+        Initialise Station object.
+
         Parameters
         ----------
         name : str
@@ -260,18 +224,11 @@ class Station(IsmnComponent):
         self.sensors = OrderedDict([])
 
     def __repr__(self):
-        """
-        Provide basic station information.
-
-        Returns
-        -------
-        info : str
-            Basic station information.
-        """
+        # Provide basic station information.
         return f"Sensors at '{self.name}': {[s.name for s in self.sensors.values()]}"
 
     @property
-    def metadata(self):
+    def metadata(self) -> MetaData:
         """
         Collect the metadata from all sensors at station.
         """
@@ -279,24 +236,18 @@ class Station(IsmnComponent):
         station_meta = MetaData().merge(sens_meta, inplace=False)
         return station_meta
 
-    def from_file_collection(self, file_collection, keep_loaded_data=False):
-        n = len(file_collection.index.size)
-        d = file_collection.to_dict('list')
+    @property
+    def n_sensors(self) -> int:
+        """
+        Number of Sensors at this Station.
+        """
+        return len(self.sensors)
 
-        assert (len(np.array(d['station'])) == 1) and \
-               (len(np.array(d['network']))), \
-            "Unique network and station names are expected"
-
-        for i in range(n):
-            depth = Depth(d['sensor_depth_from'][i],
-                          d['sensor_depth_to'][i])
-
-            self.add_sensor(d['instrument'][i],
-                            d['variable'][i],
-                            depth=depth,
-                            filehandler=d['filehandler'][i],
-                            name=None, # auto-generate name
-                            keep_loaded_data=keep_loaded_data)
+    def __getitem__(self, item:int or str) -> Sensor:
+        if isinstance(item, int):
+            return self.sensors[list(self.sensors.keys())[item]]
+        else:
+            return self.sensors[item]
 
     def get_variables(self):
         """
@@ -330,27 +281,76 @@ class Station(IsmnComponent):
 
         return depths
 
+    @deprecated
+    def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None,
+                                  max_depth=None):
+        """
+        Goes through the sensors associated with this station
+        and checks the metadata to get and approximate time coverage of the station.
+        This is just an overview. If holes have to be detected the
+        complete file must be read.
+        
+        Parameters
+        ----------
+        variable: str, optional (default: 'soil_moisture')
+            name of the variable, only sensors measuring that variable are used.
+        min_depth : float, optional (default: None)
+            depth_from of variable has to be >= min_depth in order to be
+            included.
+        max_depth : float, optional (default: None)
+            depth_to of variable has to be <= max_depth in order to be
+            included.
+
+        Returns
+        -------
+        start_date: datetime
+            Earliest date observed by any sensor at the station after filtering
+            for the passed requirements.
+        end_date: datetime
+            Latest date observed by any sensor at the station after filtering
+            for the passed requirements.
+        """
+        depth = Depth(-np.inf if min_depth is None else min_depth,
+                      np.inf if max_depth is None else max_depth)
+
+        min_from, max_to = None, None
+
+        for sensor in self.iter_sensors(variable=variable, depth=depth):
+            time_from = sensor.metadata['timerange_from'].val
+            time_to = sensor.metadata['timerange_to'].val
+            if (min_from is None) or (time_from < min_from):
+                min_from = time_from
+            if (max_to is None) or (time_to > max_to):
+                max_to = time_to
+
+        min_from = min_from.to_pydatetime() if min_from is not None else None
+        max_to = max_to.to_pydatetime() if max_to is not None else None
+
+        return min_from, max_to
+
     def add_sensor(self, instrument, variable, depth, filehandler=None,
                    name=None, keep_loaded_data=False):
         """
-        Add sensor to station.
+        Add a new Sensor to this Station.
 
         Parameters
         ----------
         instrument : str
-            Instrument name.
+            Instrument name. e.g. ThetaProbe-ML2X
         variable : str
-            Observed variable.
+            Observed variable. e.g. soil_moisture
         depth : Depth
-            Sensing depth.
-        filehandler : IsmnFile, optional (default: None)
-            File handler.
+            Sensing depth. e.g. Depth(0, 0.1)
+        filehandler : DataFile, optional (default: None)
+            File handler object that allows access to observation data and
+            sensor metadata via its read_data() function (default: None).
         name: str or int, optional (default: None)
-            A name or id for the sensor. If None is passed, one is generated.
+            A name or id for the sensor. If None is passed, one is generated
+            automatically from other properties.
         keep_loaded_data : bool, optional (default: False)
-            Keep data for a file in memory once it is loaded. This makes subsequent
-            calls of data faster (if e.g. a station is accessed multiple times)
-            but can fill up memory if multiple networks are loaded.
+            Keep data for the sensor in memory once it is loaded.
+            This makes subsequent reading of the same data faster
+            but can fill up memory if stations / networks are loaded.
         """
         if name is None:
             name = f"{instrument}_{variable}_{depth.start:1.6f}_{depth.end:1.6f}"
@@ -373,165 +373,200 @@ class Station(IsmnComponent):
         if name in self.sensors:
             del self.sensors[name]
         else:
-            logger.warning('Sensor not found: {}'.format(name))
+            logger.warning(f'Sensor not found: {name}')
 
-    def iter_sensors(self, variable=None, depth=None, **kwargs):
+    def iter_sensors(self,  **filter_kwargs):
         """
-        Get all sensors for variable and/or depth information.
+        Iterates over all sensors in this station and yields those that
+        comply with the passed filter settings (or all).
 
         Parameters
         ----------
-        variable : str, optional
-            Observed variabl e.
-        depth: Depth, optinal (default: None)
-            Yield only sensors that are enlosed by this depth.
-        kwargs:
-            All other kwargs as used in the sensor.eval() function to
-            evaluate the sensor.
+        Keyword arguments are used to check all sensors at all stations,
+        only stations that have at least one matching sensor are returned.
+
+        For a description of possible filter kwargs, see Sensor.eval() function
 
         Yields
         ------
         sensors : Sensor
-            Sensor that measure the passsed var within the passed depth.
+            (Filtered) Sensors at the Station.
         """
         for sensor in self.sensors.values():
-            if sensor.eval(variable, depth, **kwargs):
+            if sensor.eval(**filter_kwargs):
                 yield sensor
 
-    def n_sensors(self):
+    @deprecated
+    def get_sensors(self, variable, depth_from, depth_to):
         """
-        Number of sensors.
-
+        get the sensors at which the variable was measured at the
+        given depth
+        Parameters
+        ----------
+        variable : string
+            variable abbreviation
+        depth_from : float
+            shallower depth of layer the variable was measured at
+        depth_to : float
+            deeper depth of layer the variable was measured at
         Returns
         -------
-        n : int
-            Number of sensors at the station.
+        sensors : numpy.array
+            array of sensors found for the given combination of variable and depths
         """
-        return len(self.sensors)
-
-
-class Sensor(IsmnComponent):
+        return np.array([s for s in
+                         self.iter_sensors(variable=variable,
+                                           depth=Depth(depth_from, depth_to))])
+                
+                
+class Network(IsmnComponent):
 
     """
-    A Sensor with ground observations.
+    A network is described by a distinct name and can be composed of
+    multiple ISMN stations.
 
     Attributes
     ----------
     name : str
-        Name of the sensor.
-    instrument : str
-        Instrument name.
-    variable : str
-        Observed variable.
-    depth : Depth
-        Sensing depth.
-    filehandler : IsmnFile, optional
-        File handler (default: None).
+        Network name.
+    stations : OrderedDict[name, Station]
+        Stations belonging to the network. If a string is passed, an empty
+        Station is added.
     """
 
-    def __init__(self, instrument, variable, depth, name=None,
-                 filehandler=None, keep_loaded_data=False):
+    def __init__(self,
+                 name,
+                 stations=None):
         """
+        Initialise Network object.
+
         Parameters
         ----------
-        instrument : str
-            Instrument name.
-        variable : str
-            Observed variable.
-        depth : Depth
-            Sensing depth.
-        name : str or int, optional (default: None)
-            Id or Name of the sensor. If None is passed, a name is generated.
-        filehandler : IsmnFile, optional
-            File handler that allows access to observation data and
-            sensor metadata (default: None).
-        keep_loaded_data : bool, optional (default: False)
-            Keep data for a file in memory once it is loaded. This makes subsequent
-            calls of data faster (if e.g. a station is accessed multiple times)
-            but can fill up memory if multiple networks are loaded.
+        name : str
+            Network name.
+        stations : list[Station], optional (default: None)
+            Initial list of Station object to fill the network with.
+            Additional Stations can be added later.
         """
+        # todo: using station dicts means that duplicate station names are not possible
+        self.name = name
+        self.stations = OrderedDict([])
 
-        self.instrument = instrument
-        self.variable = variable
-        self.depth = depth
-        self.filehandler = filehandler
-        self.keep_loaded_data = keep_loaded_data
-        self.data = None
-        self.name = name if name is not None else self.__repr__()
+        if stations is not None:
+            for s in stations:
+                self.stations[s.name] = s
 
     def __repr__(self):
-        return f"{self.instrument}_{self.variable}_" \
-            f"{self.depth.start:1.6f}_{self.depth.end:1.6f}"
+        # Provide basic Network information.
+        return f"Stations in '{self.name}': {list(self.stations.keys())}"
 
     @property
-    def metadata(self):
-        return MetaData() if self.filehandler is None else self.filehandler.metadata
-
-    def read_data(self) -> pd.DataFrame:
+    def coords(self) -> (list, list):
         """
-        Load data from filehandler for sensor.
+        Get lists of lats and lons for all stations in the Network
         """
-        if self.filehandler is None:
-            warnings.warn(f"No filehandler found for sensor {self.name}")
-        else:
-            if self.data is None:
-                data = self.filehandler.read_data()
+        lons, lats = [], []
+        for name, stat in self.stations.items():
+            lons.append(stat.lon)
+            lats.append(stat.lat)
 
-                if self.keep_loaded_data:
-                    self.data = data
+        return lons, lats
 
-                return data
-            else:
-                return self.data
-
-    def eval(self, variable=None, depth=None, filter_meta_dict=None,
-             check_only_sensor_depth_from=False):
+    @property
+    def grid(self) -> BasicGrid:
         """
-        Evaluate whether the sensor complies with the passed metadata
-        requirements.
+        Get grid for all Stations in Network
+        """
+        return BasicGrid(*self.coords)
+
+    @property
+    def n_stations(self) -> int:
+        """
+        Number of Stations in this Network.
+        """
+        return len(self.stations)
+
+    def add_station(self, name, lon, lat, elev):
+        """
+        Add a station to the network.
 
         Parameters
         ----------
-        variable : str, optional (default: None)
-            Check if the variable name matches
-        depth : Depth, optional (default: None)
-            Check if the passed depth encloses the sensor depth.
-        filter_meta_dict : dict, optional (default: None)
-            Additional metadata keys and values for which the file list is filtered
-            e.g. {'lc_2010': 10} to filter for a landcover class.
-        check_only_sensor_depth_from : bool, optional (default: False)
-            Ignores the sensors depth_to value and only checks if depth_from of
-            the sensor is in the passed depth (e.g. for cosmic ray probes).
-
-        Returns
-        -------
-        flag : bool
-            Indicates success.
+        name : str
+            Station name.
+        lon : float
+            Longitude coordinate.
+        lat : float
+            Latitude coordinate.
+        elev : float
+            Elevation.
         """
-
-        if depth is None:
-            depth = Depth(-np.inf, np.inf)
-
-        flag = False
-        
-        if check_only_sensor_depth_from:
-            d = Depth(self.depth.start, self.depth.start)
+        if name not in self.stations:
+            self.stations[name] = Station(name,
+                                          lon,
+                                          lat,
+                                          elev)
         else:
-            d = self.depth 
+            logger.warning(f'Station already exists: {name}')
 
-        if (variable in [None, self.variable]) and depth.encloses(d):
-            flag = True
+    def remove_station(self, name):
+        """
+        Remove Station from Network.
 
-        if flag and filter_meta_dict:
-            if self.filehandler is None:
-                warnings.warn("Filehandler is None, can't filter by metadata")
-            else:
-                # checks also if the metadata in file matches
-                flag = self.filehandler.check_metadata(
-                    variable, allowed_depth=depth,
-                    filter_meta_dict=filter_meta_dict)
+        Parameters
+        ----------
+        name : str
+            Station name.
+        """
+        if name in self.stations:
+            del self.stations[name]
+        else:
+            logger.warning(f'Station not found {name}')
 
-        return flag
+    def iter_stations(self, **filter_kwargs):
+        """
+        Get all stations having at least one sensor observing
+        a specific variable and/or sensing depth.
+
+        Parameters
+        ----------
+        Parameters are used to check all sensors at all stations, only stations
+        that have at least one matching sensor are returned.
+
+        For a description of possible filter kwargs, see Sensor.eval() function
+
+        Yields
+        ------
+        station : Station
+            Stations that contain at least one sensor that matches to the passed
+            conditions.
+        """
+        for station in self.stations.values():
+            for sensor in station.sensors.values():
+                if sensor.eval(**filter_kwargs):
+                    yield station
+                    break
+
+    def iter_sensors(self, **filter_kwargs):
+        """
+        Get all sensors in all stations in the network that comply with the
+        passed filtering parameters.
+
+        Parameters
+        ----------
+        Keyword arguments are used to evaluate the sensors, see Sensor.eval()
+
+        Yields
+        ------
+        station : Station
+            Station that contains Sensor.
+        sensor : Sensor
+            Sensor at Station that matches to the passed filtering conditions.
+        """
+        for station in self.stations.values():
+            for sensor in station.sensors.values():
+                if sensor.eval(**filter_kwargs):
+                    yield station, sensor
 
 
 class NetworkCollection(IsmnComponent):
@@ -539,19 +574,27 @@ class NetworkCollection(IsmnComponent):
     A NetworkCollection holds multiple networks and provides functionality
     to perform access to components from multiple networks.
     A grid is added that contains all stations to perform spatial searches.
+
+    Attributes
+    ----------
+    networks : OrderedDict
+        Collection of network names and Networks
+    grid : BasicGrid
+        Grid that contains one point for each station in all networks.
     """
     def __init__(self, networks):
 
         """
-        Create network collection from previously loaded IsmnFileCollection.
+        Create network collection from previously created Networks.
 
         Parameters
         ----------
-        networks : list[Network or str]
-            List of Networks that build the collection
+        networks : list[Network]
+            List of Networks that build the collection from.
         """
 
         self.networks = OrderedDict([])
+
         lons = []
         lats = []
         for net in networks:
@@ -562,11 +605,9 @@ class NetworkCollection(IsmnComponent):
 
         self.grid = BasicGrid(lons, lats)
 
-    def __repr__(self, indent=0):
-        strs = []
-        for net in self.networks.values():
-            strs.append(" " * indent + f"{net.name}: {list(net.stations.keys())}")
-        return ', \n'.join(strs)
+    def __repr__(self, indent=''):
+        return ',\n'.join([f"{indent}{net.name}: {list(net.stations.keys())}"
+                           for net in self.networks.values()])
 
     def __getitem__(self, item:Union[int,str]):
         if isinstance(item, int):
@@ -574,65 +615,84 @@ class NetworkCollection(IsmnComponent):
         return self.networks[item]
 
     def iter_networks(self) -> Network:
-        # Iterate through all networks
+        """ 
+        Iterate through all networks in the Collection.
+        """
         for nw in self.networks.values():
             yield nw
 
-    def iter_stations(self, *eval_args, **eval_kwargs) -> (Network, Station):
-        # Iterate through (all/filtered) networks and stations
+    def iter_stations(self, **filter_kwargs) -> (Network, Station):
+        """ 
+        Iterate through Networks in the Collection and get (all/filtered)
+        Stations.
+        """
         for nw in self.networks.values():
-            for stat in nw.iter_stations(*eval_args, **eval_kwargs):
+            for stat in nw.iter_stations(**filter_kwargs):
                 yield nw, stat
 
-    def iter_sensors(self, *eval_args, **eval_kwargs) -> (Network, Station, Sensor):
-        # Iterate through (all/filtered) networks, stations, sensors
+    def iter_sensors(self, **filter_kwargs) -> (Network, Station, Sensor):
+        """
+        Iterate through Networks in the Collection and get (all/filtered)
+        Stations and Sensors at each Station.
+        """
         for nw in self.networks.values():
-            for stat, sen in nw.iter_sensors(*eval_args, **eval_kwargs):
+            for stat, sen in nw.iter_sensors(**filter_kwargs):
                 yield nw, stat, sen
 
-    def station4idx(self, idx):
+    def station4gpi(self, gpi):
         """
-        Get the station object for the passed gpi.
+        Get the Station for the passed gpi in the grid.
 
         Parameters
         ----------
-        idx : int
-            Point index in self.grid, resp. line index in file list.
+        gpi : int or List[int]
+            Point index or multiple indices in self.grid.
 
         Returns
         -------
-        station : Station
-            Station at gpi.
+        station : Station or list[Station]
+            Station(s) at gpi(s).
         """
-        if idx not in self.grid.activegpis:
-            raise ValueError("Index does not exist in loaded grid")
+        idxs = np.atleast_1d(gpi)
+        in_grid = np.isin(idxs, self.grid.activegpis)
 
-        lon, lat = self.grid.gpi2lonlat(idx)
+        if not all(in_grid):
+            raise ValueError(f"Index not found in loaded grid: {idxs[~in_grid]}")
+
+        lon, lat = self.grid.gpi2lonlat(idxs)
+
+        stations = []
         for net, stat in self.iter_stations():
             if (stat.lon == lon) and (stat.lat == lat):
-                return stat
+                stations.append(stat)
+                if len(stations) == len(idxs):
+                    break  # stop when all indices are found
+
+        return stations[0] if len(stations) == 1 else stations
 
     def get_nearest_station(self, lon, lat, max_dist=np.inf):
         """
         Get nearest station for given longitude/latitude coordinates.
+
         Parameters
         ----------
-        lon : float
-            Longitude coordinate.
-        lat : float
-            Latitude coordinate.
-        max_dist : float, optional
-            Maximum search distance (default: numpy.inf).
+        lon : float or List[float]
+            Longitude coordinate(s).
+        lat : float or List[float]
+            Latitude coordinate(s).
+        max_dist : float, optional (default: np.Inf)
+            Maximum search distance.
 
         Returns
         -------
-        station : Station
-            Station.
+        station : Station or List[Station]
+            The nearest Station(s) to the passed coordinates.
         dist : float
-            Distance in meter.
+            Distance in meter between the passed coordinates and the
+            actual location of the station.
         """
         gpi, dist = self.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
-        station = self.station4idx(gpi)
+        station = self.station4gpi(gpi)
 
         return station, dist
 

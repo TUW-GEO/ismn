@@ -8,7 +8,7 @@ import sys
 
 from ismn.filecollection import IsmnFileCollection
 from ismn.components import *
-from ismn.tables import *
+from ismn.const import *
 from ismn.base import IsmnRoot
 
 try:
@@ -95,14 +95,15 @@ class ISMN_Interface():
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
 
-    def __collect_networks(self, network_names:list=None) -> list:
+    def __collect_networks(self,
+                           network_names: list = None) -> list:
         """
-        Build networks and fill them with stations and sensors and apply
-        filehandlers for data reading.
+        Build Networks and fill them with Stations and Sensors and apply
+        according filehandlers from filelist for data reading.
         """
         networks = OrderedDict([])
 
-        for idx, f in enumerate(self.__file_collection.iter_files(network_names)):
+        for f in self.__file_collection.iter_filehandlers(network_names):
 
             nw_name, st_name, instrument = f.metadata['network'].val, \
                                            f.metadata['station'].val, \
@@ -118,23 +119,21 @@ class ISMN_Interface():
                                               f.metadata['elevation'].val)
 
             # the senor name is the index in the list
-            if idx not in networks[nw_name].stations[st_name].sensors:
-                networks[nw_name].stations[st_name]. \
-                    add_sensor(instrument,
-                               f.metadata['variable'].val,
-                               f.metadata['variable'].depth,
-                               filehandler=f, # todo: remove station meta from sensor
-                               name=idx,
-                               keep_loaded_data=self.keep_loaded_data)
+            networks[nw_name].stations[st_name]. \
+                add_sensor(instrument,
+                           f.metadata['variable'].val,
+                           f.metadata['variable'].depth,
+                           filehandler=f, # todo: remove station meta from sensor
+                           name=None,
+                           keep_loaded_data=self.keep_loaded_data)
 
         return list(networks.values()) # , grid
 
     def __repr__(self):
-        indent = 2
-        return f"root:\n" \
-               f"{' '* indent}{self.root}\n" + \
-               f"-" * (len(str(self.root)) + indent) + "\n" \
-               f"networks:\n{self.collection.__repr__(indent)}"
+        return f"{self.root}\n" \
+               f"with Networks[Stations]:\n" \
+               f"------------------------\n" \
+               f"{self.collection.__repr__('  ')}"
 
     @property
     def networks(self):
@@ -221,41 +220,44 @@ class ISMN_Interface():
         else:
             return network_with_station[0]
 
-    def stations_that_measure(self, variable, **eval_kwargs):
+    def stations_that_measure(self, variable, **filter_kwargs):
         """
         Goes through all stations and returns those that measure the specified
         variable
 
         Parameters
         ----------
-        variable : string
-            variable name
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
+        variable : str
+            variable name, one of:
+                * 'soil_moisture',
+                * 'soil_temperature',
+                * 'soil_suction',
                 * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
+                * 'air_temperature',
+                * 'field_capacity',
+                * 'permanent_wilting_point',
+                * 'plant_available_water',
+                * 'potential_plant_available_water',
                 * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
+                * 'silt_fraction',
+                * 'snow_depth',
+                * 'sand_fraction',
+                * 'clay_fraction',
+                * 'organic_carbon',
+                * 'snow_water_equivalent',
+                * 'surface_temperature',
+                * 'surface_temperature_quality_flag_original'
+        filter_kwargs :
+            Parameters are used to check all sensors at all stations, only stations
+            that have at least one matching sensor are returned.
+            For a description of possible filter kwargs, see Sensor.eval() function
 
         Yields
         -------
         ISMN_station : Station
         """
-        for network in self.networks.values(): # type: Network
-            for station in network.iter_stations(variable, **eval_kwargs):
+        for network in self.networks.values():
+            for station in network.iter_stations(variable=variable, **filter_kwargs):
                 yield station
 
     def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
@@ -285,15 +287,14 @@ class ISMN_Interface():
 
         depth = Depth(min_depth, max_depth)
         for _, _, sensor in self.collection.iter_sensors(
-                variable=variable, depth=depth,
-                filter_meta_dict=filter_meta_dict,
-                check_only_sensor_depth_from=check_only_sensor_depth_from):
+            variable=variable, depth=depth,
+            filter_meta_dict=filter_meta_dict,
+            check_only_sensor_depth_from=check_only_sensor_depth_from):
             ids.append(sensor.name)
 
         return ids
 
-    def read_ts(self, idx):# todo: load data?
-        # todo: rename data column from variable to e.g. soil_moisture?
+    def read_ts(self, idx):
         """
         Read a time series directly by the id
 
@@ -307,10 +308,7 @@ class ISMN_Interface():
         timeseries : pandas.DataFrame
             of the read data
         """
-        station = self.collection.station4idx(idx)
-        for se in station.iter_sensors():
-            if se.name == idx:
-                return se.read_data()
+        return self.__file_collection.get_filehandler(idx).read_data()
 
     def read(self, *args, **kwargs):
         # calls read_ts
@@ -341,12 +339,12 @@ class ISMN_Interface():
         """
         # todo: fix bug in pygeogrids that leads to always np.inf as max dist
         # what happens if there is no point within max dist if that works?
-        idx, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
+        gpi, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
 
-        if idx is None: # todo: not sure what this looks like when pygeogrids is fixed.
+        if gpi is None: # todo: not sure what this looks like when pygeogrids is fixed.
             stat = None
         else:
-            stat = self.collection.station4idx(idx)
+            stat = self.collection.station4gpi(gpi)
 
         if return_distance:
             return stat, d
@@ -623,7 +621,6 @@ class ISMN_Interface():
 
         return all_vars
 
-
     def print_landcover_dict(self):
         """
         print all classes provided by the CCI Landcover Classification
@@ -644,13 +641,17 @@ class ISMN_Interface():
         for key in self.climate.keys():
             print('{:4}: {}'.format(key, self.climate[key]))
 
+    def close_files(self):
+        # close all open filehandlers
+        self.__file_collection.close()
 
 
 if __name__ == '__main__':
-    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212_5712_zm79_20201212"
+    path = r"D:\data-read\ISMN\global_20191024"
     ds = ISMN_Interface(path)
-
-    ds.plot_station_locations()
+    #ids = ds.get_dataset_ids('air_temperature')
+    #ds.read_ts(20)
+    # ds.plot_station_locations()
     # mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
     # ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
     # # ds.plot_station_locations('soil_moisture', 0., 0.1, filename="/home/wolfgang/data-write/temp/plot.png")

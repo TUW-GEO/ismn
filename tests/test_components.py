@@ -50,19 +50,19 @@ class NetCollTest(unittest.TestCase):
         net2.stations['station_2_1'].add_sensor('sens_2_1_1', 'var1', Depth(0.5, 1), None)
         net2.stations['station_2_1'].add_sensor('sens_2_1_2', 'var1', Depth(1 ,2), None)
 
-        self.collection = NetworkCollection([net1, net2])
+        self.netcol = NetworkCollection([net1, net2])
 
     def test_grid(self):
-        assert self.collection.grid.gpi2lonlat(0) == (0, 0)
-        assert self.collection.grid.gpi2lonlat(1) == (1, 1)
+        assert self.netcol.grid.gpi2lonlat(0) == (0, 0)
+        assert self.netcol.grid.gpi2lonlat(1) == (1, 1)
 
     def test_station4idx(self):
-        assert self.collection.station4idx(0).name == 'station_1_1'
-        assert self.collection.station4idx(1).name == 'station_2_1'
+        assert self.netcol.station4gpi(0).name == 'station_1_1'
+        assert self.netcol.station4gpi(1).name == 'station_2_1'
 
     def test_get_nearest_station(self):
-        assert self.collection.get_nearest_station(0.1,0.1)[0].name == 'station_1_1'
-        assert self.collection.get_nearest_station(1,1)[0].name == 'station_2_1'
+        assert self.netcol.get_nearest_station(0.1,0.1)[0].name == 'station_1_1'
+        assert self.netcol.get_nearest_station(1,1)[0].name == 'station_2_1'
 
 class NetworkTest(unittest.TestCase):
 
@@ -99,18 +99,18 @@ class NetworkTest(unittest.TestCase):
         self.network.add_station('station1', 0, 0, 0)
         self.network.add_station('station2', 0, 0, 0)
 
-        assert self.network.n_stations() == 2
+        assert self.network.n_stations == 2
 
         self.network.remove_station('station2')
 
-        assert self.network.n_stations() == 1
+        assert self.network.n_stations == 1
 
     def test_iter_stations(self):
         self.network.add_station('station1', 0, 0, 0)
         self.network.stations['station1'].add_sensor('sens1', 'var1', Depth(0.5, 1), None)
         self.network.stations['station1'].add_sensor('sens2', 'var1', Depth(1 ,2), None)
 
-        for s in self.network.iter_stations('var1', Depth(0 ,1)):
+        for s in self.network.iter_stations(variable='var1', depth=Depth(0 ,1)):
             # sensor 1 applies to conditions, therefore station is found.
             assert s.name == 'station1'
 
@@ -118,7 +118,7 @@ class NetworkTest(unittest.TestCase):
         self.network.stations['station2'].add_sensor('sens1', 'var1', Depth(0 ,1), None)
         self.network.stations['station2'].add_sensor('sens2', 'var2', Depth(1 ,2), None)
 
-        for s in self.network.iter_stations('var1', Depth(0 ,0.5)):
+        for s in self.network.iter_stations(variable='var1', depth=Depth(0 ,0.5)):
             raise ValueError("Found station but shouldn't ...") # this should never be reached
 
 class StationTest(unittest.TestCase):
@@ -135,7 +135,6 @@ class StationTest(unittest.TestCase):
         se_name = '{}_{}_{:1.6f}_{:1.6f}'.format(
             name, variable, d.start, d.end)
 
-
         self.station.add_sensor(name, variable, d, None)
 
         assert self.station.sensors[se_name].variable == 'sm'
@@ -146,7 +145,7 @@ class StationTest(unittest.TestCase):
 
         self.station.add_sensor(name, variable, d, None)
 
-        assert self.station.n_sensors() == 2
+        assert self.station.n_sensors == 2
 
     def test_add_sensor(self):
         """
@@ -157,7 +156,7 @@ class StationTest(unittest.TestCase):
         variable = 'sm'
 
         self.station.add_sensor(name, variable, d, None)
-        assert self.station.n_sensors() == 3
+        assert self.station.n_sensors == 3
 
     def test_get_variables(self):
         """
@@ -175,7 +174,7 @@ class StationTest(unittest.TestCase):
         """
         Test if sensor1 one is found when iteration over all sensors in 0-0.05 m.
         """
-        for sen in self.station.iter_sensors('sm', Depth(0, 0.05),
+        for sen in self.station.iter_sensors(variable='sm', depth=Depth(0, 0.05),
                                              check_only_sensor_depth_from=False):
             assert sen.name == 'sensor1_sm_0.000000_0.050000'
 
@@ -183,11 +182,19 @@ class StationTest(unittest.TestCase):
         """
         Test removing sensors.
         """
-        assert self.station.n_sensors() == 2
+        assert self.station.n_sensors == 2
 
         self.station.remove_sensor('sensor2_sm2_0.000000_0.100000')
 
-        assert self.station.n_sensors() == 1
+        assert self.station.n_sensors == 1
+
+    def test_get_sensors(self):
+        variable, depth = 'soil_moisture', Depth(0, 0.05)
+        sensors = self.station.get_sensors(variable, depth_from=depth.start,
+                                           depth_to=depth.end)
+        assert len(sensors) == len([s for s in self.station.iter_sensors(variable=variable,
+                                                                         depth=depth)])
+
 
 
 class SensorTest(unittest.TestCase):

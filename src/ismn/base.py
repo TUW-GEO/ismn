@@ -9,7 +9,6 @@ import warnings
 from pathlib import Path, PurePosixPath
 from typing import Union
 
-
 def zip(func):
     def wrapper(cls, *args, **kwargs):
         if not cls.zip:
@@ -18,7 +17,6 @@ def zip(func):
 
     return wrapper
 
-
 def dir(func):
     def wrapper(cls, *args, **kwargs):
         if cls.zip:
@@ -26,7 +24,6 @@ def dir(func):
         return func(cls, *args, **kwargs)
 
     return wrapper
-
 
 class IsmnRoot():
 

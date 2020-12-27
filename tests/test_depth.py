@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from ismn.tables import *
+from ismn.const import *
 from ismn.meta import Depth
 
 class DepthTest(unittest.TestCase):
@@ -11,6 +11,20 @@ class DepthTest(unittest.TestCase):
         Setup test data.
         """
         self.d = Depth(0, 0.05)
+        assert str(self.d) == '0.0 to 0.05 [m]'
+        assert tuple(self.d) == (0.0, 0.05)
+
+    def test_neg_depth(self):
+        other = Depth(0., -0.05)
+        assert str(other) == '0.0 to -0.05 [m]'
+
+        assert self.d != other
+        assert other.encloses(self.d) == False
+        assert other.enclosed(self.d) == False
+        assert self.d.across0 == other.across0 == False
+        assert self.d.is_profile == other.is_profile == True
+
+        assert other.perc_overlap(self.d) == 0.
 
     def test_attributes(self):
         """

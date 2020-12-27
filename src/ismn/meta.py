@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Optional, List, Any, Union
 import pandas as pd
-from ismn.tables import *
+from ismn.const import *
 
 """
 TODO:
@@ -93,7 +93,7 @@ class Depth():
         for d in [self.start, self.end]:
             yield d
 
-    def __temp_pos_depths(self, other=None):
+    def __temp_pos_depths(self, other=None) -> ('Depth', 'Depth' or None):
         # Create temporary depths that are shifted to positive
 
         shift = min([self.end, other.end] +
@@ -129,7 +129,7 @@ class Depth():
         Parameters
         ----------
         other : Depth
-            Second depth
+            Second depth, overlap with this depth is calculated.
 
         Returns
         -------
@@ -160,7 +160,7 @@ class Depth():
     def overlap(self, other, return_perc=False):
         """
         Check if two depths overlap, (if the start of one depth is the same as
-        the end of the other, they overlap,
+        the end of the other, they would also overlap),
         e.g. Depth(0, 0.1) and Depth(0.1, 0.2) do overlap.
 
         Parameters

@@ -2,21 +2,32 @@
 
 import numpy as np
 from collections import OrderedDict
+import functools
+import warnings
+
+def deprecated(func):
+    # mark func as deprecated (warn when used)
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn(f"Function {func.__name__} is deprecated and will be removed soon.",
+                      category=DeprecationWarning,
+                      stacklevel=2)
+        warnings.simplefilter('default', DeprecationWarning)  # reset filter
+        return func(*args, **kwargs)
+    return new_func
 
 class MetadataError(IOError):
     pass
 
-
 class ISMNError(Exception):
     pass
-
 
 class IsmnFileError(IOError):
     pass
 
 class DepthError(ValueError):
     pass
-
 
 # ==============================================================================
 # Variable short names

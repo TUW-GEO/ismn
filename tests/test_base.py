@@ -18,7 +18,7 @@ def test_root_dir():
 
     root.close()
 
-    assert root.isopen == True # dir is always open
+    assert root.isopen # dir is always open
 
 
 def test_root_zip():
@@ -33,7 +33,7 @@ def test_root_zip():
 
     root.close()
 
-    assert root.isopen == False
+    assert not root.isopen
 
 
 

@@ -52,8 +52,8 @@ class Test_NetworkCollectionCeopSepUnzipped(unittest.TestCase):
         assert station.name == 'ARM-1'
         assert len(station.sensors) == 1
 
-        station = self.netcol.station4idx(1)
-        assert station.name == 'Barrow-ARM'
+        station = self.netcol.station4idx([0, 1])
+        assert station[1].name == 'Barrow-ARM'
         assert len(station.sensors) == 1
 
     def test_get_dataset_ids(self):

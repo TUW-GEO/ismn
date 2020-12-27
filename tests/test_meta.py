@@ -14,6 +14,11 @@ class Test_MetaVar(unittest.TestCase):
         assert tuple(var) == ('myvar', 1.1, 0, 1)
         assert var == var
 
+        nvar = MetaVar('negmyvar', 1.1, Depth(0, -1))
+        assert str(nvar) == "negmyvar (0.0 to -1.0 [m]): 1.1"
+        assert tuple(nvar) == ('negmyvar', 1.1, -0, -1)
+        assert nvar != var
+
         other = MetaVar('other', 99)
         assert str(other) == "other (no depth): 99"
         assert tuple(other) == ('other', 99, None, None)

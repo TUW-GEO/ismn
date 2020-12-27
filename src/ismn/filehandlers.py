@@ -24,8 +24,8 @@ import os
 import pandas as pd
 from ismn.base import IsmnRoot
 from ismn.components import *
-from ismn import tables
-from ismn.tables import IsmnFileError
+from ismn import const
+from ismn.const import IsmnFileError
 from ismn.meta import MetaVar, MetaData
 
 from tempfile import gettempdir, TemporaryDirectory
@@ -98,7 +98,7 @@ class IsmnFile(object):
             Whether the metadata complies with the passed conditions or not.
         """
 
-        lc_cl = list(tables.CSV_META_TEMPLATE.keys())
+        lc_cl = list(const.CSV_META_TEMPLATE.keys())
 
         if variable:
             if not (self.metadata['variable'].val == variable):
@@ -207,7 +207,7 @@ class StaticMetaFile(IsmnFile):
             logging.info('no header: {}'.format(csvfile))
             data = pd.read_csv(csvfile, delimiter=";", header=None)
             cols = list(data.columns)
-            cols[:len(tables.CSV_COLS)] = tables.CSV_COLS  # todo: not safe
+            cols[:len(const.CSV_COLS)] = const.CSV_COLS  # todo: not safe
             data.columns = cols
             data.set_index('quantity_name', inplace=True)
 
@@ -233,13 +233,13 @@ class StaticMetaFile(IsmnFile):
         # read landcover classifications
         lc = data.loc[['land cover classification']][['value', 'quantity_source_name']]
 
-        lc_dict = {'CCI_landcover_2000': tables.CSV_META_TEMPLATE['lc_2000'],
-                   'CCI_landcover_2005': tables.CSV_META_TEMPLATE['lc_2005'],
-                   'CCI_landcover_2010': tables.CSV_META_TEMPLATE['lc_2010'],
-                   'insitu': tables.CSV_META_TEMPLATE['lc_insitu']}
+        lc_dict = {'CCI_landcover_2000': const.CSV_META_TEMPLATE['lc_2000'],
+                   'CCI_landcover_2005': const.CSV_META_TEMPLATE['lc_2005'],
+                   'CCI_landcover_2010': const.CSV_META_TEMPLATE['lc_2010'],
+                   'insitu': const.CSV_META_TEMPLATE['lc_insitu']}
 
-        cl_dict = {'koeppen_geiger_2007': tables.CSV_META_TEMPLATE['climate_KG'],
-                   'insitu': tables.CSV_META_TEMPLATE['climate_insitu']}
+        cl_dict = {'koeppen_geiger_2007': const.CSV_META_TEMPLATE['climate_KG'],
+                   'insitu': const.CSV_META_TEMPLATE['climate_insitu']}
 
         for key in lc_dict.keys():
             if key in lc['quantity_source_name'].values:
@@ -271,17 +271,17 @@ class StaticMetaFile(IsmnFile):
 
         static_meta = {
             'saturation': self._read_field(data, 'saturation'),
-            'clay_fraction': self._read_field(data, 'clay fraction', tables.VARIABLE_LUT['cl_h']),
-            'sand_fraction': self._read_field(data, 'sand fraction', tables.VARIABLE_LUT['sa_h']),
-            'silt_fraction': self._read_field(data, 'silt fraction', tables.VARIABLE_LUT['si_h']),
-            'organic_carbon': self._read_field(data, 'organic carbon', tables.VARIABLE_LUT['oc_h']),
+            'clay_fraction': self._read_field(data, 'clay fraction', const.VARIABLE_LUT['cl_h']),
+            'sand_fraction': self._read_field(data, 'sand fraction', const.VARIABLE_LUT['sa_h']),
+            'silt_fraction': self._read_field(data, 'silt fraction', const.VARIABLE_LUT['si_h']),
+            'organic_carbon': self._read_field(data, 'organic carbon', const.VARIABLE_LUT['oc_h']),
         }
 
         for name, vars in static_meta.items():
             if len(vars) > 0:
                 metavars += vars
             else:
-                metavars.append(MetaVar(name, tables.CSV_META_TEMPLATE[name]))
+                metavars.append(MetaVar(name, const.CSV_META_TEMPLATE[name]))
 
         metadata = MetaData(metavars)
 
@@ -396,8 +396,8 @@ class DataFile(IsmnFile):
         else:
             instr = fname[6]
 
-        if fname[3] in tables.VARIABLE_LUT:
-            variable = tables.VARIABLE_LUT[fname[3]]
+        if fname[3] in const.VARIABLE_LUT:
+            variable = const.VARIABLE_LUT[fname[3]]
         else:
             variable = fname[3]
 
@@ -448,8 +448,8 @@ class DataFile(IsmnFile):
         else:
             instrument = fname[6]
 
-        if fname[3] in tables.VARIABLE_LUT:
-            variable = tables.VARIABLE_LUT[fname[3]]
+        if fname[3] in const.VARIABLE_LUT:
+            variable = const.VARIABLE_LUT[fname[3]]
         else:
             variable = fname[3]
 

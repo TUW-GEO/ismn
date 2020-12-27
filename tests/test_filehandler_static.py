@@ -12,7 +12,7 @@ from ismn.components import Depth
 from ismn.filehandlers import StaticMetaFile
 from pathlib import Path
 
-from ismn.tables import CSV_META_TEMPLATE
+from ismn.const import CSV_META_TEMPLATE
 
 testdata_path = Path(os.path.join(os.path.dirname(__file__), 'test_data'))
 

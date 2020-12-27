@@ -30,6 +30,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         self.ds = ISMN_Interface(self.testdata)
 
     def tearDown(self) -> None:
+        self.ds.close_files()
         logging.shutdown()
 
     def test_list(self):
@@ -50,15 +51,18 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
             raise AssertionError("Found var that doesnt exist")
 
     def test_get_dataset_ids(self):
+        sensors_in_testdata = ['Cosmic-ray-Probe_soil_moisture_0.000000_0.190000',
+                               'Cosmic-ray-Probe_soil_moisture_0.000000_0.210000']
+
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=100)
-        assert ids == [0,1]
+        assert ids == sensors_in_testdata
 
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=0.19)
-        assert ids == [0]
+        assert ids == [sensors_in_testdata[0]]
 
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=99,
                                       filter_meta_dict={'lc_2010': 210})
-        assert ids == [1]
+        assert ids == [sensors_in_testdata[1]]
 
         ids = self.ds.get_dataset_ids('novar')
         assert len(ids) == 0
@@ -102,6 +106,12 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
 
     def test_get_min_max_obs_timestamps(self):
         tmin, tmax = self.ds.get_min_max_obs_timestamps('soil_moisture', max_depth=0.19)
+        assert tmin == datetime(2017, 8, 10, 0)
+        assert tmax == datetime(2018, 8, 9, 23)
+
+    def test_get_min_max_obs_timestamps_for_station(self):
+        station = self.ds.collection.networks['COSMOS'].stations['ARM-1']
+        tmin, tmax = station.get_min_max_obs_timestamp('soil_moisture', 0, 0.19)
         assert tmin == datetime(2017, 8, 10, 0)
         assert tmax == datetime(2018, 8, 9, 23)
 

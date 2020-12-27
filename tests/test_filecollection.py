@@ -12,7 +12,6 @@ import pytest
 from tempfile import TemporaryDirectory
 
 from pathlib import Path
-import numpy as np
 from ismn.filecollection import IsmnFileCollection
 
 testdata_root = os.path.join(os.path.dirname(__file__), 'test_data')
@@ -45,13 +44,13 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
     def test_filelist(self):
         # cecks content of file collection
 
-        assert list(self.coll.files.keys()) == ['COSMOS']
+        assert list(self.coll.filelist.keys()) == ['COSMOS']
 
-        files = [f for f in self.coll.iter_files()]
+        files = [f for f in self.coll.iter_filehandlers()]
 
         assert Path(files[1].file_path).parts == \
                ("COSMOS", "Barrow-ARM",
-                    "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
+                "COSMOS_COSMOS_Barrow-ARM_sm_0.000000_0.210000_Cosmic-ray-Probe_20170810_20180809.stm")
 
         assert files[1].metadata['instrument'].val == 'Cosmic-ray-Probe'
         assert files[1].metadata['variable'].val == 'soil_moisture'
@@ -74,7 +73,6 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
         assert files[1].metadata['variable'].val in data.columns
         assert len(data.index) == 7059
 
-
     def test_from_csv(self):
         # test alternative method to build collection, should get same result
         print('Setup from csv')
@@ -85,7 +83,7 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
             other = IsmnFileCollection.from_metadata_csv(
                 self.coll.root.path, os.path.join(temp, 'meta.csv'))
 
-        for thisfile, otherfile in zip(self.coll.iter_files(), other.iter_files()):
+        for thisfile, otherfile in zip(self.coll.iter_filehandlers(), other.iter_filehandlers()):
             assert thisfile.file_path == otherfile.file_path, "Paths dont match"
             assert thisfile.root.path == otherfile.root.path, "Paths dont match"
             assert thisfile.metadata == otherfile.metadata, "Meta dont match"
