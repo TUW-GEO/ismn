@@ -610,6 +610,7 @@ class NetworkCollection(IsmnComponent):
                            for net in self.networks.values()])
 
     def __getitem__(self, item:Union[int,str]):
+        # shortcut to access networks directly
         if isinstance(item, int):
             item = list(self.networks.keys())[item]
         return self.networks[item]

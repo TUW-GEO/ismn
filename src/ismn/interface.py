@@ -354,7 +354,7 @@ class ISMN_Interface():
     def plot_station_locations(self, variable=None, min_depth=-np.inf,
                                max_depth=np.inf, stats_text=True,
                                check_only_sensor_depth_from=False,
-                               markersize=1, filename=None):
+                               markersize=1, filename=None, ax=None):
         # TODO: optionally indicate sensor count for each station in map directly (symbol, number)?
         # TODO: fix similar colors for different networks, e.g. using sybols?
         """
@@ -380,6 +380,8 @@ class ISMN_Interface():
             Size of the marker, might depend on the amount of stations you plot.
         filename : str or Path, optional (default: None)
             Filename where image is stored. If None is passed, no file is created.
+        ax : plt.axes
+            Axes object that can be used by cartopy (projection assigned).
 
         Returns
         -------
@@ -392,14 +394,21 @@ class ISMN_Interface():
             sensor and networks that contain at least one valid station.
         """
 
+        if filename and ax:
+            raise ValueError("Either pass a filename OR pass ax to use for plot, not both.")
+
         if not plotlibs:
             warnings.warn("Could not import all plotting libs, plotting functions not available.")
             return
 
         data_crs = ccrs.PlateCarree()
 
-        fig, ax = plt.subplots(1, 1)
-        ax = plt.axes(projection=ccrs.Robinson())
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax = plt.axes(projection=ccrs.Robinson())
+        else:
+            fig = None
+
         ax.coastlines(linewidth=0.5)
         # show global map
         ax.set_global()
@@ -409,53 +418,53 @@ class ISMN_Interface():
             colormap = plt.get_cmap('tab20')
         else:
             colormap = plt.get_cmap('Set1')
-        uniq_networks = list(self.networks.keys())
-        colorsteps = np.arange(0, 1, 1 / float(len(uniq_networks)))
+
+        all_networks = list(self.networks.keys())
+        colorsteps = np.arange(0, 1, 1 / float(len(all_networks)))
+
         rect = []
+        act_networks = []
+        act_stations = []
 
-        uniq_networks = []
-        counts = {'networks': 0, 'stations': 0, 'sensors': 0}
+        iterator = self.collection.iter_sensors(
+            variable=variable, depth=Depth(min_depth, max_depth),
+            filter_meta_dict=None,
+            check_only_sensor_depth_from=check_only_sensor_depth_from)
 
-        for j, (nw_name, nw) in enumerate(self.networks.items()):
-            netcolor = colormap(colorsteps[j])
-            station_count = 0
-            for station in nw.stations.values():
-                sensor_count = 0 # count number of valid sensors at station, indicate number in map?
-                for sensor in station.sensors.values():
-                    # could add filtering for other metadata here,
-                    # e.g. for landcover using the filter_meta_dict .. slow
-                    if sensor.eval(variable, depth=Depth(min_depth, max_depth),
-                                   filter_meta_dict=None,
-                                   check_only_sensor_depth_from=check_only_sensor_depth_from):
-                        sensor_count += 1
-                if sensor_count > 0:
-                    station_count += 1
-                    counts['sensors'] += sensor_count
-                    ax.plot(station.lon, station.lat, color=netcolor, markersize=markersize,
-                            marker='s', transform=data_crs)
-            if station_count > 0:
-                counts['networks'] += 1
-                counts['stations'] += station_count
-
-                uniq_networks.append(nw_name)
+        n_sens = 0
+        for nw, stat, sens in iterator:
+            netcolor = colormap(colorsteps[all_networks.index(nw.name)])
+            if nw.name not in act_networks:
+                act_networks.append(nw.name)
                 rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
 
-        nrows = 8. if len(uniq_networks) > 8 else len(uniq_networks)
+            if stat.name not in act_stations:
+                act_stations.append(stat.name)
+                ax.plot(stat.lon, stat.lat,
+                        color=netcolor,
+                        markersize=markersize, marker='s', transform=data_crs)
+            n_sens += 1
 
-        ncols = int(counts['networks'] / nrows)
+
+        nrows = 8. if len(act_networks) > 8 else len(act_networks)
+
+        try:
+            ncols = int(len(act_networks) / nrows)
+        except ZeroDivisionError:
+            ncols = 0
         if ncols == 0:
             ncols = 1
 
         handles, labels = ax.get_legend_handles_labels()
         lgd = ax.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.1))
 
-        plt.legend(rect, uniq_networks, loc='upper center', ncol=ncols,
+        ax.legend(rect, act_networks, loc='upper center', ncol=ncols,
                    bbox_to_anchor=(0.5, -0.05), fontsize=4)
 
         postfix_depth = "when only considering depth_from of the sensor" if check_only_sensor_depth_from else ''
-        depth_text =  f"between {min_depth} and {max_depth} m \n {postfix_depth}"
-        feedback = f"{counts['sensors']} valid sensors in {counts['stations']} stations " \
-                   f"in {counts['networks']} networks (of {len(list(self.networks.keys()))} potential networks) \n" \
+        depth_text = f"between {min_depth} and {max_depth} m \n {postfix_depth}"
+        feedback = f"{n_sens} valid sensors in {len(act_stations)} stations " \
+                   f"in {len(act_networks)} networks (of {len(all_networks)} potential networks) \n" \
                    f"for {f'variable {variable}' if variable is not None else 'all variables'} " \
                    f"{depth_text}"
 
@@ -465,12 +474,14 @@ class ISMN_Interface():
         else:
             text = None
 
-        fig.set_size_inches([6, 3.5 + 0.25 * nrows])
+        if fig:
+            fig.set_size_inches([6, 3.5 + 0.25 * nrows])
 
         if filename is not None:
             fig.savefig(filename, bbox_extra_artists=(lgd, text) if stats_text else (lgd),
                         dpi=300)
         else:
+            counts = (len(act_networks), len(act_stations), n_sens)
             return fig, ax, counts
 
     def get_min_max_obs_timestamps(self, variable="soil_moisture",
@@ -647,14 +658,15 @@ class ISMN_Interface():
 
 
 if __name__ == '__main__':
-    path = r"D:\data-read\ISMN\global_20191024"
+    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212"
     ds = ISMN_Interface(path)
+    ds.collection.networks['GROW'].stations['1jmz460j'].sensors['Flower-Power_air_temperature_-0.100000_-0.100000'].metadata
     #ids = ds.get_dataset_ids('air_temperature')
     #ds.read_ts(20)
     # ds.plot_station_locations()
     # mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
     # ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
-    # # ds.plot_station_locations('soil_moisture', 0., 0.1, filename="/home/wolfgang/data-write/temp/plot.png")
+    ds.plot_station_locations('soil_moisture', 0., 10, filename="/tmp/plot.png")
     # netname = ds.network_for_station('Villevielle')
     # ts = ds.read_ts(1)
     # print(ts)
