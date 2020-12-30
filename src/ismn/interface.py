@@ -160,10 +160,12 @@ class ISMN_Interface():
                     assert sens.keep_loaded_data == True
                     sens.read_data()
 
+    @deprecated
     def list_networks(self) -> np.array:
         # get network names from list of active files
         return np.array(list(self.networks.keys()))
 
+    @deprecated
     def list_stations(self, network=None) -> np.array:
         # get station names for one of the active networks
         if network is not None:
@@ -176,6 +178,7 @@ class ISMN_Interface():
                 stations += list(network.stations.keys())
             return np.array(stations)
 
+    @deprecated
     def list_sensors(self, network:str=None, station:str=None) -> np.array:
         # List sensors names for a specific sensor in an active network
         sensors = np.array([])
@@ -189,7 +192,7 @@ class ISMN_Interface():
 
         return sensors
 
-    def network_for_station(self, stationname):
+    def network_for_station(self, stationname, name_only=True):
         """
         Find networks that contain a station of the passed name.
 
@@ -197,20 +200,23 @@ class ISMN_Interface():
         ----------
         stationname : str
             Station name to search in the active networks.
+        name_only : bool, optional (default: False)
+            Returns only the name of the network and not the Network object.
 
         Returns
         -------
-        network_names : str or None
+        network_names : str or Network or None
             Network that contains a station of that name, or None if no such
             network exists.
             Prints are warning and uses the FIRST found network name if there
             are multiple stations with the same name in different networks.
+
         """
         network_with_station = []
 
         for network in self.networks.values():
             if stationname in network.stations.keys():
-                network_with_station.append(network.name)
+                network_with_station.append(network)
 
         if len(network_with_station) > 1:
            warnings.warn("stationname occurs in multiple networks")
@@ -218,7 +224,14 @@ class ISMN_Interface():
         if len(network_with_station) == 0:
             return None
         else:
-            return network_with_station[0]
+            nw = network_with_station[0]
+            if name_only:
+                warnings.warn("Future Versions of the package will always return the Network object (same as name_only=False now). "
+                              "You can use Network.name to get the name of a network.",
+                               category=DeprecationWarning)
+                return nw.name
+            else:
+                return nw
 
     def stations_that_measure(self, variable, **filter_kwargs):
         """
@@ -264,7 +277,8 @@ class ISMN_Interface():
                         filter_meta_dict=None, check_only_sensor_depth_from=False):
         """
         Yield all sensors for a specific network and/or station and/or
-        variable and/or depth.
+        variable and/or depth. The id is defined by the position of the filehandler
+        in the filelist.
 
         Parameters
         ----------
@@ -286,15 +300,20 @@ class ISMN_Interface():
         ids = []
 
         depth = Depth(min_depth, max_depth)
-        for _, _, sensor in self.collection.iter_sensors(
-            variable=variable, depth=depth,
-            filter_meta_dict=filter_meta_dict,
-            check_only_sensor_depth_from=check_only_sensor_depth_from):
-            ids.append(sensor.name)
+
+        for id, filehandler in enumerate(self.__file_collection.iter_filehandlers()):
+            eval = filehandler.check_metadata(
+                variable=variable,
+                allowed_depth=depth,
+                filter_meta_dict=filter_meta_dict,
+                check_only_sensor_depth_from=check_only_sensor_depth_from)
+
+            if eval:
+                ids.append(id)
 
         return ids
 
-    def read_ts(self, idx):
+    def read_ts(self, idx, return_meta=False):
         """
         Read a time series directly by the id
 
@@ -303,12 +322,23 @@ class ISMN_Interface():
         idx : int
             id into self.metadata, best one of those returned
             from get_dataset_ids()
+        return_meta : bool, optional (default: False)
+            Also return the metadata for the sensor that is read.
+
         Returns
         -------
-        timeseries : pandas.DataFrame
-            of the read data
+        timeseries : pd.DataFrame
+            Observation time series
+        metadata : dict, optional
+            {name : (value, depth_from, depth_to), ...}
+            All available metadata for that sensor.
         """
-        return self.__file_collection.get_filehandler(idx).read_data()
+
+        filehandler = self.__file_collection.get_filehandler(idx)
+        if return_meta:
+            return filehandler.read_data(), filehandler.metadata.to_dict()
+        else:
+            return filehandler.read_data()
 
     def read(self, *args, **kwargs):
         # calls read_ts
@@ -617,12 +647,12 @@ class ISMN_Interface():
 
     def get_variables(self):
         """
-         get a list of variables available for the data
+        get a list of variables available for the data
 
-         Returns
-         -------
-         variables : numpy.array
-             array of variables available for the data
+        Returns
+        -------
+        variables : numpy.array
+            array of variables available for the data
         """
         all_vars = np.array([])
         for _, station in self.collection.iter_stations():
@@ -660,13 +690,20 @@ class ISMN_Interface():
 if __name__ == '__main__':
     path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212"
     ds = ISMN_Interface(path)
-    ds.collection.networks['GROW'].stations['1jmz460j'].sensors['Flower-Power_air_temperature_-0.100000_-0.100000'].metadata
+    ids = ds.get_dataset_ids('soil_moisture', max_depth=99,
+                             filter_meta_dict={'network': 'BIEBRZA-S-1',
+                                               'station': 'marshland-soil-25'})
+
+    ts, meta = ds.read_ts(idx=157, return_meta=True)
+    ts.plot()
+
+    #ds.collection.networks['GROW'].stations['1jmz460j'].sensors['Flower-Power_air_temperature_-0.100000_-0.100000'].metadata
     #ids = ds.get_dataset_ids('air_temperature')
     #ds.read_ts(20)
     # ds.plot_station_locations()
     # mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
     # ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
-    ds.plot_station_locations('soil_moisture', 0., 10, filename="/tmp/plot.png")
+    #ds.plot_station_locations('soil_moisture', 0., 10, filename="/tmp/plot.png")
     # netname = ds.network_for_station('Villevielle')
     # ts = ds.read_ts(1)
     # print(ts)

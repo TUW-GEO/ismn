@@ -176,7 +176,8 @@ class Sensor(IsmnComponent):
                 # checks also if the metadata in file matches
                 flag = self.filehandler.check_metadata(
                     variable, allowed_depth=depth,
-                    filter_meta_dict=filter_meta_dict)
+                    filter_meta_dict=filter_meta_dict,
+                    check_only_sensor_depth_from=check_only_sensor_depth_from)
 
         return flag
 

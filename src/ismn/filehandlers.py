@@ -77,7 +77,7 @@ class IsmnFile(object):
 
 
     def check_metadata(self, variable=None, allowed_depth=None,
-                       filter_meta_dict=None) -> bool:
+                       filter_meta_dict=None, check_only_sensor_depth_from=False) -> bool:
         """
         Evaluate whether the file complies with the passed metadata requirements
 
@@ -91,14 +91,15 @@ class IsmnFile(object):
         filter_meta_dict: dict, optional (default: None)
             Additional metadata keys and values for which the file list is filtered
             e.g. {'station': 'stationname'} to filter for a station name.
+        check_only_sensor_depth_from : bool, optional (default: False)
+            Ignores the sensors depth_to value and only checks if depth_from of
+            the sensor is in the passed depth (e.g. for cosmic ray probes).
 
         Returns
         -------
         valid : bool
             Whether the metadata complies with the passed conditions or not.
         """
-
-        lc_cl = list(const.CSV_META_TEMPLATE.keys())
 
         if variable:
             if not (self.metadata['variable'].val == variable):
@@ -109,6 +110,9 @@ class IsmnFile(object):
                 sensor_depth = self.metadata['instrument'].depth
             except AttributeError:
                 sensor_depth = self.metadata['variable'].depth
+
+            if check_only_sensor_depth_from:
+                sensor_depth = Depth(sensor_depth.start, sensor_depth.start)
 
             if not allowed_depth.encloses(sensor_depth):
                 return False

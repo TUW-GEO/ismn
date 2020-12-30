@@ -402,6 +402,25 @@ class MetaData():
                 vars.append(MetaVar(k, *v))
         return cls(vars)
 
+    def to_dict(self):
+        """
+        Convert metadata to dictionary.
+
+        Returns
+        -------
+        meta : dict
+            Variable name as key, value and depth as values
+        """
+        d = {}
+        for var in self.metadata:
+            dat = tuple(var)
+            name = dat[0]
+            if name not in d.keys():
+                d[name] = []
+            d[name].append(dat[1:])
+        return d
+
+
     def to_pd(self, transpose=False, dropna=True):
         """
         Convert metadata to a pandas DataFrame.
@@ -541,10 +560,6 @@ class MetaData():
 
 
 if __name__ == '__main__':
-    d1 = Depth(0.1, -0.2)
-    d2 = Depth(-0.1, -0.3)
-
-    p = d1.perc_overlap(d2)
 
     var11 = MetaVar('station', 'bla1')
     var12 = MetaVar('station', 'bla2')
