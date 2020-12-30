@@ -51,18 +51,17 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
             raise AssertionError("Found var that doesnt exist")
 
     def test_get_dataset_ids(self):
-        sensors_in_testdata = ['Cosmic-ray-Probe_soil_moisture_0.000000_0.190000',
-                               'Cosmic-ray-Probe_soil_moisture_0.000000_0.210000']
-
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=100)
-        assert ids == sensors_in_testdata
+        assert ids == [0,1]
 
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=0.19)
-        assert ids == [sensors_in_testdata[0]]
+        assert ids == [0]
 
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=99,
-                                      filter_meta_dict={'lc_2010': 210})
-        assert ids == [sensors_in_testdata[1]]
+                                      filter_meta_dict={'lc_2010': 210,
+                                                        'network': 'COSMOS',
+                                                        'station': 'Barrow-ARM'})
+        assert ids == [1]
 
         ids = self.ds.get_dataset_ids('novar')
         assert len(ids) == 0

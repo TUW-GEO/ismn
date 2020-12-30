@@ -36,7 +36,17 @@ class Test_MetaData(unittest.TestCase):
 
         self.other = MetaData([MetaVar('dup', '3rd', Depth(2,4)),
                                MetaVar('4', 4)])
-        
+
+    def test_format(self):
+        df = self.dat.to_pd()
+        assert df['first', 'val'] == 1
+        assert df['neg', 'depth_from'] == -0.25
+        assert df['dup', 'depth_to'] == 3
+        ddict = self.dat.to_dict()
+        assert ddict['dup'] == [('3rd', 1, 3)]
+        assert ddict['second'] == [(0, None, None)]
+
+
     def test_MetaData(self):
         assert len(self.dat) == 4
         assert 'second' in self.dat
