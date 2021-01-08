@@ -4,7 +4,7 @@
 # For more information see:
 # https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: build
+name: Build package and run tests
 
 on:
   push:
@@ -41,6 +41,17 @@ jobs:
           pip list
           which pip
           which python
+      - name: Export Environment
+        shell: bash -l {0}
+        run: |
+          mkdir -p .artifacts
+          filename=env_py${{ matrix.python-version }}_${{ matrix.os }}.yml
+          conda env export --no-builds | grep -v "prefix" > .artifacts/$filename
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: os_py_environments
+          path: .artifacts/*
       - name: Install package and test
         shell: bash -l {0}
         run: |
