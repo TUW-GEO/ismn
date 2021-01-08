@@ -14,11 +14,14 @@ from ismn.base import IsmnRoot
 try:
     import cartopy.crs as ccrs
     import cartopy.feature as cfeature
+
     if platform.system() == 'Darwin':
-          import matplotlib
-          matplotlib.use("TkAgg")
+        import matplotlib
+
+        matplotlib.use("TkAgg")
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
+
     plotlibs = True
 except ImportError:
     plotlibs = False
@@ -123,11 +126,11 @@ class ISMN_Interface():
                 add_sensor(instrument,
                            f.metadata['variable'].val,
                            f.metadata['variable'].depth,
-                           filehandler=f, # todo: remove station meta from sensor
+                           filehandler=f,  # todo: remove station meta from sensor
                            name=None,
                            keep_loaded_data=self.keep_loaded_data)
 
-        return list(networks.values()) # , grid
+        return list(networks.values())  # , grid
 
     def __repr__(self):
         return f"{self.root}\n" \
@@ -179,7 +182,7 @@ class ISMN_Interface():
             return np.array(stations)
 
     @deprecated
-    def list_sensors(self, network:str=None, station:str=None) -> np.array:
+    def list_sensors(self, network: str = None, station: str = None) -> np.array:
         # List sensors names for a specific sensor in an active network
         sensors = np.array([])
         for net in self.networks.values():
@@ -219,16 +222,17 @@ class ISMN_Interface():
                 network_with_station.append(network)
 
         if len(network_with_station) > 1:
-           warnings.warn("stationname occurs in multiple networks")
+            warnings.warn("stationname occurs in multiple networks")
 
         if len(network_with_station) == 0:
             return None
         else:
             nw = network_with_station[0]
             if name_only:
-                warnings.warn("Future Versions of the package will always return the Network object (same as name_only=False now). "
-                              "You can use Network.name to get the name of a network.",
-                               category=DeprecationWarning)
+                warnings.warn(
+                    "Future Versions of the package will always return the Network object (same as name_only=False now). "
+                    "You can use Network.name to get the name of a network.",
+                    category=DeprecationWarning)
                 return nw.name
             else:
                 return nw
@@ -371,7 +375,7 @@ class ISMN_Interface():
         # what happens if there is no point within max dist if that works?
         gpi, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
 
-        if gpi is None: # todo: not sure what this looks like when pygeogrids is fixed.
+        if gpi is None:  # todo: not sure what this looks like when pygeogrids is fixed.
             stat = None
         else:
             stat = self.collection.station4gpi(gpi)
@@ -475,7 +479,6 @@ class ISMN_Interface():
                         markersize=markersize, marker='s', transform=data_crs)
             n_sens += 1
 
-
         nrows = 8. if len(act_networks) > 8 else len(act_networks)
 
         try:
@@ -489,7 +492,7 @@ class ISMN_Interface():
         lgd = ax.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.1))
 
         ax.legend(rect, act_networks, loc='upper center', ncol=ncols,
-                   bbox_to_anchor=(0.5, -0.05), fontsize=4)
+                  bbox_to_anchor=(0.5, -0.05), fontsize=4)
 
         postfix_depth = "when only considering depth_from of the sensor" if check_only_sensor_depth_from else ''
         depth_text = f"between {min_depth} and {max_depth} m \n {postfix_depth}"
@@ -557,7 +560,7 @@ class ISMN_Interface():
         t_max = None
 
         for net, stat, sens in self.collection.iter_sensors(
-            variable=variable, depth=Depth(min_depth, max_depth),
+                variable=variable, depth=Depth(min_depth, max_depth),
                 filter_meta_dict=filter_meta_dict):
 
             time_from = pd.Timestamp(sens.metadata['timerange_from'].val)
@@ -631,15 +634,15 @@ class ISMN_Interface():
 
         return val_dict
 
-    def get_landcover_types(self, variable:str='soil_moisture', min_depth:float=0,
-                          max_depth:float=10, landcover:str='lc_2010') -> dict:
+    def get_landcover_types(self, variable: str = 'soil_moisture', min_depth: float = 0,
+                            max_depth: float = 10, landcover: str = 'lc_2010') -> dict:
         """
         See description of get_static_var_vals
         """
         return self.get_static_var_vals(variable, min_depth, max_depth, landcover)
 
-    def get_climate_types(self, variable:str='soil_moisture', min_depth:float=0,
-                          max_depth:float=10, climate:str='climate_KG') -> dict:
+    def get_climate_types(self, variable: str = 'soil_moisture', min_depth: float = 0,
+                          max_depth: float = 10, climate: str = 'climate_KG') -> dict:
         """
         See description of get_static_var_vals
         """
@@ -688,7 +691,7 @@ class ISMN_Interface():
 
 
 if __name__ == '__main__':
-    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212"
+    path = r"C:\Temp\delete_me\ismn\stick\Data_separate_files_20090804_20201212.zip"
     ds = ISMN_Interface(path)
     ids = ds.get_dataset_ids('soil_moisture', max_depth=99,
                              filter_meta_dict={'network': 'BIEBRZA-S-1',
@@ -697,13 +700,13 @@ if __name__ == '__main__':
     ts, meta = ds.read_ts(idx=157, return_meta=True)
     ts.plot()
 
-    #ds.collection.networks['GROW'].stations['1jmz460j'].sensors['Flower-Power_air_temperature_-0.100000_-0.100000'].metadata
-    #ids = ds.get_dataset_ids('air_temperature')
-    #ds.read_ts(20)
+    # ds.collection.networks['GROW'].stations['1jmz460j'].sensors['Flower-Power_air_temperature_-0.100000_-0.100000'].metadata
+    # ids = ds.get_dataset_ids('air_temperature')
+    # ds.read_ts(20)
     # ds.plot_station_locations()
     # mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
     # ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
-    #ds.plot_station_locations('soil_moisture', 0., 10, filename="/tmp/plot.png")
+    # ds.plot_station_locations('soil_moisture', 0., 10, filename="/tmp/plot.png")
     # netname = ds.network_for_station('Villevielle')
     # ts = ds.read_ts(1)
     # print(ts)

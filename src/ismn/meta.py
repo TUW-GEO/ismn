@@ -51,18 +51,19 @@ class Depth():
             if abs(start) > abs(end):
                 raise DepthError("Depth end can not be further from 0"
                                  " than depth start")
+
     @property
     def is_profile(self):
         return False if self.start == self.end else True
 
     @property
-    def across0 (self):
+    def across0(self):
         return True if (self.start * self.end) < 0 else False
 
     def __repr__(self):
         return f"{self.__class__.__name__}([{self.start}, {self.end}])"
 
-    def __getitem__(self, item:int):
+    def __getitem__(self, item: int):
         return [self.start, self.end][item]
 
     def __str__(self):
@@ -237,7 +238,7 @@ class Depth():
         return flag
 
 
-class MetaVar():
+class MetaVar:
     """
     Meta Variable is a simple combination of a name, a value
     and a depth (optional).
@@ -265,9 +266,9 @@ class MetaVar():
 
     def __repr__(self):
         return f"{self.__class__.__name__}([{self.name}, {self.val}, " \
-            f"{None.__repr__() if not self.depth else self.depth.__repr__()}])"
+               f"{None.__repr__() if not self.depth else self.depth.__repr__()}])"
 
-    def __getitem__(self, item:int):
+    def __getitem__(self, item: int):
         return [self.name, self.val, self.depth][item]
 
     def __str__(self):
@@ -300,7 +301,7 @@ class MetaVar():
         return pd.isnull(self.val)  # np.nan or None
 
 
-class MetaData():
+class MetaData:
     """
     MetaData contains multiple MetaVars as a list (there can be multiple
     vars with the same name, e.g. for different depths)
@@ -347,7 +348,6 @@ class MetaData():
         else:
             items = [v for v in self.metadata if v.name in item]
             return MetaData(items)
-
 
     def __contains__(self, item: Union[MetaVar, str]):
         if isinstance(item, MetaVar):
@@ -420,7 +420,6 @@ class MetaData():
             d[name].append(dat[1:])
         return d
 
-
     def to_pd(self, transpose=False, dropna=True):
         """
         Convert metadata to a pandas DataFrame.
@@ -483,24 +482,24 @@ class MetaData():
 
         Returns
         -------
-        merged: MetaData or None
+        merged_meta: MetaData or None
             The merged metadata (if inplace is False)
         """
 
         if isinstance(other, MetaData):
             other = [other]
-        merged = MetaData()
+        merged_meta = MetaData()
 
         for m in [self, *other]:
             for v in m.metadata:
                 if (not v.empty if exclude_empty else True) and \
-                        (v not in merged):
-                    merged.add(v.name, v.val, v.depth)
+                        (v not in merged_meta):
+                    merged_meta.add(v.name, v.val, v.depth)
 
         if inplace:
-            self.metadata = merged
+            self.metadata = merged_meta
         else:
-            return merged
+            return merged_meta
 
     def add(self, name, val, depth: Depth = None):
         """
@@ -560,7 +559,6 @@ class MetaData():
 
 
 if __name__ == '__main__':
-
     var11 = MetaVar('station', 'bla1')
     var12 = MetaVar('station', 'bla2')
     var13 = MetaVar('sand_fraction', 9000, Depth(0, 0.1))

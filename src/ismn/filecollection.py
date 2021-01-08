@@ -35,10 +35,6 @@ from ismn.const import *
 from ismn.filehandlers import DataFile, StaticMetaFile
 from ismn.meta import MetaData, MetaVar, Depth
 
-"""
-The file collection / file list / sensor list contains all information about 
-the sensors to quickly rebuild a network collection.
-"""
 
 def _read_station_dir(
         root: Union[IsmnRoot, Path, str],  # Path for reading from zip, avoid serialisation error
@@ -60,7 +56,7 @@ def _read_station_dir(
     try:
         if len(csv) == 0:
             raise IsmnFileError("Expected 1 csv file for station, found 0. "
-                                 "Use empty static metadata.")
+                                "Use empty static metadata.")
         else:
             if len(csv) > 1:
                 infos.append(f"Expected 1 csv file for station, found {len(csv)}. "
@@ -100,6 +96,7 @@ def _read_station_dir(
 
     return filelist, infos
 
+
 class IsmnFileCollection(object):
     """
     The IsmnFileCollection class contains a list of file handlers to access data
@@ -107,6 +104,15 @@ class IsmnFileCollection(object):
     stored csv file, or built by iterating over all files in the data root.
     This class also contains function to load filehandlers for certain networks
     only.
+
+    Attributes
+    ----------
+    root : IsmnRoot
+        Root object where data is stored.
+    filelist : OrderedDict
+        A collection of filehandlers and network names
+    temp_root : Path
+        Temporary root dir.
     """
 
     def __init__(self,
@@ -114,8 +120,6 @@ class IsmnFileCollection(object):
                  filelist,
                  temp_root=gettempdir()):
         """
-        Use the @classmethods to create this object!
-
         Parameters
         ----------
         root : IsmnRoot
@@ -128,7 +132,7 @@ class IsmnFileCollection(object):
         """
         self.root = root
         self.filelist = filelist
-        self.temp_root = temp_root
+        self.temp_root = Path(temp_root)
 
         os.makedirs(self.temp_root, exist_ok=True)
 
@@ -137,7 +141,7 @@ class IsmnFileCollection(object):
 
     @classmethod
     def build_from_scratch(cls, data_root, parallel=True, log_path=None,
-                            temp_root=gettempdir()):
+                           temp_root=gettempdir()):
         """
         Parameters
         ----------
@@ -147,6 +151,9 @@ class IsmnFileCollection(object):
             or a file list that contains these infos already.
         parallel : bool, optional (default: True)
             Speed up metadata collecting with multiple processes.
+        log_path : str or Path, optional (default: None)
+            Path where the log file is created. If None is set, no log file
+            will be written.
         temp_root : str or Path, (default: gettempdir())
             Temporary folder where extracted data is copied during reading from
             zip archive.
@@ -203,7 +210,7 @@ class IsmnFileCollection(object):
             pool.close()
             pool.join()
 
-        fl_elements.sort(key=itemgetter(0,1)) # sort by net name, stat name
+        fl_elements.sort(key=itemgetter(0, 1))  # sort by net name, stat name
 
         # to ensure alphabetical order... not sure if necessary, slow?
         filelist = OrderedDict([])
@@ -245,15 +252,15 @@ class IsmnFileCollection(object):
         for col in ['timerange_from', 'timerange_to']:
             metadata_df[col, 'val'] = pd.to_datetime(metadata_df[col, 'val'])
 
-        vars = []
+        lvars = []
         for c in metadata_df.columns:
-            if c[0] not in vars:
-                vars.append(c[0])
+            if c[0] not in lvars:
+                lvars.append(c[0])
 
         # we assume triples for all vars except these, so they must be at the end
-        assert vars[-2:] == ['file_path', 'file_type'], \
+        assert lvars[-2:] == ['file_path', 'file_type'], \
             "file_type and file_path must be at the end."
-        vars = vars[:-2]
+        lvars = lvars[:-2]
 
         filelist = OrderedDict([])
 
@@ -261,8 +268,8 @@ class IsmnFileCollection(object):
 
             metavars = []
 
-            for j, metavar_name in enumerate(vars):
-                depth_from, depth_to, val = row[j*3], row[j*3+1], row[j*3+2]
+            for j, metavar_name in enumerate(lvars):
+                depth_from, depth_to, val = row[j * 3], row[j * 3 + 1], row[j * 3 + 2]
 
                 if np.all(np.isnan(np.array([depth_from, depth_to]))):
                     depth = None
@@ -285,7 +292,7 @@ class IsmnFileCollection(object):
 
             if network not in filelist.keys():
                 filelist[network] = []
-            
+
             filelist[network].append(f)
 
         return cls(root, filelist=filelist)
@@ -342,8 +349,8 @@ class IsmnFileCollection(object):
         fs = 0
         for net, files in self.filelist.items():
             l = len(files)
-            if fs+l > idx:
-                return files[idx-fs]
+            if fs + l > idx:
+                return files[idx - fs]
             else:
                 fs += l
 
@@ -371,19 +378,3 @@ class IsmnFileCollection(object):
         self.root.close()
         for f in self.iter_filehandlers():
             f.close()
-
-if __name__ == '__main__':
-    IsmnFileCollection.from_metadata_csv(r"D:\data-read\ISMN\global_20191024", r"D:\data-read\ISMN\global_20191024\python_metadata\global_20191024.csv")
-    root_path = r"/home/wolfgang/code/ismn/tests/test_data/Data_seperate_files_20170810_20180809"
-    fc = IsmnFileCollection.build_from_scratch(root_path)
-    fc.to_metadata_csv(r"C:\Temp\test\test.csv")
-    #files = IsmnFileCollection.from_metadata_csv(root_path, r"C:\Temp\test\test.csv")
-
-    # fc.to_metadata_csv(r"C:\Temp\delete_me\ismn\testdata_ceop.csv")
-
-    # fc = IsmnFileCollection.from_metadata_csv(root_path,
-    #                                           r"C:\Temp\delete_me\ismn\testdata_ceop.csv")
-
-
-
-

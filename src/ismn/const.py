@@ -1,9 +1,30 @@
-# -*- coding: utf-8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2019 TU Wien
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 import numpy as np
 from collections import OrderedDict
 import functools
 import warnings
+
 
 def deprecated(func):
     # mark func as deprecated (warn when used)
@@ -15,19 +36,25 @@ def deprecated(func):
                       stacklevel=2)
         warnings.simplefilter('default', DeprecationWarning)  # reset filter
         return func(*args, **kwargs)
+
     return new_func
+
 
 class MetadataError(IOError):
     pass
 
+
 class ISMNError(Exception):
     pass
+
 
 class IsmnFileError(IOError):
     pass
 
+
 class DepthError(ValueError):
     pass
+
 
 # ==============================================================================
 # Variable short names
@@ -52,7 +79,7 @@ VARIABLE_LUT = OrderedDict([
     ('sweq', 'snow_water_equivalent'),
     ('tsf', 'surface_temperature'),
     ('tsfq', 'surface_temperature_quality_flag_original'),
-    ])
+])
 
 # ==============================================================================
 # static meta data template (csv)
@@ -67,14 +94,14 @@ CSV_META_TEMPLATE_SURF_VAR = OrderedDict([
     ('lc_insitu', 'unknown'),
     ('climate_KG', 'unknown'),
     ('climate_insitu', 'unknown'),
-    ])
+])
 CSV_META_TEMPLATE_GROUND_VAR = OrderedDict([
     ('saturation', np.nan),
     ('clay_fraction', np.nan),
     ('sand_fraction', np.nan),
     ('silt_fraction', np.nan),
     ('organic_carbon', np.nan),
-    ])
+])
 
 CSV_META_TEMPLATE = OrderedDict(**CSV_META_TEMPLATE_SURF_VAR,
                                 **CSV_META_TEMPLATE_GROUND_VAR)
@@ -122,7 +149,7 @@ LANDCOVER = OrderedDict([
     ('Unconsolidated bare areas', 202),
     ('Water', 210),
     ('Permanent snow and ice', 220),
-    ])
+])
 
 # ==============================================================================
 # Koeppen-Geiger 2007 climate classification:
@@ -165,6 +192,6 @@ KOEPPENGEIGER = OrderedDict([
     ('ET', 'Polar Tundra'),
     ('EF', 'Polar Eternal Winter'),
     ('W', 'Water'),
-    ])
+])
 
 # ==============================================================================

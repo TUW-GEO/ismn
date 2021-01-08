@@ -40,7 +40,9 @@ formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+
 class IsmnComponent: pass
+
 
 class Sensor(IsmnComponent):
     """
@@ -138,12 +140,15 @@ class Sensor(IsmnComponent):
         ----------
         variable : str, optional (default: None)
             Check if the variable name matches, e.g. soil_moisture
-        depth : Depth, optional (default: None)
+        depth : Depth or list or tuple, optional (default: None)
             Check if the passed depth encloses the sensor depth.
+            A list/tuple must contain 2 values where the first is the depth start
+            and the second is the end. Start must be closer to 0 than end (or equal).
+            A negative depth range is above the surface.
         filter_meta_dict : dict, optional (default: None)
             Additional metadata keys and values for which the file list is filtered
             e.g. {'lc_2010': [10, 130]} or
-                 {'climate_kg': 'Dwa', 'lc_2010': [10, 130] }
+                 {'climate_KG': 'Dwa', 'lc_2010': [10, 130] }
             to filter for a multiple landcover classes and a climate class.
         check_only_sensor_depth_from : bool, optional (default: False)
             Ignores the sensors depth_to value and only checks if depth_from of
@@ -155,16 +160,18 @@ class Sensor(IsmnComponent):
             Indicates weather metadata for this Sensor matches with the passed
             requirements.
         """
+        if isinstance(depth, (list, tuple)):
+            depth = Depth(depth[0], depth[1])
 
         if depth is None:
             depth = Depth(-np.inf, np.inf)
 
         flag = False
-        
+
         if check_only_sensor_depth_from:
             d = Depth(self.depth.start, self.depth.start)
         else:
-            d = self.depth 
+            d = self.depth
 
         if (variable in [None, self.variable]) and depth.encloses(d):
             flag = True
@@ -183,7 +190,6 @@ class Sensor(IsmnComponent):
 
 
 class Station(IsmnComponent):
-
     """
     A station is described by a distinct name and location.
     Multiple sensors at various depths can be part of a station.
@@ -244,7 +250,7 @@ class Station(IsmnComponent):
         """
         return len(self.sensors)
 
-    def __getitem__(self, item:int or str) -> Sensor:
+    def __getitem__(self, item: int or str) -> Sensor:
         if isinstance(item, int):
             return self.sensors[list(self.sensors.keys())[item]]
         else:
@@ -282,7 +288,6 @@ class Station(IsmnComponent):
 
         return depths
 
-    @deprecated
     def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None,
                                   max_depth=None):
         """
@@ -376,7 +381,7 @@ class Station(IsmnComponent):
         else:
             logger.warning(f'Sensor not found: {name}')
 
-    def iter_sensors(self,  **filter_kwargs):
+    def iter_sensors(self, **filter_kwargs):
         """
         Iterates over all sensors in this station and yields those that
         comply with the passed filter settings (or all).
@@ -397,7 +402,7 @@ class Station(IsmnComponent):
             if sensor.eval(**filter_kwargs):
                 yield sensor
 
-    @deprecated
+    @deprecated  # use iter_sensors instead
     def get_sensors(self, variable, depth_from, depth_to):
         """
         get the sensors at which the variable was measured at the
@@ -418,10 +423,9 @@ class Station(IsmnComponent):
         return np.array([s for s in
                          self.iter_sensors(variable=variable,
                                            depth=Depth(depth_from, depth_to))])
-                
-                
-class Network(IsmnComponent):
 
+
+class Network(IsmnComponent):
     """
     A network is described by a distinct name and can be composed of
     multiple ISMN stations.
@@ -583,6 +587,7 @@ class NetworkCollection(IsmnComponent):
     grid : BasicGrid
         Grid that contains one point for each station in all networks.
     """
+
     def __init__(self, networks):
 
         """
@@ -610,7 +615,7 @@ class NetworkCollection(IsmnComponent):
         return ',\n'.join([f"{indent}{net.name}: {list(net.stations.keys())}"
                            for net in self.networks.values()])
 
-    def __getitem__(self, item:Union[int,str]):
+    def __getitem__(self, item: Union[int, str]):
         # shortcut to access networks directly
         if isinstance(item, int):
             item = list(self.networks.keys())[item]
@@ -697,21 +702,3 @@ class NetworkCollection(IsmnComponent):
         station = self.station4gpi(gpi)
 
         return station, dist
-
-if __name__ == '__main__':
-
-    networks = []
-
-    for n_id in range(10):
-        stations = []
-        for s_id in range(100):
-            station = Station(f'station{s_id}', *np.random.rand(3)*100)
-            for sens_id in range(10):
-                station.add_sensor(f'Instrument{sens_id}', 'var', Depth(1,2))
-            stations.append(station)
-        networks.append(Network(name=f"Network-{n_id}", stations=stations))
-
-    coll = NetworkCollection(networks)
-
-    coll.get_nearest_station(10,10)
-
