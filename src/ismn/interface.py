@@ -371,12 +371,12 @@ class ISMN_Interface():
             distance to station in meters, measured in cartesian coordinates and not on
             a great circle. Should be OK for small distances
         """
-        # todo: fix bug in pygeogrids that leads to always np.inf as max dist
         # what happens if there is no point within max dist if that works?
         gpi, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
 
-        if gpi is None:  # todo: not sure what this looks like when pygeogrids is fixed.
+        if len(gpi) == 0:
             stat = None
+            d = None
         else:
             stat = self.collection.station4gpi(gpi)
 

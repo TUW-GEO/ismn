@@ -264,8 +264,7 @@ class IsmnFileCollection(object):
 
         filelist = OrderedDict([])
 
-        for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
-
+        for row in metadata_df.values:  # todo: slow!?? parallelise?
             metavars = []
 
             for j, metavar_name in enumerate(lvars):

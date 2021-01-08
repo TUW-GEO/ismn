@@ -184,10 +184,9 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
                 assert net.stations[station.name].lon == should_lon
                 assert net.stations[station.name].lat == should_lat
 
-        #station, dist = self.netcol.get_nearest_station(0, 0, max_dist=100)
-        # todo: when fixed in pygeogrids this should return nothing...
-        #https://github.com/TUW-GEO/pygeogrids/issues/64
-        #assert station == None
+        station, dist = self.ds.find_nearest_station(0, 0, return_distance=True,
+                                                     max_dist=100)
+        assert station == dist == None
 
 class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
 
