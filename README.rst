@@ -3,9 +3,8 @@ ismn
 ====
 
 
-
-.. image:: https://github.com/wpreimes/ismn/workflows/build/badge.svg
-    :target: https://github.com/wpreimes/ismn/actions?query=workflow%3Abuild
+.. image:: https://github.com/TUW-GEO/ismn/workflows/test/badge.svg
+   :target: https://github.com/TUW-GEO/ismn/actions?query=workflow%3A%22Build+package+and+run+tests%22
 
 .. image:: https://coveralls.io/repos/TUW-GEO/ismn/badge.png?branch=master
   :target: https://coveralls.io/r/TUW-GEO/ismn?branch=master
@@ -63,7 +62,6 @@ like system. Miniconda will be installed into ``$HOME/miniconda``.
    cd ismn
    conda env create -f environment.yml
    source activate ismn
-   pip install -r test-requirements.txt
 
 This script adds ``$HOME/miniconda/bin`` temporarily to the ``PATH`` to do this
 permanently add ``export PATH="$HOME/miniconda/bin:$PATH"`` to your ``.bashrc``
@@ -224,10 +222,3 @@ If you want to contribute please follow these steps:
 - Please include tests for your contributions in one of the test directories.
   We use py.test so a simple function called test_my_feature is enough
 - submit a pull request to our master branch
-
-
-Note
-====
-
-This project has been set up using PyScaffold 2.5.7. For details and usage
-information on PyScaffold see http://pyscaffold.readthedocs.org/.
