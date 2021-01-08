@@ -233,14 +233,14 @@ class SensorTest(unittest.TestCase):
 
     def test_eval(self):
         assert self.sensor.eval('soil_moisture', Depth(0,5))
-        assert self.sensor.eval('soil_moisture', Depth(0,0.21),
+        assert self.sensor.eval('soil_moisture', (0,0.21),
                                 check_only_sensor_depth_from=True)
         assert self.sensor.eval('soil_moisture', Depth(0,0.05),
                                 check_only_sensor_depth_from=True)
         # fails because of varname:
         assert not self.sensor.eval('wrongname', Depth(0,0.21))
         # fails because of depth
-        assert not self.sensor.eval('soil_moisture', Depth(0,0.05),
+        assert not self.sensor.eval('soil_moisture', [0,0.05],
                                     check_only_sensor_depth_from=False)
 
     def test_read_data(self):

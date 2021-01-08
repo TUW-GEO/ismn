@@ -97,7 +97,7 @@ class TestReaders(unittest.TestCase):
 
     def test_get_info_from_file(self):
 
-        header_elements, _, _, filename_elements = self.filehandler_ceop_sep._get_elements_from_file()
+        header_elements, _, _, filename_elements = self.filehandler_ceop_sep.get_elements_from_file()
 
         assert sorted(header_elements) == sorted(['2007/01/01', '01:00', '2007/01/01',
                                                   '01:00', 'SMOSMANIA', 'SMOSMANIA',
@@ -109,7 +109,7 @@ class TestReaders(unittest.TestCase):
 
     def test_get_metadata_header_values(self):
 
-        metadata, depth = self.filehandler_header_values._get_metadata_header_values()
+        metadata, depth = self.filehandler_header_values.get_metadata_header_values()
 
         for key in metadata.keys():
             assert metadata[key].val == self.metadata_ref[key]
@@ -142,7 +142,7 @@ class TestReaders(unittest.TestCase):
 
         filehandler = self.filehandler_ceop_sep
 
-        metadata, depth = filehandler._get_metadata_ceop_sep()
+        metadata, depth = filehandler.get_metadata_ceop_sep()
         for key in metadata.keys():
             assert metadata[key].val == self.metadata_ref[key]
         assert metadata['variable'].depth.start == self.metadata_depth_from
