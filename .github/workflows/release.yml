@@ -1,0 +1,40 @@
+name: Upload source distribution to pypi
+
+# This workflow uploads a release to pypi. A released must be triggered
+# via github (releases) and will include a version number tag (leading 'v'!!)
+# This will NOT repeat testing, draft a release only from tested branches!
+
+on:
+  release:
+    types: [released]
+jobs:
+  publish:
+    name: Upload to Pypi 🚀
+    # needs original repo (TUW-GEO) and tagged commit (v*)
+    if: startsWith(github.ref, 'refs/tags/v') && startsWith(github.repository, 'wpreimes/') # todo: change account
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref }}
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - name: Build
+        shell: bash -l {0}
+        run: |
+          python setup.py --version
+          python setup.py sdist
+          pip install wheel && python setup.py bdist_wheel
+      - name: Publish distribution to Test PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.1
+        with:
+          skip_existing: true
+          verbose: true
+          verify_metadata: true
+          packages_dir: dist/
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }} # todo: change token for real pypi in github actions secrets of the repo
+          repository_url: https://test.pypi.org/legacy/ # todo: delete for real pypi

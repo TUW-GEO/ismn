@@ -1,9 +1,0 @@
-# install cartopy via conda first
-pygeogrids
-numpy
-pandas
-matplotlib
-configparser
-scipy
-cython
-more_itertools
