@@ -556,26 +556,3 @@ class MetaData:
                     pass  # ignore var only if there is a depth but no overlap
 
         return MetaData(best_vars)
-
-
-if __name__ == '__main__':
-    var11 = MetaVar('station', 'bla1')
-    var12 = MetaVar('station', 'bla2')
-    var13 = MetaVar('sand_fraction', 9000, Depth(0, 0.1))
-
-    var21 = MetaVar('station', 'bla1')
-    var22 = MetaVar('sand_fraction', 1, Depth(0.05, 0.1))
-    var23 = MetaVar('sand_fraction', 1, Depth(0.1, 0.3))
-
-    var32 = MetaVar('depvar', 123, Depth(0, -1))
-    var33 = MetaVar('station', 'bla2', Depth(0, -1))
-
-    meta1 = MetaData([var11, var12, var13])
-    meta2 = MetaData([var21, var22, var23])
-    meta3 = MetaData([var32, var33])
-
-    meta3.best_meta_for_depth(Depth(0, -0.5))
-    merged = meta1.merge([meta2, meta3])
-    merged.to_pd()
-
-    # dd = d.to_dict()
