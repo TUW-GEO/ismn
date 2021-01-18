@@ -27,7 +27,7 @@ except ImportError:
     plotlibs = False
 
 
-class ISMN_Interface():
+class ISMN_Interface:
     """
     Class provides interface to ISMN data downloaded from the ISMN website
     upon initialization it collects metadata from all files in
@@ -87,7 +87,7 @@ class ISMN_Interface():
 
         if os.path.isfile(meta_csv_file):
             self.__file_collection = IsmnFileCollection.from_metadata_csv(
-                self.root, meta_csv_file)
+                self.root, meta_csv_file, network=network)
         else:
             self.__file_collection = IsmnFileCollection.build_from_scratch(
                 self.root, parallel=True, log_path=meta_path, temp_root=temp_root)
@@ -692,7 +692,7 @@ class ISMN_Interface():
 
 if __name__ == '__main__':
     path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212.zip"
-    ds = ISMN_Interface(path)
+    ds = ISMN_Interface(path, network=None)
     ids = ds.get_dataset_ids('soil_moisture', max_depth=99,
                              filter_meta_dict={'network': 'BIEBRZA-S-1',
                                                'station': 'marshland-soil-25'})
