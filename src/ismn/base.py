@@ -28,7 +28,7 @@ def dir(func):
     return wrapper
 
 
-class IsmnRoot():
+class IsmnRoot:
     """
     Connection to the zip resp. extracted zip archive downloaded from the
     ismn website. This class only handles file access / requests made by the

@@ -361,7 +361,7 @@ class ISMN_Interface():
         return_distance : boolean, optional
             if True also distance is returned
         max_dist : float, optional (default: np.inf)
-            Maximum distance allowed. # todo: fix in pygeogrids
+            Maximum distance allowed.
             
         Returns
         -------
@@ -374,7 +374,7 @@ class ISMN_Interface():
         # what happens if there is no point within max dist if that works?
         gpi, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
 
-        if len(gpi) == 0:
+        if len(np.atleast_1d(gpi)) == 0:
             stat = None
             d = None
         else:
@@ -691,7 +691,7 @@ class ISMN_Interface():
 
 
 if __name__ == '__main__':
-    path = r"C:\Temp\delete_me\ismn\stick\Data_separate_files_20090804_20201212.zip"
+    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212.zip"
     ds = ISMN_Interface(path)
     ids = ds.get_dataset_ids('soil_moisture', max_depth=99,
                              filter_meta_dict={'network': 'BIEBRZA-S-1',
