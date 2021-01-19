@@ -60,7 +60,7 @@ jobs:
       - name: Upload Coverage
         shell: bash -l {0}
         run: |
-          pip install coveralls && coveralls
+          pip install coveralls && coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
@@ -73,6 +73,6 @@ jobs:
     steps:
       - name: Finished
         run: |
-          pip3 install --upgrade coveralls && coveralls --finish
+          pip3 install --upgrade coveralls && coveralls --service=github --finish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

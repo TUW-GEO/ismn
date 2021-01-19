@@ -224,7 +224,8 @@ class IsmnFileCollection(object):
         return cls(root, filelist=filelist)
 
     @classmethod
-    def from_metadata_csv(cls, data_root, meta_csv_file, temp_root=gettempdir()):
+    def from_metadata_csv(cls, data_root, meta_csv_file, network=None,
+                          temp_root=gettempdir()):
         """
         Load a previously created and stored filelist from pkl.
 
@@ -234,10 +235,15 @@ class IsmnFileCollection(object):
             Path where the ismn data is stored, can also be a zip file
         meta_csv_file : str or Path
             Csv file where the metadata is stored.
+        network : list, optional (default: None)
+            List of networks that are considered. Other filehandlers are set to None.
         temp_root : str or Path, optional (default: gettempdir())
             Temporary folder where extracted data is copied during reading from
             zip archive.
         """
+        if network is not None:
+            network = np.atleast_1d(network)
+
         if isinstance(data_root, IsmnRoot):
             root = data_root
         else:
@@ -264,35 +270,43 @@ class IsmnFileCollection(object):
 
         filelist = OrderedDict([])
 
-        for row in metadata_df.values:  # todo: slow!?? parallelise?
-            metavars = []
+        all_networks = metadata_df['network']['val'].values
 
-            for j, metavar_name in enumerate(lvars):
-                depth_from, depth_to, val = row[j * 3], row[j * 3 + 1], row[j * 3 + 2]
+        for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
 
-                if np.all(np.isnan(np.array([depth_from, depth_to]))):
-                    depth = None
-                else:
-                    depth = Depth(depth_from, depth_to)
+            this_nw = all_networks[i]
+            if (network is not None) and (this_nw not in network):
+                f = None
+                continue
+            else:
+                metavars = []
 
-                metavar = MetaVar(metavar_name, val, depth)
-                metavars.append(metavar)
+                for j, metavar_name in enumerate(lvars):
+                    depth_from, depth_to, val = row[j * 3], row[j * 3 + 1], row[j * 3 + 2]
 
-            metadata = MetaData(metavars)
-            f = DataFile(root=root,
-                         file_path=str(PurePosixPath(row[-2])),
-                         load_metadata=False,
-                         temp_root=temp_root)
+                    if np.all(np.isnan(np.array([depth_from, depth_to]))):
+                        depth = None
+                    else:
+                        depth = Depth(depth_from, depth_to)
 
-            f.metadata = metadata
-            f.file_type = row[-1]
+                    metavar = MetaVar(metavar_name, val, depth)
+                    metavars.append(metavar)
 
-            network = f.metadata['network'].val
+                metadata = MetaData(metavars)
+                f = DataFile(root=root,
+                             file_path=str(PurePosixPath(row[-2])),
+                             load_metadata=False,
+                             temp_root=temp_root)
 
-            if network not in filelist.keys():
-                filelist[network] = []
+                f.metadata = metadata
+                f.file_type = row[-1]
 
-            filelist[network].append(f)
+                this_nw = f.metadata['network'].val
+
+            if this_nw not in filelist.keys():
+                filelist[this_nw] = []
+
+            filelist[this_nw].append(f)
 
         return cls(root, filelist=filelist)
 
