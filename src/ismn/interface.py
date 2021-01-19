@@ -689,24 +689,3 @@ class ISMN_Interface:
         # close all open filehandlers
         self.__file_collection.close()
 
-
-if __name__ == '__main__':
-    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212.zip"
-    ds = ISMN_Interface(path, network=None)
-    ids = ds.get_dataset_ids('soil_moisture', max_depth=99,
-                             filter_meta_dict={'network': 'BIEBRZA-S-1',
-                                               'station': 'marshland-soil-25'})
-
-    ts, meta = ds.read_ts(idx=157, return_meta=True)
-    ts.plot()
-
-    # ds.collection.networks['GROW'].stations['1jmz460j'].sensors['Flower-Power_air_temperature_-0.100000_-0.100000'].metadata
-    # ids = ds.get_dataset_ids('air_temperature')
-    # ds.read_ts(20)
-    # ds.plot_station_locations()
-    # mmin, mmax = ds.get_min_max_obs_timestamps('soil_moisture')
-    # ids = ds.get_dataset_ids('soil_moisture', 0, 0.05, filter_meta_dict={'lc_2010': 130})
-    # ds.plot_station_locations('soil_moisture', 0., 10, filename="/tmp/plot.png")
-    # netname = ds.network_for_station('Villevielle')
-    # ts = ds.read_ts(1)
-    # print(ts)
