@@ -432,7 +432,8 @@ class ISMN_Interface:
             raise ValueError("Either pass a filename OR pass ax to use for plot, not both.")
 
         if not plotlibs:
-            warnings.warn("Could not import all plotting libs, plotting functions not available.")
+            warnings.warn("Could not import all plotting libs, plotting functions not available."
+                          "run 'pip install ismn[plot]' to install them")
             return
 
         data_crs = ccrs.PlateCarree()
@@ -688,4 +689,3 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-
