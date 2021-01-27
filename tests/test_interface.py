@@ -27,7 +27,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         cls.testdata = testdata
 
     def setUp(self) -> None:
-        self.ds = ISMN_Interface(self.testdata)
+        self.ds = ISMN_Interface(self.testdata, network=['COSMOS'])
 
     def tearDown(self) -> None:
         self.ds.close_files()

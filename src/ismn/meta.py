@@ -3,12 +3,6 @@ from typing import Optional, List, Any, Union
 import pandas as pd
 from ismn.const import *
 
-"""
-TODO:
-- Add unit for depths?
-"""
-
-
 class Depth():
     """
     A class representing a depth
