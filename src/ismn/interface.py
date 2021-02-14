@@ -44,13 +44,17 @@ class ISMN_Interface:
     meta_path : str or Path
         Path where the metadata csv file(s) is / are stored. The actual filename
         is defined by the name of data_path and will be generated automatically.
+    network : str or list, optional (default: None)
+        Name(s) of network(s) to load. Other data in the data_path will be ignored.
+        By default all networks are activated.
+    activate : bool, optional (default: True)
+        Activate the passed networks (all if None was passed). If this is set to
+        false, you can call activate_network() separately.
     keep_loaded_data : bool, optional (default: False)
         Keep data for a file in memory once it is loaded. This makes subsequent
         calls of data faster (if e.g. a station is accessed multiple times)
         but can fill up memory if multiple networks are loaded.
-    network : str or list, optional (default: None)
-        Name(s) of network(s) to load. Other data in the data_path will be ignored.
-        By default all networks are activated.
+
 
     Raises
     ------
@@ -69,12 +73,20 @@ class ISMN_Interface:
         find nearest station for given coordinates
     """
 
-    def __init__(self, data_path, meta_path=None, network=None,
+    def __init__(self, data_path, meta_path=None, network=None, activate=True,
                  keep_loaded_data=False, temp_root=gettempdir()):
 
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
 
         self.root = IsmnRoot(data_path)
+
+        self.keep_loaded_data = keep_loaded_data
+
+        if activate:
+            self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
+
+
+    def activate_network(self, network=None, meta_path=None, temp_root=gettempdir()):
 
         meta_csv_filename = f'{self.root.name}.csv'
 
@@ -93,10 +105,9 @@ class ISMN_Interface:
                 self.root, parallel=True, log_path=meta_path, temp_root=temp_root)
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
-        self.keep_loaded_data = keep_loaded_data
-
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
+
 
     def __collect_networks(self,
                            network_names: list = None) -> list:
@@ -278,7 +289,8 @@ class ISMN_Interface:
                 yield station
 
     def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
-                        filter_meta_dict=None, check_only_sensor_depth_from=False):
+                        filter_meta_dict=None, check_only_sensor_depth_from=False,
+                        groupby=None):
         """
         Yield all sensors for a specific network and/or station and/or
         variable and/or depth. The id is defined by the position of the filehandler
@@ -689,3 +701,15 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
+
+if __name__ == '__main__':
+    path = r"R:\Projects\QA4SM_HR\07_data\ISMN\global_202101"
+    ds = ISMN_Interface(path,activate=None)
+    ds.activate_network(['BIEBRZA-S-1', 'SCAN'])
+
+    ids = ds.get_dataset_ids(variable='soil_moisture',
+                             min_depth=0, max_depth=0.1)
+
+    networks = ds.collection.networks.keys()
+    ds.collection.meta
+
