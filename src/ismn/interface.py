@@ -46,10 +46,10 @@ class ISMN_Interface:
         is defined by the name of data_path and will be generated automatically.
     network : str or list, optional (default: None)
         Name(s) of network(s) to load. Other data in the data_path will be ignored.
-        By default all networks are activated.
-    activate : bool, optional (default: True)
-        Activate the passed networks (all if None was passed). If this is set to
-        false, you can call activate_network() separately.
+        By default or if None is passed, all networks are activated. If an empty list is passed
+        no netoworks are activated.
+    parallel: bool, optional (default: True)
+        Activate parallel processes to speed up metadata generation.
     keep_loaded_data : bool, optional (default: False)
         Keep data for a file in memory once it is loaded. This makes subsequent
         calls of data faster (if e.g. a station is accessed multiple times)
@@ -73,17 +73,17 @@ class ISMN_Interface:
         find nearest station for given coordinates
     """
 
-    def __init__(self, data_path, meta_path=None, network=None, activate=True,
+    def __init__(self, data_path, meta_path=None, network=None, parallel=True,
                  keep_loaded_data=False, temp_root=gettempdir()):
 
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
+        self.parallel = parallel
 
         self.root = IsmnRoot(data_path)
 
         self.keep_loaded_data = keep_loaded_data
 
-        if activate:
-            self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
+        self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
 
 
     def activate_network(self, network=None, meta_path=None, temp_root=gettempdir()):
@@ -102,7 +102,7 @@ class ISMN_Interface:
                 self.root, meta_csv_file, network=network)
         else:
             self.__file_collection = IsmnFileCollection.build_from_scratch(
-                self.root, parallel=True, log_path=meta_path, temp_root=temp_root)
+                self.root, parallel=self.parallel, log_path=meta_path, temp_root=temp_root)
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
         networks = self.__collect_networks(network)
@@ -312,8 +312,13 @@ class ISMN_Interface:
         check_only_sensor_depth_from : bool, optional (default: False)
             Ignores the sensors depth_to value and only checks if depth_from of
             the sensor is in the passed depth (e.g. for cosmic ray probes).
+        groupby : str, optional (default: None)
+            A metadata field name that is used to group sensors, e.g. network
         """
-        ids = []
+        if groupby is None:
+            ids = []
+        else:
+            ids = {}
 
         depth = Depth(min_depth, max_depth)
 
@@ -325,7 +330,13 @@ class ISMN_Interface:
                 check_only_sensor_depth_from=check_only_sensor_depth_from)
 
             if eval:
-                ids.append(id)
+                if groupby is not None:
+                    groupval = filehandler.metadata[groupby].val
+                    if groupval not in ids.keys():
+                        ids[groupval] = []
+                    ids[groupval].append(id)
+                else:
+                    ids.append(id)
 
         return ids
 
@@ -701,15 +712,4 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-
-if __name__ == '__main__':
-    path = r"R:\Projects\QA4SM_HR\07_data\ISMN\global_202101"
-    ds = ISMN_Interface(path,activate=None)
-    ds.activate_network(['BIEBRZA-S-1', 'SCAN'])
-
-    ids = ds.get_dataset_ids(variable='soil_moisture',
-                             min_depth=0, max_depth=0.1)
-
-    networks = ds.collection.networks.keys()
-    ds.collection.meta
 

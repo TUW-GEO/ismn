@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from datetime import datetime
 import pytest
 import logging
+from collections import OrderedDict
 
 from tests.test_filecollection import cleanup
 from ismn.interface import ISMN_Interface
@@ -23,7 +24,8 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         metadata_path = os.path.join(testdata, 'python_metadata')
 
         cleanup(metadata_path)
-        ds = ISMN_Interface(testdata)
+        ds = ISMN_Interface(testdata, network=[])
+        assert ds.networks == OrderedDict()
         cls.testdata = testdata
 
     def setUp(self) -> None:
@@ -32,7 +34,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
     def tearDown(self) -> None:
         self.ds.close_files()
         logging.shutdown()
-
+            
     def test_list(self):
         assert len(self.ds.list_networks()) == 1
         assert len(self.ds.list_stations()) == len(self.ds.list_stations('COSMOS')) == 2
@@ -51,8 +53,9 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
             raise AssertionError("Found var that doesnt exist")
 
     def test_get_dataset_ids(self):
-        ids = self.ds.get_dataset_ids('soil_moisture', max_depth=100)
-        assert ids == [0,1]
+        ids = self.ds.get_dataset_ids('soil_moisture', max_depth=100, groupby='network')
+        assert list(ids.keys()) == ['COSMOS']
+        assert ids['COSMOS'] == [0,1]
 
         ids = self.ds.get_dataset_ids('soil_moisture', max_depth=0.19)
         assert ids == [0]

@@ -385,6 +385,7 @@ class IsmnFileCollection(object):
             if (networks is None) or (net in networks):
                 for f in files:
                     yield f
+        yield from () # in case networks is an empty list
 
     def close(self):
         # close root and all filehandlers
