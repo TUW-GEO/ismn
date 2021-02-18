@@ -110,7 +110,8 @@ class ISMN_Interface:
 
 
     def __collect_networks(self,
-                           network_names: list = None) -> list:
+                           network_names: list = None,
+                           nw_from_folder: bool = True):
         """
         Build Networks and fill them with Stations and Sensors and apply
         according filehandlers from filelist for data reading.
@@ -122,6 +123,9 @@ class ISMN_Interface:
             nw_name, st_name, instrument = f.metadata['network'].val, \
                                            f.metadata['station'].val, \
                                            f.metadata['instrument'].val
+                                           
+            if nw_from_folder:
+                nw_name = f.metadata['nw_from_folder'].val
 
             if nw_name not in networks:
                 networks[nw_name] = Network(nw_name)
