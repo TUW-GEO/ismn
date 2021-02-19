@@ -115,6 +115,13 @@ class ISMN_Interface:
         """
         Build Networks and fill them with Stations and Sensors and apply
         according filehandlers from filelist for data reading.
+        
+        Attributes
+        ----------
+        network_names: list
+            list of metwork names to collect. If None, all networks are collected
+        nw_from_folder: bool
+            If True, the network name is parsed from the folder name
         """
         networks = OrderedDict([])
 
