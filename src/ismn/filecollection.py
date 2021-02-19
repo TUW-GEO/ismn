@@ -29,6 +29,7 @@ from tqdm import tqdm
 from typing import Union
 from multiprocessing import Pool, cpu_count
 from operator import itemgetter
+import time
 
 from ismn.base import IsmnRoot
 from ismn.const import *
@@ -65,7 +66,7 @@ def _read_station_dir(
                                               temp_root=temp_root)
             station_meta = static_meta_file.metadata
     except IsmnFileError:
-        station_meta = MetaData.from_dict(CSV_META_TEMPLATE)
+        station_meta = MetaData([MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()])
 
     data_files = root.find_files(stat_dir, '*.stm')
 
@@ -190,7 +191,7 @@ class IsmnFileCollection(object):
         args = [(root.path if root.zip else root, d, temp_root)
                 for d in process_stat_dirs]
 
-        pbar = tqdm(total=len(args), desc='Files Processed:')
+        pbar = tqdm(total=len(args), desc='Files Processed')
 
         fl_elements = []
 
@@ -252,7 +253,7 @@ class IsmnFileCollection(object):
         print(f"Found existing ismn metadata in {meta_csv_file}.")
 
         metadata_df = pd.read_csv(meta_csv_file, index_col=0, header=[0, 1],
-                                  low_memory=False)
+                                  low_memory=False, engine='c')
 
         # parse date cols as datetime
         for col in ['timerange_from', 'timerange_to']:
@@ -266,33 +267,26 @@ class IsmnFileCollection(object):
         # we assume triples for all vars except these, so they must be at the end
         assert lvars[-2:] == ['file_path', 'file_type'], \
             "file_type and file_path must be at the end."
-        lvars = lvars[:-2]
 
         filelist = OrderedDict([])
 
         all_networks = metadata_df['network']['val'].values
 
-        for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
+        columns = np.array(list(metadata_df.columns))
 
+        for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
+            print(i)
             this_nw = all_networks[i]
             if (network is not None) and not np.isin([this_nw], network)[0]:
                 f = None
                 continue
             else:
-                metavars = []
+                vars = np.unique(columns[:-2][:, 0])
+                vals = row[:-2].reshape(-1, 3)
 
-                for j, metavar_name in enumerate(lvars):
-                    depth_from, depth_to, val = row[j * 3], row[j * 3 + 1], row[j * 3 + 2]
+                metadata = MetaData([MetaVar.from_tuple((vars[i], vals[i][2], vals[i][0], vals[i][1]))
+                                     for i in range(len(vars))])
 
-                    if np.all(np.isnan(np.array([depth_from, depth_to]))):
-                        depth = None
-                    else:
-                        depth = Depth(depth_from, depth_to)
-
-                    metavar = MetaVar(metavar_name, val, depth)
-                    metavars.append(metavar)
-
-                metadata = MetaData(metavars)
                 f = DataFile(root=root,
                              file_path=str(PurePosixPath(row[-2])),
                              load_metadata=False,

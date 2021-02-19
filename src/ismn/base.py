@@ -109,7 +109,7 @@ class IsmnRoot:
 
     @property
     def cont(self):
-        """ Get cont if object, or scan to create cont. """
+        """ Get cont of object, or scan to create cont. """
         if self.__cont is None:
             self.__cont = self.scan()
         return self.__cont
