@@ -338,7 +338,8 @@ class DataFile(IsmnFile):
         super(DataFile, self).__init__(root, file_path, temp_root)
 
         self.file_type = 'undefined'
-
+        self.posix_path = file_path
+        
         self.metadata = None
 
         if load_metadata:
@@ -367,6 +368,16 @@ class DataFile(IsmnFile):
         last = [s.decode('ascii') for s in last]
 
         return headr, scnd, last
+    
+    @staticmethod
+    def __get_parent_path(filepath):
+        """
+        returns the parent directory of a full path
+        """
+        normalized_path = os.path.normpath(filepath)
+        path_components = normalized_path.split(os.sep)
+        
+        return path_components[0]
 
     def get_metadata_ceop_sep(self, elements=None):
         """
@@ -633,6 +644,8 @@ class DataFile(IsmnFile):
         if best_meta_for_sensor:
             depth = metadata['instrument'].depth
             metadata = metadata.best_meta_for_depth(depth)
+        
+        metadata.add('nw_from_folder', self.__get_parent_path(self.posix_path), None)
 
         self.metadata = metadata
 

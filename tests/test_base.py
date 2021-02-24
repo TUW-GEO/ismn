@@ -9,7 +9,7 @@ testdata = Path(testdata_path)
 def test_root_dir():
     root = IsmnRoot(testdata / 'Data_seperate_files_20170810_20180809')
     assert root.root_dir.parent == Path(testdata_path)
-    assert list(root.cont.keys()) == ['COSMOS']
+    assert list(root.cont.keys()) == ['COSMOS', 'FR_Aqui']
     assert len(root.cont['COSMOS']) == 2
     assert root.isopen
 
