@@ -465,6 +465,9 @@ class Network(IsmnComponent):
         # Provide basic Network information.
         return f"Stations in '{self.name}': {list(self.stations.keys())}"
 
+    def __getitem__(self, item):
+        return self.stations[item]
+
     @property
     def coords(self) -> (list, list):
         """

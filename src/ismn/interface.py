@@ -47,7 +47,7 @@ class ISMN_Interface:
     network : str or list, optional (default: None)
         Name(s) of network(s) to load. Other data in the data_path will be ignored.
         By default or if None is passed, all networks are activated. If an empty list is passed
-        no netoworks are activated.
+        no networks are activated.
     parallel: bool, optional (default: True)
         Activate parallel processes to speed up metadata generation.
     keep_loaded_data : bool, optional (default: False)
@@ -87,6 +87,18 @@ class ISMN_Interface:
 
 
     def activate_network(self, network=None, meta_path=None, temp_root=gettempdir()):
+        """
+        Load files for specific networks
+
+        Parameters
+        ----------
+        network : list or str, optional (default: None)
+            See __init__ description
+        meta_path : str, optional (default: None)
+            See __init__ description
+        temp_root: str, optional (default: None)
+            See __init__ description
+        """
 
         meta_csv_filename = f'{self.root.name}.csv'
 
@@ -152,7 +164,11 @@ class ISMN_Interface:
                            name=None,
                            keep_loaded_data=self.keep_loaded_data)
 
+
         return list(networks.values())  # , grid
+    
+    def __getitem__(self, item):
+        return self.collection[item]
 
     def __repr__(self):
         return f"{self.root}\n" \
@@ -177,13 +193,9 @@ class ISMN_Interface:
         if not self.keep_loaded_data:
             raise IOError("Can only load all data when storing to memory is allowed. "
                           "Pass keep_loaded_data=True when creating the NetworkCollection.")
-
-        for net in self.networks.iter_networks():
-            for stat in net.iter_stations():
-                print(stat.name)
-                for sens in stat.iter_sensors():
-                    assert sens.keep_loaded_data == True
-                    sens.read_data()
+        for net, stat, sens in self.collection.iter_sensors():
+            assert sens.keep_loaded_data, "keep_loaded_data for sensor is off."
+            sens.read_data()
 
     @deprecated
     def list_networks(self) -> np.array:
@@ -423,8 +435,6 @@ class ISMN_Interface:
                                max_depth=np.inf, stats_text=True,
                                check_only_sensor_depth_from=False,
                                markersize=1, filename=None, ax=None):
-        # TODO: optionally indicate sensor count for each station in map directly (symbol, number)?
-        # TODO: fix similar colors for different networks, e.g. using sybols?
         """
         Plots available stations on a world map in robinson projection.
 
@@ -723,4 +733,8 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
+
+if __name__ == '__main__':
+    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212.zip"
+    ds = ISMN_Interface(path, keep_loaded_data=True, network=['FMI'])
 

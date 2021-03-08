@@ -573,7 +573,7 @@ class DataFile(IsmnFile):
         """
         readf = lambda f: pd.read_csv(f, skiprows=skiprows, usecols=usecols,
                                       names=names, delim_whitespace=True,
-                                      parse_dates=[[0, 1]])
+                                      parse_dates=[[0, 1]], engine='c')
         if self.root.zip:
 
             with TemporaryDirectory(prefix='ismn', dir=self.temp_root) as tempdir:

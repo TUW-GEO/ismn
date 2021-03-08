@@ -3,7 +3,7 @@ from typing import Optional, List, Any, Union
 import pandas as pd
 from ismn.const import *
 
-class Depth():
+class Depth:
     """
     A class representing a depth
     0: surface, >0: Below surface, <0: Above surface.
@@ -294,6 +294,32 @@ class MetaVar:
         # Check if Var has a valid value
         return pd.isnull(self.val)  # np.nan or None
 
+    @classmethod
+    def from_tuple(cls, args: tuple):
+        """
+        Create Metadata for a list of arguments.
+
+        Parameters
+        ----------
+        args : tuple
+            2 or 4 elements.
+            2: name and value
+            4: name, value, depth_from, depth_to
+
+        Returns
+        -------
+
+        """
+        if len(args) == 2:
+            return cls(*args)
+        elif len(args) == 4:
+            if pd.isnull(args[2]) or pd.isnull(args[3]):
+                return cls(*args[:2])
+            else:
+                return cls(args[0], args[1], depth=Depth(args[2], args[3]))
+        else:
+            raise ValueError("Expected tuple of length 2 or 4.")
+
 
 class MetaData:
     """
@@ -380,21 +406,6 @@ class MetaData:
         for var in self.metadata:
             values.append(var.val)
         return values
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'MetaData':
-        # Build Metadata from dict {name: (*args) ... }
-        vars = []
-        for k, v in data.items():
-            v = np.atleast_1d(v)
-            if len(v) == 3:
-                if v[1] is None and v[2] is None:
-                    vars.append(MetaVar(k, v[0]))
-                else:
-                    vars.append(MetaVar(k, v[0], Depth(float(v[1]), float(v[2]))))
-            else:
-                vars.append(MetaVar(k, *v))
-        return cls(vars)
 
     def to_dict(self):
         """
