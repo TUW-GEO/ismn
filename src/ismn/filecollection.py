@@ -275,7 +275,6 @@ class IsmnFileCollection(object):
         columns = np.array(list(metadata_df.columns))
 
         for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
-            print(i)
             this_nw = all_networks[i]
             if (network is not None) and not np.isin([this_nw], network)[0]:
                 f = None

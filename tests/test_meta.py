@@ -58,7 +58,7 @@ class Test_MetaData(unittest.TestCase):
 
         assert self.dat.keys() == ['first', 'second', 'neg', 'dup']
 
-        assert MetaData.from_dict({'first': (1,0,1)}) == self.dat[['first']]
+        assert MetaData([MetaVar.from_tuple(('first', 1,0.,1.))]) == self.dat[['first']]
 
 
     def test_best_meta(self):
