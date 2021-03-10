@@ -109,8 +109,7 @@ class ISMN_Interface:
         self.collection = NetworkCollection(networks)
 
 
-    def __collect_networks(self,
-                           network_names: list = None) -> list:
+    def __collect_networks(self, network_names: list = None) -> list:
         """
         Build Networks and fill them with Stations and Sensors and apply
         according filehandlers from filelist for data reading.
