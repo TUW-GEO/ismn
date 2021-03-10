@@ -510,6 +510,24 @@ class MetaData:
         """
         self.metadata.append(MetaVar(name, val, depth))
 
+    def replace(self, name, val, depth: Depth = None):
+        """
+        Replace the value of a MetaVar in the initialized class
+
+        Parameters
+        ----------
+        name: str
+            name of the MetaVar
+        val: new value of the MetaVar
+        """
+        Var = self.__getitem__(name)
+        if not Var is None:
+            self.metadata.remove(Var)
+            self.metadata.append(MetaVar(name, val, depth))
+
+        else:
+            raise MetadataError ("There is no MetaVar with name '{}'".format(name))
+
     def best_meta_for_depth(self, depth):
         """
         For meta variables that have a depth assigned, find the ones that match

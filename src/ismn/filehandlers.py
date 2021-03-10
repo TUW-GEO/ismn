@@ -644,9 +644,8 @@ class DataFile(IsmnFile):
         if best_meta_for_sensor:
             depth = metadata['instrument'].depth
             metadata = metadata.best_meta_for_depth(depth)
-        
-        metadata.add('nw_from_folder', self.__get_parent_path(self.posix_path), None)
 
         self.metadata = metadata
+        self.metadata.replace('network', self.__get_parent_path(self.posix_path))
 
         return self.metadata
