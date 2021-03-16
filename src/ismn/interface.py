@@ -182,7 +182,7 @@ class ISMN_Interface:
 
     @property
     def grid(self):
-        return self.networks.grid
+        return self.collection.grid
 
     def load_all(self):
         """
