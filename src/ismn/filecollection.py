@@ -85,7 +85,7 @@ def _read_station_dir(
             Depth(f.metadata['instrument'].depth.start,
                   f.metadata['instrument'].depth.end))
 
-        network = f.metadata['nw_from_folder'].val
+        network = f.metadata['network'].val
         station = f.metadata['station'].val
 
         filelist.append((network, station, f))
