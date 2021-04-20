@@ -45,8 +45,11 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
         # cecks content of file collection
 
         if os.path.split(self.coll.root.path)[1] == 'Data_seperate_files_20170810_20180809':
-            # check that FR_Aqui is in data AND metwork name is network folder
+            # check that FR_Aqui is in data AND network name is network folder
             assert list(self.coll.filelist.keys()) == ['COSMOS', 'FR_Aqui']
+            # check that files are associated to right network name
+            files = [f for f in self.coll.iter_filehandlers(networks='FR_Aqui')]
+            assert files != []
         else:
             assert list(self.coll.filelist.keys()) == ['COSMOS']
 
