@@ -612,7 +612,7 @@ class NetworkCollection(IsmnComponent):
             lons += net_lons
             lats += net_lats
 
-        self.grid = BasicGrid(lons, lats) if (len(lons) > 1 and len(lats) > 1) else None
+        self.grid = BasicGrid(lons, lats) if (len(lons) > 0 and len(lats) > 0) else None
 
     def __repr__(self, indent=''):
         return ',\n'.join([f"{indent}{net.name}: {list(net.stations.keys())}"
