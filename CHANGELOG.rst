@@ -5,7 +5,17 @@ Changelog
 Unreleased
 ==========
 
--
+- Rewrite package, objects for Networks, Stations, Sensors etc.
+- Update ISMN_Interface to use new components, similar behaviour to old interface.
+- Add MetaVar and MetaData modules for ismn metadata handling.
+- Data readers are now collected in filehandler class.
+- Metadata for soil layers is now filter by the sensor depth.
+- Support reading from zip archive and extracted folders.
+- New python_metadata structure (no absolute paths, no pickle format).
+- Drop support for old ceop format (new ceop_sep format is supported!).
+- Move lookup tables to const.py
+- Update docs and tests.
+- Use Github Actions instead of Travis CI.
 
 Version 0.4
 ===========

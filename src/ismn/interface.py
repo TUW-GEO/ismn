@@ -1,511 +1,60 @@
-# The MIT License (MIT)
-#
-# Copyright (c) 2019 TU Wien
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# -*- coding: utf-8 -*-
 
+from pathlib import Path
+from tempfile import gettempdir
 import platform
-if platform.system() == 'Darwin':
-      import matplotlib
-      matplotlib.use("TkAgg")
-
-import ismn.metadata_collector as metadata_collector
-import ismn.readers as readers
-import pygeogrids.grids as grids
-
 import os
 import sys
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-import configparser
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
+
+from ismn.filecollection import IsmnFileCollection
+from ismn.components import *
+from ismn.const import *
+from ismn.base import IsmnRoot
+
+try:
+    import cartopy.crs as ccrs
+    import cartopy.feature as cfeature
+
+    if platform.system() == 'Darwin':
+        import matplotlib
+
+        matplotlib.use("TkAgg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+
+    plotlibs = True
+except ImportError:
+    plotlibs = False
 
 
-class ISMNError(Exception):
-    pass
-
-
-class ISMN_station(object):
+class ISMN_Interface:
     """
-    Knows everything about the station, like which variables are measured there in which depths
-    and in which files the data is stored. This is not completely true for the CEOP format
-    since depth_from and depth_to are not easily knowable without parsing the whole file.
-    For CEOP format depth_from and depth_to will only contain the phrase 'multiple' instead
-    of the actual depth
-
-        Parameters
-    ----------
-    metadata : numpy.array
-        part of the structured array from metadata_collector.collect_from_folder()
-        which contains only fields for one station
-
-    Attributes
-    ----------
-    network : string
-        network the time series belongs to
-    station : string
-        station name the time series belongs to
-    latitude : float
-        latitude of station
-    longitude : float
-        longitude of station
-    elevation : float
-        elevation of station
-    landcover: string
-        land cover classification for station
-    climate: string
-        climate classification for station
-    variables : numpy.array
-        variables measured at this station
-        one of
-        - dynamic (time series):
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'snow depth',
-                * 'snow water equivalent',
-                * 'surface temperature',
-        - static:
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'surface temperature quality flag original'
-    depth_from : numpy.array
-        shallower depth of layer the variable with same index was measured at
-    depth_to : numpy.array
-        deeper depth of layer the variable with same index was measured at
-    sensors : numpy.array
-        sensor names of variables
-    filenames : numpy.array
-        filenames in which the data is stored
-
-    Methods
-    -------
-    get_variables()
-        returns the variables measured at this station
-    get_depths(variable)
-        get the depths in which a variable was measured at this station
-    get_sensors(variable,depth_from,depth_to)
-        get the sensors for the given variable, depth combination
-    read_variable(variable,depth_from=None,depth_to=None,sensor=None)
-        read the data for the given parameter combination
-    """
-
-    def __init__(self, metadata):
-        """
-        Goes through the passed metadata array and fills the attributes accordingly.
-        """
-        self.network = None
-        self.station = None
-        self.latitude = None
-        self.longitude = None
-        self.elevation = None
-        self.variables = []
-        self.depth_from = []
-        self.depth_to = []
-        self.sensors = []
-        self.filenames = []
-        self.landcover_2000 = metadata[0]['landcover_2000']
-        self.landcover_2005 = metadata[0]['landcover_2005']
-        self.landcover_2010 = metadata[0]['landcover_2010']
-        self.landcover_insitu = metadata[0]['landcover_insitu']
-        self.climate = metadata[0]['climate']
-        self.climate_insitu = metadata[0]['climate_insitu']
-        self.saturation = metadata[0]['saturation']
-        self.clay_fraction = metadata[0]['clay_fraction']
-        self.sand_fraction = metadata[0]['sand_fraction']
-        self.silt_fraction = metadata[0]['silt_fraction']
-        self.organic_carbon = metadata[0]['organic_carbon']
-
-        for dataset in metadata:
-            if self.network is None:
-                self.network = dataset['network']
-            elif self.network != dataset['network']:
-                raise ISMNError(
-                    "Networks in Station metadata are not the same")
-            if self.station is None:
-                self.station = dataset['station']
-            elif self.station != dataset['station']:
-                raise ISMNError(
-                    "Station names in Station metadata are not the same")
-            self.latitude = dataset['latitude']
-            self.longitude = dataset['longitude']
-            self.elevation = dataset['elevation']
-            self.variables.append(dataset['variable'])
-            self.depth_from.append(dataset['depth_from'])
-            self.depth_to.append(dataset['depth_to'])
-            self.sensors.append(dataset['sensor'])
-            self.filenames.append(dataset['filename'])
-
-        self.variables = np.array(self.variables)
-        self.depth_from = np.array(self.depth_from)
-        self.depth_to = np.array(self.depth_to)
-        self.sensors = np.array(self.sensors)
-        self.filenames = np.array(self.filenames)
-
-    def get_variables(self):
-        """
-        get a list of variables measured at this station
-
-        Returns
-        -------
-        variables : numpy.array
-            array of variables measured at this station
-        """
-        return np.unique(self.variables)
-
-    def get_depths(self, variable):
-        """
-        get depths at which the given variable was measured at this station
-
-        Parameters
-        ----------
-        variable : string
-            variable string best one of those returned by get_variables() or
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-
-        Returns
-        -------
-        depth_from : numpy.array
-        depth_to : numpy.array
-        """
-        if variable in self.variables:
-            index = np.where(variable == self.variables)
-            return self.depth_from[index], self.depth_to[index]
-        else:
-            return None, None
-
-    def get_sensors(self, variable, depth_from, depth_to):
-        """
-        get the sensors at which the variable was measured at the
-        given depth
-
-        Parameters
-        ----------
-        variable : string
-            variable abbreviation
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        depth_from : float
-            shallower depth of layer the variable was measured at
-        depth_to : float
-            deeper depth of layer the variable was measured at
-
-        Returns
-        -------
-        sensors : numpy.array
-            array of sensors found for the given combination of variable and depths
-
-        Raises
-        ------
-        ISMNError
-            if no sensor was found for the given combination of variable and depths
-        """
-        ind_sensors = np.where((variable == self.variables) &
-                               (depth_from == self.depth_from) &
-                               (depth_to == self.depth_to))[0]
-
-        if ind_sensors.size == 0:
-            raise ISMNError("variable-depth_from-depth_to combination does not exist."
-                            "Please check which depths do exist with get_depths_for_variable")
-        else:
-            return self.sensors[ind_sensors]
-
-    def read_variable(self, variable, depth_from=None, depth_to=None, sensor=None):
-        """
-        actually reads the given variable from the file. Parameters are
-        required until any ambiguity is resolved. If there is only one depth for
-        the given variable then only variable is required. If there are multiple
-        depths at least depth_from is required. If there are multiple depth_to
-        possibilities for one variable-depth_from combination also depth_to has to
-        be specified. If 2 sensors are measuring the same variable in the same
-        depth then also the sensor has to be specified.
-
-        Parameters
-        ----------
-        variable: string
-            variable to read
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        depth_from : float, optional
-            shallower depth of layer the variable was measured at
-        depth_to : float, optional
-            deeper depth of layer the variable was measured at
-        sensor : string, optional
-            name of the sensor
-
-        Returns
-        -------
-        data : readers.ISMNTimeSeries
-            ISMNTimeSeries object containing the relevant metadata for the time series
-            as well as a .data pointing to a pandas.DataFrame
-
-        Raises
-        ------
-        ISMNError:
-            if not all ambiguity was resolved by the given input parameters or
-            if no data was found for the given input parameters
-
-        """
-        if depth_from is None:
-            depth_f, depth_t = self.get_depths(variable)
-            if depth_f.size > 1:
-                raise ISMNError("there are multiple depths for this variable"
-                                "Please specify the one you want to read")
-            elif depth_f.size == 1:
-                depth_from = depth_f[0]
-            elif depth_f.size == 0:
-                raise ISMNError("there are no depths for this variable"
-                                "Something went wrong")
-        if depth_to is None:
-            depth_f, depth_t = self.get_depths(variable)
-            if depth_t.size > 1:
-                raise ISMNError("there are multiple depths with the same depth_from value"
-                                "Please specify the depth_to value you want to read")
-            elif depth_t.size == 1:
-                depth_to = depth_t[0]
-            elif depth_t.size == 0:
-                raise ISMNError("there are no depths for this variable"
-                                "Something went wrong")
-
-        if sensor is None:
-            sensors = self.get_sensors(variable, depth_from, depth_to)
-            if sensors.size > 1:
-                raise ISMNError("there are multiple sensors for this combination of "
-                                "variable, depth_to, depth_from. Please specify which one "
-                                "you want to read")
-            elif sensors.size == 1:
-                sensor = sensors[0]
-            elif sensors.size == 0:
-                raise ISMNError("there are no sensors for this variable, depth_from, depth_to "
-                                "combination. Please make sure you specified valid depths")
-
-        index_filename = np.where((variable == self.variables) &
-                                  (depth_from == self.depth_from) &
-                                  (depth_to == self.depth_to) &
-                                  (sensor == self.sensors))[0]
-
-        if index_filename.size != 1:
-            raise ISMNError("There is no data for this combination of variable, depth_from, "
-                            "depth_to and sensor. Please check.")
-        else:
-            return readers.read_data(self.filenames[index_filename[0]])
-
-    def data_for_variable(self, variable, min_depth=None, max_depth=None):
-        """
-        function to go through all the depth_from, depth_to, sensor combinations
-        for the given variable and yields ISMNTimeSeries if a match is found.
-        if min_depth and/or max_depth where given it only returns a
-        ISMNTimeSeries if depth_from >= min_depth and/or depth_to <= max_depth
-
-        Parameters
-        ----------
-        variable: string
-            variable to read
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        min_depth : float, optional
-            depth_from of variable has to be >= min_depth in order to be
-            included.
-        max_depth : float, optional
-            depth_to of variable has to be <= max_depth in order to be
-            included.
-
-        Returns
-        -------
-        time_series : iterator(ismn.readers.ISMNTimeSeries)
-            ISMNTimeSeries object containing data and metadata
-        """
-
-        if min_depth is None:
-            min_depth = np.min(self.depth_from)
-        if max_depth is None:
-            max_depth = np.max(self.depth_to)
-
-        for var, d1, d2, filename in zip(self.variables, self.depth_from, self.depth_to, self.filenames):
-            if var != variable:
-                continue
-
-            if ((d1 >= min_depth) &
-                    (d2 <= max_depth)):
-
-                yield readers.read_data(filename)
-
-    def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None, max_depth=None):
-        """
-        goes through the filenames associated with a station
-        and reads the date of the first and last observation to get
-        and approximate time coverage of the station.
-        This is just an overview. If holes have to be detected the
-        complete file must be read.
-
-        Parameters
-        ----------
-        self: type
-            description
-        variable: string, optional
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        min_depth : float, optional
-            depth_from of variable has to be >= min_depth in order to be
-            included.
-        max_depth : float, optional
-            depth_to of variable has to be <= max_depth in order to be
-            included.
-        Returns
-        -------
-        start_date: datetime
-        end_date: datetime
-        """
-        start_date = None
-        end_date = None
-
-        if min_depth is None:
-            min_depth = np.min(self.depth_from)
-        if max_depth is None:
-            max_depth = np.max(self.depth_to)
-
-        for var, d1, d2, filename in zip(self.variables, self.depth_from, self.depth_to, self.filenames):
-
-            if var == variable and ((d1 >= min_depth) & (d2 <= max_depth)):
-                sdate, edate = readers.get_min_max_timestamp(filename)
-                if start_date is None or start_date > sdate:
-                    start_date = sdate
-                if end_date is None or end_date < edate:
-                    end_date = edate
-
-        return start_date, end_date
-
-
-class ISMN_Interface(object):
-
-    """
-    class provides interface to ISMN data downloaded from the ISMN website
-
+    Class provides interface to ISMN data downloaded from the ISMN website
     upon initialization it collects metadata from all files in
-    path_to_data and saves metadata information
-    in numpy file in folder path_to_data/python_metadata/
-    First initialization can take a minute or so if all ISMN
-    data is present in path_to_data
+    path_to_data and saves metadata information in a csv file into the folder
+    python_metadata in meta_path (or data_path if no meta_path is defined).
+    First initialization can take some time if all ISMN
+    data is present in data_path and will start multiple processes.
 
     Parameters
     ----------
-    path_to_data : string
-        filepath to unzipped ISMN data containing the Network folders
-    network : string or list, optional
-        provide name of network to only load the given network
+    data_path : str or Path
+        Path to ISMN data to read, either to a zip archive or to the extracted
+        directory.
+    meta_path : str or Path
+        Path where the metadata csv file(s) is / are stored. The actual filename
+        is defined by the name of data_path and will be generated automatically.
+    network : str or list, optional (default: None)
+        Name(s) of network(s) to load. Other data in the data_path will be ignored.
+        By default or if None is passed, all networks are activated. If an empty list is passed
+        no networks are activated.
+    parallel: bool, optional (default: True)
+        Activate parallel processes to speed up metadata generation.
+    keep_loaded_data : bool, optional (default: False)
+        Keep data for a file in memory once it is loaded. This makes subsequent
+        calls of data faster (if e.g. a station is accessed multiple times)
+        but can fill up memory if multiple networks are loaded.
+
 
     Raises
     ------
@@ -518,303 +67,332 @@ class ISMN_Interface(object):
         metadata array for all stations contained in the path given during initialization
     grid : pygeogrids.grid.BasicGrid
         Grid object used for finding nearest insitu station for given lon lat
-
     Methods
     -------
     find_nearest_station(lon,lat)
         find nearest station for given coordinates
     """
 
-    def __init__(self, path_to_data, network=None):
+    def __init__(self, data_path, meta_path=None, network=None, parallel=True,
+                 keep_loaded_data=False, temp_root=gettempdir()):
+
+        self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
+        self.parallel = parallel
+
+        self.root = IsmnRoot(data_path)
+
+        self.keep_loaded_data = keep_loaded_data
+
+        self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
+
+
+    def activate_network(self, network=None, meta_path=None, temp_root=gettempdir()):
         """
-        collects metadata from all files in path_to_data and saves metadata information
-        in numpy file in folder path_to_data/python_metadata/
-        First initialization can take a minute or so if all ISMN
-        data is present in path_to_data
+        Load files for specific networks
 
         Parameters
-        ---------
-        path_to_data : str
-            Path to the downloaded ISMN data
+        ----------
         network : list or str, optional (default: None)
-            Name of a network in the initialised path or multiple networks as
-            a list of strings that are activated and loaded.
+            See __init__ description
+        meta_path : str, optional (default: None)
+            See __init__ description
+        temp_root: str, optional (default: None)
+            See __init__ description
         """
-        self.path_to_data = path_to_data
 
-        # read cci landcover class names and their identifiers
-        config = configparser.ConfigParser()
-        config.optionxform = str
-        config.read_file(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classifications.ini')))
-        landcover = dict(config.items('LANDCOVER'))
-        self.landcover = dict([(int(v), k) for k, v in landcover.items()])
-        self.climate = dict(config.items('KOEPPENGEIGER'))
+        meta_csv_filename = f'{self.root.name}.csv'
 
-        self.activate_network(network)
-
-    def activate_network(self, network):
-        """
-        Load or update metadata for reading one or multiple networks.
-
-        Parameters
-        ---------
-        network : list or str
-            Name of a network in the initialised path or multiple networks as
-            a list of strings that are loaded.
-        """
-        if not os.path.exists(os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy')):
-            os.mkdir(os.path.join(self.path_to_data, 'python_metadata'))
-            self.metadata = metadata_collector.collect_from_folder(
-                self.path_to_data)
-            np.save(
-                os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy'), self.metadata)
-            #np.savetxt(os.path.join(path_to_data,'python_metadata','metadata.npy'), self.metadata,delimiter=',')
+        if meta_path is None:
+            meta_path = Path(self.root.root_dir) / 'python_metadata'
         else:
-            self.metadata = np.load(
-                  os.path.join(self.path_to_data, 'python_metadata', 'metadata.npy'),
-                  allow_pickle=True)
+            meta_path = Path(meta_path)
 
+        meta_csv_file = meta_path / meta_csv_filename
+
+        if os.path.isfile(meta_csv_file):
+            self.__file_collection = IsmnFileCollection.from_metadata_csv(
+                self.root, meta_csv_file, network=network)
+        else:
+            self.__file_collection = IsmnFileCollection.build_from_scratch(
+                self.root, parallel=self.parallel, log_path=meta_path, temp_root=temp_root)
+            self.__file_collection.to_metadata_csv(meta_csv_file)
+
+        networks = self.__collect_networks(network)
+        self.collection = NetworkCollection(networks)
+
+
+    def __collect_networks(self, network_names: list = None) -> list:
+        """
+        Build Networks and fill them with Stations and Sensors and apply
+        according filehandlers from filelist for data reading.
+        
+        Attributes
+        ----------
+        network_names: list
+            list of metwork names to collect. If None, all networks are collected
+        nw_from_folder: bool
+            If True, the network name is parsed from the folder name
+        """
+        networks = OrderedDict([])
+
+        for f in self.__file_collection.iter_filehandlers(network_names):
+
+            nw_name, st_name, instrument = f.metadata['network'].val, \
+                                           f.metadata['station'].val, \
+                                           f.metadata['instrument'].val
+
+            if nw_name not in networks:
+                networks[nw_name] = Network(nw_name)
+
+            if st_name not in networks[nw_name].stations:
+                networks[nw_name].add_station(st_name,
+                                              f.metadata['longitude'].val,
+                                              f.metadata['latitude'].val,
+                                              f.metadata['elevation'].val)
+
+            # the senor name is the index in the list
+            networks[nw_name].stations[st_name]. \
+                add_sensor(instrument,
+                           f.metadata['variable'].val,
+                           f.metadata['variable'].depth,
+                           filehandler=f,  # todo: remove station meta from sensor
+                           name=None,
+                           keep_loaded_data=self.keep_loaded_data)
+
+
+        return list(networks.values())  # , grid
+    
+    def __getitem__(self, item):
+        return self.collection[item]
+
+    def __repr__(self):
+        return f"{self.root}\n" \
+               f"with Networks[Stations]:\n" \
+               f"------------------------\n" \
+               f"{self.collection.__repr__('  ')}"
+
+    @property
+    def networks(self):
+        return self.collection.networks
+
+    @property
+    def grid(self):
+        return self.collection.grid
+
+    def load_all(self):
+        """
+        Load data for all file handlers in the current network collection.
+        This may take some time and fill up your memory if multiple networks are
+        loaded at once.
+        """
+        if not self.keep_loaded_data:
+            raise IOError("Can only load all data when storing to memory is allowed. "
+                          "Pass keep_loaded_data=True when creating the NetworkCollection.")
+        for net, stat, sens in self.collection.iter_sensors():
+            assert sens.keep_loaded_data, "keep_loaded_data for sensor is off."
+            sens.read_data()
+
+    @deprecated
+    def list_networks(self) -> np.array:
+        # get network names from list of active files
+        return np.array(list(self.networks.keys()))
+
+    @deprecated
+    def list_stations(self, network=None) -> np.array:
+        # get station names for one of the active networks
         if network is not None:
-            if type(network) is not list:
-                network = [network]
-            # initialize binary mask the size of metadata
-            mask = np.zeros(self.metadata.shape[0], dtype=np.bool)
-            for net in network:
-                if net in self.metadata['network']:
-                    mask = mask | (self.metadata['network'] == net)
-                else:
-                    raise ISMNError("Network {} not found".format(net))
-            self.metadata = self.metadata[mask]
+            if network not in self.networks:
+                raise ISMNError(f'Network {network} not found in currently loaded networks.')
+            return np.array(list(self.networks[network].stations.keys()))
+        else:
+            stations = []
+            for network in self.networks.values():
+                stations += list(network.stations.keys())
+            return np.array(stations)
 
-        # initialize grid object for all stations
-        self.grid = grids.BasicGrid(self.metadata['longitude'],
-                                    self.metadata['latitude'],
-                                    setup_kdTree=False)
+    @deprecated
+    def list_sensors(self, network: str = None, station: str = None) -> np.array:
+        # List sensors names for a specific sensor in an active network
+        sensors = np.array([])
+        for net in self.networks.values():
+            if network in [None, net.name]:
+                for stat in net.stations.values():
+                    if station in [None, stat.name]:
+                        sensors = np.append(sensors,
+                                            # get the objects instead, use .values()?
+                                            np.array(list(stat.sensors.keys())))
 
-    def list_networks(self):
+        return sensors
+
+    def network_for_station(self, stationname, name_only=True):
         """
-        returns numpy.array of networks available through the interface
-
-        Returns
-        -------
-        networks : numpy.array
-            unique network names available
-        """
-        return np.unique(self.metadata['network'])
-
-    def list_stations(self, network=None):
-        """
-        returns numpy.array of station names available through the interface
+        Find networks that contain a station of the passed name.
 
         Parameters
         ----------
-        network : string, optional
-            if network name is given only stations belonging to the network
-            are returned
+        stationname : str
+            Station name to search in the active networks.
+        name_only : bool, optional (default: False)
+            Returns only the name of the network and not the Network object.
 
         Returns
         -------
-        networks : numpy.array
-            unique network names available
+        network_names : str or Network or None
+            Network that contains a station of that name, or None if no such
+            network exists.
+            Prints are warning and uses the FIRST found network name if there
+            are multiple stations with the same name in different networks.
+
         """
+        network_with_station = []
 
-        if network is None:
-            return np.unique(self.metadata['station'])
-        elif network in self.list_networks():
-            return np.unique(self.metadata[self.metadata['network'] == network]['station'])
+        for network in self.networks.values():
+            if stationname in network.stations.keys():
+                network_with_station.append(network)
 
-    def get_station(self, stationname, network=None):
-        """
-        get ISMN_station object by station name
+        if len(network_with_station) > 1:
+            warnings.warn("stationname occurs in multiple networks")
 
-        Parameters
-        ----------
-        stationname : string
-            name of station
-        network : string, optional
-            network name, has to be used if stations belonging
-            to different networks have the same name
-
-        Returns
-        -------
-        ISMN_station : ISMN_station object
-
-        Raises
-        ------
-        ISMNError
-            if stationname was not found
-        """
-
-        if network is not None:
-            all_index = np.where((self.metadata['station'] == stationname) &
-                                 (self.metadata['network'] == network))[0]
+        if len(network_with_station) == 0:
+            return None
         else:
-            all_index = np.where(self.metadata['station'] == stationname)[0]
+            nw = network_with_station[0]
+            if name_only:
+                warnings.warn(
+                    "Future Versions of the package will always return the Network object (same as name_only=False now). "
+                    "You can use Network.name to get the name of a network.",
+                    category=DeprecationWarning)
+                return nw.name
+            else:
+                return nw
 
-        if all_index.size == 0:
-            raise ISMNError("stationname was not found")
-
-        metadatasub = self.metadata[all_index]
-
-        if np.unique(metadatasub['network']).size > 1:
-            raise ISMNError("stationname occurs in multiple networks")
-
-        return ISMN_station(self.metadata[all_index])
-
-    def stations_that_measure(self, variable):
+    def stations_that_measure(self, variable, **filter_kwargs):
         """
         Goes through all stations and returns those that measure the specified
         variable
 
         Parameters
         ----------
-        variable : string
-            variable name
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
+        variable : str
+            variable name, one of:
+                * 'soil_moisture',
+                * 'soil_temperature',
+                * 'soil_suction',
                 * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
+                * 'air_temperature',
+                * 'field_capacity',
+                * 'permanent_wilting_point',
+                * 'plant_available_water',
+                * 'potential_plant_available_water',
                 * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
+                * 'silt_fraction',
+                * 'snow_depth',
+                * 'sand_fraction',
+                * 'clay_fraction',
+                * 'organic_carbon',
+                * 'snow_water_equivalent',
+                * 'surface_temperature',
+                * 'surface_temperature_quality_flag_original'
+        filter_kwargs :
+            Parameters are used to check all sensors at all stations, only stations
+            that have at least one matching sensor are returned.
+            For a description of possible filter kwargs, see Sensor.eval() function
 
-        Returns
+        Yields
         -------
-        ISMN_station : ISMN_station object
+        ISMN_station : Station
         """
-
-        for network in self.list_networks():
-
-            for stationname in self.list_stations(network=network):
-
-                station = self.get_station(stationname, network=network)
-
-                if variable in station.variables:
-                    yield station
+        for network in self.networks.values():
+            for station in network.iter_stations(variable=variable, **filter_kwargs):
+                yield station
 
     def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
-                        **kwargs):
+                        filter_meta_dict=None, check_only_sensor_depth_from=False,
+                        groupby=None):
         """
-        returns list of dataset_id's that can be used to read a
-        dataset directly through the read_ts function
+        Yield all sensors for a specific network and/or station and/or
+        variable and/or depth. The id is defined by the position of the filehandler
+        in the filelist.
 
         Parameters
         ----------
-        self: type
-            description
-        variable: string, optional
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        min_depth : float, optional
-            depth_from of variable has to be >= min_depth in order to be
-            included.
-        max_depth : float and None, optional (default: 0.1)
-            depth_to of variable has to be <= max_depth in order to be
-            included. When set to None, there is no upper limit for depth_to of variable.
-        kwargs:
-            filter by landcover and/or climate classifications
-            keys:
-                * landcover_2000
-                * landcover_2005
-                * landcover_2010
-                * landcover_insitu
-                * climate
-                * climate_insitu
+        variable : str
+            Variable to filer out
+        min_depth : float, optional (default: 0)
+            Min depth of sensors to search
+        max_depth : float, optional (default: 0.1)
+            Max depth of sensors to search
+        filter_meta_dict: dict, optional (default: None)
+            Additional metadata keys and values for which the file list is filtered
+            e.g. {'lc_2010': 10} to filter for a landcover class.
+            if there are multiple conditions, ALL have to be fulfilled.
+            e.g. {'lc_2010': 10', 'climate_KG': 'Dfc'})
+        check_only_sensor_depth_from : bool, optional (default: False)
+            Ignores the sensors depth_to value and only checks if depth_from of
+            the sensor is in the passed depth (e.g. for cosmic ray probes).
+        groupby : str, optional (default: None)
+            A metadata field name that is used to group sensors, e.g. network
         """
-        lc_cl = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu', 'climate', 'climate_insitu']
-        if max_depth:
-            if max_depth < min_depth:
-                raise ValueError("min_depth can not be more than max_depth. min_depth: {}, max_depth: {})".format(min_depth, max_depth))
-
-        landcover_climate = np.ones(self.metadata['variable'].shape, dtype=bool)
-
-        for k in kwargs.keys():
-            if k in lc_cl:
-                landcover_climate = np.logical_and(landcover_climate, self.metadata[k] == kwargs[k])
-            else:
-                raise ValueError('Specified keyword \"{}\" not found in metadata! Use one of the following: {}'.format(k, lc_cl))
-
-        if not max_depth:
-            ids = np.where((self.metadata['variable'] == variable) &
-                           (self.metadata['depth_from'] >= min_depth) &
-                           landcover_climate)[0]
+        if groupby is None:
+            ids = []
         else:
-            ids = np.where((self.metadata['variable'] == variable) &
-                           (self.metadata['depth_to'] <= max_depth) &
-                           (self.metadata['depth_from'] >= min_depth) &
-                           landcover_climate)[0]
+            ids = {}
+
+        depth = Depth(min_depth, max_depth)
+
+        for id, filehandler in enumerate(self.__file_collection.iter_filehandlers()):
+            eval = filehandler.check_metadata(
+                variable=variable,
+                allowed_depth=depth,
+                filter_meta_dict=filter_meta_dict,
+                check_only_sensor_depth_from=check_only_sensor_depth_from)
+
+            if eval:
+                if groupby is not None:
+                    groupval = filehandler.metadata[groupby].val
+                    if groupval not in ids.keys():
+                        ids[groupval] = []
+                    ids[groupval].append(id)
+                else:
+                    ids.append(id)
 
         return ids
 
-    def read_ts(self, idx):
+    def read_ts(self, idx, return_meta=False):
         """
-        read a time series directly by the id
+        Read a time series directly by the id
 
         Parameters
         ----------
         idx : int
             id into self.metadata, best one of those returned
             from get_dataset_ids()
+        return_meta : bool, optional (default: False)
+            Also return the metadata for the sensor that is read.
 
         Returns
         -------
-        timeseries : pandas.DataFrame
-            of the read data
+        timeseries : pd.DataFrame
+            Observation time series
+        metadata : dict, optional
+            {name : (value, depth_from, depth_to), ...}
+            All available metadata for that sensor.
         """
-        ts = readers.read_data(self.metadata['filename'][idx])
-        return ts.data
+
+        filehandler = self.__file_collection.get_filehandler(idx)
+        if return_meta:
+            return filehandler.read_data(), filehandler.metadata.to_dict()
+        else:
+            return filehandler.read_data()
 
     def read(self, *args, **kwargs):
-        """
-        Alias for read_ts. This is included so that the reader is in line with
-        other, pynetcf based readers.
-
-        Parameters
-        ----------
-        idx : int
-            id into self.metadata, best one of those returned
-            from get_dataset_ids()
-
-        Returns
-        -------
-        timeseries : pandas.DataFrame
-            of the read data
-        """
+        # calls read_ts
         return self.read_ts(*args, **kwargs)
 
-    def find_nearest_station(self, lon, lat, return_distance=False):
+    def find_nearest_station(self, lon, lat, return_distance=False,
+                             max_dist=np.inf):
         """
         finds the nearest station available in downloaded data
-
         Parameters
         ----------
         lon : float
@@ -823,7 +401,9 @@ class ISMN_Interface(object):
             Latitude of point
         return_distance : boolean, optional
             if True also distance is returned
-
+        max_dist : float, optional (default: np.inf)
+            Maximum distance allowed.
+            
         Returns
         -------
         station : ISMN_station
@@ -832,23 +412,49 @@ class ISMN_Interface(object):
             distance to station in meters, measured in cartesian coordinates and not on
             a great circle. Should be OK for small distances
         """
+        # what happens if there is no point within max dist if that works?
+        gpi, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
 
-        index, d = self.grid.find_nearest_gpi(lon, lat)
-
-        all_index = np.where(
-            self.metadata['station'] == self.metadata['station'][index])
+        if len(np.atleast_1d(gpi)) == 0:
+            stat = None
+            d = None
+        else:
+            stat = self.collection.station4gpi(gpi)
 
         if return_distance:
-            return ISMN_station(self.metadata[all_index]), d
+            return stat, d
         else:
-            return ISMN_station(self.metadata[all_index])
+            return stat
 
-    def plot_station_locations(self):
+    def plot_station_locations(self, variable=None, min_depth=-np.inf,
+                               max_depth=np.inf, stats_text=True,
+                               check_only_sensor_depth_from=False,
+                               markersize=1, filename=None, ax=None):
         """
-        plots available stations on a world map in robinson projection
+        Plots available stations on a world map in robinson projection.
 
         Parameters
         ----------
+        variable : str, optional (default: None)
+            Show only stations that measure this variable, e.g. soil_moisture
+            If None is passed, no filtering for variable is performed.
+        min_depth : float, optional (default: -np.inf)
+            Minimum depth, only stations that have a valid sensor measuring the
+            passed variable (if one is selected) in this depth range are included.
+        max_depth : float, optional (default: -np.inf)
+            See description of min_depth. This is the bottom threshold for the
+            allowed depth.
+        stats_text : bool, optianal (default: False)
+            Include text of net/stat/sens counts in plot.
+        check_only_sensor_depth_from : bool, optional (default: False)
+            Ignores the sensors depth_to value and only checks if depth_from of
+            the sensor is in the passed depth_range (e.g. for cosmic ray probes).
+        markersize : int, optional (default: 1)
+            Size of the marker, might depend on the amount of stations you plot.
+        filename : str or Path, optional (default: None)
+            Filename where image is stored. If None is passed, no file is created.
+        ax : plt.axes
+            Axes object that can be used by cartopy (projection assigned).
 
         Returns
         -------
@@ -856,12 +462,27 @@ class ISMN_Interface(object):
             created figure instance. If axes was given this will be None.
         ax: matplitlib.Axes
             used axes instance.
+        count : dict
+            Number of valid sensors and stations that contain at least one valid
+            sensor and networks that contain at least one valid station.
         """
+
+        if filename and ax:
+            raise ValueError("Either pass a filename OR pass ax to use for plot, not both.")
+
+        if not plotlibs:
+            warnings.warn("Could not import all plotting libs, plotting functions not available."
+                          "run 'pip install ismn[plot]' to install them")
+            return
 
         data_crs = ccrs.PlateCarree()
 
-        fig, ax = plt.subplots(1, 1)
-        ax = plt.axes(projection=ccrs.Robinson())
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+            ax = plt.axes(projection=ccrs.Robinson())
+        else:
+            fig = None
+
         ax.coastlines(linewidth=0.5)
         # show global map
         ax.set_global()
@@ -871,214 +492,201 @@ class ISMN_Interface(object):
             colormap = plt.get_cmap('tab20')
         else:
             colormap = plt.get_cmap('Set1')
-        uniq_networks = self.list_networks()
-        colorsteps = np.arange(0, 1, 1 / float(uniq_networks.size))
+
+        all_networks = list(self.networks.keys())
+        colorsteps = np.arange(0, 1, 1 / float(len(all_networks)))
+
         rect = []
+        act_networks = []
+        act_stations = []
 
-        for j, network in enumerate(uniq_networks):
-            stations_idx = np.where(self.metadata['network'] == network)[0]
-            unique_stations, us_idx = np.unique(
-                self.metadata['station'][stations_idx], return_index=True)
+        iterator = self.collection.iter_sensors(
+            variable=variable, depth=Depth(min_depth, max_depth),
+            filter_meta_dict=None,
+            check_only_sensor_depth_from=check_only_sensor_depth_from)
 
-            netcolor = colormap(colorsteps[j])
-            rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
+        n_sens = 0
+        for nw, stat, sens in iterator:
+            netcolor = colormap(colorsteps[all_networks.index(nw.name)])
+            if nw.name not in act_networks:
+                act_networks.append(nw.name)
+                rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
 
-            for i, station in enumerate(unique_stations):
-                lat, lon = self.metadata['latitude'][stations_idx[us_idx[i]]], \
-                           self.metadata['longitude'][stations_idx[us_idx[i]]]
-                ax.plot(lon, lat, color=netcolor, markersize=3, marker='s', transform=data_crs)
+            if stat.name not in act_stations:
+                act_stations.append(stat.name)
+                ax.plot(stat.lon, stat.lat,
+                        color=netcolor,
+                        markersize=markersize, marker='s', transform=data_crs)
+            n_sens += 1
 
-        ncols = int(uniq_networks.size / 4)
+        nrows = 8. if len(act_networks) > 8 else len(act_networks)
+
+        try:
+            ncols = int(len(act_networks) / nrows)
+        except ZeroDivisionError:
+            ncols = 0
         if ncols == 0:
             ncols = 1
 
-        plt.legend(rect, uniq_networks.tolist(), loc='lower center', ncol=ncols)
+        handles, labels = ax.get_legend_handles_labels()
+        lgd = ax.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.1))
 
-        return fig, ax
+        ax.legend(rect, act_networks, loc='upper center', ncol=ncols,
+                  bbox_to_anchor=(0.5, -0.05), fontsize=4)
 
-    def get_min_max_obs_timestamps(self, variable="soil moisture", min_depth=None, max_depth=None):
+        postfix_depth = "when only considering depth_from of the sensor" if check_only_sensor_depth_from else ''
+        depth_text = f"between {min_depth} and {max_depth} m \n {postfix_depth}"
+        feedback = f"{n_sens} valid sensors in {len(act_stations)} stations " \
+                   f"in {len(act_networks)} networks (of {len(all_networks)} potential networks) \n" \
+                   f"for {f'variable {variable}' if variable is not None else 'all variables'} " \
+                   f"{depth_text}"
+
+        if stats_text:
+            text = ax.text(0.5, 1.05, feedback, transform=ax.transAxes, fontsize='xx-small',
+                           horizontalalignment='center')
+        else:
+            text = None
+
+        if fig:
+            fig.set_size_inches([6, 3.5 + 0.25 * nrows])
+
+        if filename is not None:
+            fig.savefig(filename, bbox_extra_artists=(lgd, text) if stats_text else (lgd),
+                        dpi=300)
+        else:
+            counts = (len(act_networks), len(act_stations), n_sens)
+            return fig, ax, counts
+
+    def get_min_max_obs_timestamps(self, variable="soil_moisture",
+                                   min_depth=-np.inf, max_depth=np.inf,
+                                   filter_meta_dict=None):
         """
-        get minimum and maximum timestamps per station
+        Filter the active file list and return the min/max time stamp from ALL
+        time series that match the passed criteria.
+        This time period does NOT apply to all time series in the collection
+        but is the OVERALL earliest and latest timestamp found.
 
         Parameters
         ----------
-        self: type
-            description
-        variable: string, optional
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        min_depth : float, optional
-            depth_from of variable has to be >= min_depth in order to be
-            included.
-        max_depth : float, optional
-            depth_to of variable has to be <= max_depth in order to be
-            included.
+        variable : str, optional (default: 'soil_moisture')
+            One of:
+            'soil_moisture', 'soil_temperature', 'soil_suction',
+            'precipitation', 'air_temperature', 'field_capacity',
+            'permanent_wilting_point', 'plant_available_water',
+            'potential_plant_available_water', 'saturation', 'silt_fraction',
+            'snow_depth', 'sand_fraction', 'clay_fraction', 'organic_carbon',
+            'snow_water_equivalent', 'surface_temperature',
+            'surface_temperature_quality_flag_original'
+        min_depth : float, optional (default: 0)
+            Only sensors in this depth are considered.
+        max_depth : float, optional (default: 10)
+            Only sensors in this depth are considered.
+        filter_meta_dict: dict, optional (default: None)
+            Additional metadata keys and values for which the file list is filtered
+            e.g. {'lc_2010': 10} to filter for a landcover class.
+            if there are multiple conditions, ALL have to be fulfilled.
+            e.g. {'lc_2010': 10', 'climate_KG': 'Dfc'})
 
         Returns
         -------
-        data : pd.DataFrame
-            dataframe with multiindex Network Station and
-            columns start_date and end_date
+        start_date: datetime
+            Earliest time stamp found in all sensors that fulfill the passed
+            requirements.
+        end_date: datetime
+            Latest time stamp found in all sensors that fulfill the passed
+            requirements.
         """
-        networks = []
-        stations = []
-        start_dates = []
-        end_dates = []
-        for network in self.list_networks():
+        t_min = None
+        t_max = None
 
-            for stationname in self.list_stations(network=network):
-                # append station and network names to lists for
-                # construction of pandas mulitindex
-                networks.append(network)
-                stations.append(stationname)
+        for net, stat, sens in self.collection.iter_sensors(
+                variable=variable, depth=Depth(min_depth, max_depth),
+                filter_meta_dict=filter_meta_dict):
 
-                station = self.get_station(stationname, network=network)
-                startd, endd = station.get_min_max_obs_timestamp(variable=variable, min_depth=min_depth,
-                                                                 max_depth=max_depth)
-                start_dates.append(startd)
-                end_dates.append(endd)
+            time_from = pd.Timestamp(sens.metadata['timerange_from'].val)
+            time_to = pd.Timestamp(sens.metadata['timerange_to'].val)
 
-        data = pd.DataFrame({"start date": start_dates,
-                             "end date": end_dates}, index=[np.array(networks), np.array(stations)])
-        return data
+            if t_min is None:
+                t_min = time_from
+            if t_max is None:
+                t_max = time_to
+            if time_from < t_min:
+                t_min = time_from
+            if time_to > t_max:
+                t_max = time_to
 
-    def get_landcover_types(self, variable='soil moisture', min_depth=0, max_depth=10, landcover='landcover_2010'):
+        t_min = t_min.to_pydatetime() if t_min is not None else None
+        t_max = t_max.to_pydatetime() if t_max is not None else None
+
+        return t_min, t_max
+
+    def get_static_var_vals(self, variable='soil_moisture', min_depth=0,
+                            max_depth=10, static_var_name='lc_2010'):
         """
-        returns all landcover types in data for specific variable at certain depths
+        Get unique meta values for the selected static variable in the active
+        networks.
 
         Parameters
         ----------
-        self: type
-            description
-        variable: string, optional
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        min_depth : float, optional
-            depth_from of variable has to be >= min_depth in order to be
-            included.
-        max_depth : float, optional
-            depth_to of variable has to be <= max_depth in order to be
-            included.
-        landcover: string
-            * landcover_2000: return all landcover types in data as specified in CCI landcover classification 2000
-            * landcover_2005: return all landcover types in data as specified in CCI landcover classification 2005
-            * landcover_2010 (default):
-                return all landcover types in data as specified in CCI landcover classification 2010
-            * landcover_insitu: return all landcover types in data (in situ measurements)
+        variable : str, optional (default: 'soil_moisture')
+            One of:
+            'soil_moisture', 'soil_temperature', 'soil_suction',
+            'precipitation', 'air_temperature', 'field_capacity',
+            'permanent_wilting_point', 'plant_available_water',
+            'potential_plant_available_water', 'saturation', 'silt_fraction',
+            'snow_depth', 'sand_fraction', 'clay_fraction', 'organic_carbon',
+            'snow_water_equivalent', 'surface_temperature',
+            'surface_temperature_quality_flag_original'
+        min_depth : float, optional (default: 0)
+            Only sensors in this depth are considered.
+        max_depth : float, optional (default: 10)
+            Only sensors in this depth are considered.
+        static_var_name : str, optional (default: 'lc_2010')
+            One of:
+            'lc_2000', 'lc_2005', 'lc_2010', 'lc_insitu', 'climate_KG',
+            'climate_insitu'
+
+        Returns
+        -------
+        vals : dict
+            Unique values found in static meta and their meanings.
         """
-        lcs = ['landcover_2000', 'landcover_2005', 'landcover_2010', 'landcover_insitu']
 
-        if max_depth < min_depth:
-            raise ValueError("max_depth can not be less than min_depth")
+        if static_var_name not in CSV_META_TEMPLATE_SURF_VAR.keys():
+            raise ValueError(f"{static_var_name} is not in the list of supported variables."
+                             f"Choose one of {list(CSV_META_TEMPLATE_SURF_VAR.keys())}")
 
-        if landcover not in lcs:
-            raise ValueError("{} is no valid landcover variable. Choose one of the following: {}".format(landcover, lcs))
+        vals = []
+        for net in self.networks.values():
+            for sta in net.stations.values():
+                for sen in sta.sensors.values():
+                    if sen.eval(variable=variable, depth=Depth(min_depth, max_depth)):
+                        vals.append(sen.filehandler.metadata[static_var_name].val)
 
-        ids = np.where((self.metadata['variable'] == variable) &
-                       (self.metadata['depth_to'] <= max_depth) &
-                       (self.metadata['depth_from'] >= min_depth) &
-                       (self.metadata[landcover] != np.nan))[0]
+        val_dict = {}
+        for val in np.unique(np.array(vals)):
+            if val in self.climate.keys():
+                val_dict[val] = self.climate[val]
+            elif val in self.landcover.values():
+                for k, v in self.landcover.items():
+                    if v == val:
+                        val_dict[v] = k
 
-        meta = self.metadata[ids]
-        lc_types = np.unique(meta[landcover])
-        lc_types = lc_types[~pd.isnull(lc_types)]
-        if landcover == 'landcover_insitu':
-            return lc_types
-        lc_types_dict = dict((k, self.landcover[k]) for k in lc_types)
-        return lc_types_dict
+        return val_dict
 
-    def get_climate_types(self, variable='soil moisture', min_depth=0, max_depth=10, climate='climate'):
+    def get_landcover_types(self, variable: str = 'soil_moisture', min_depth: float = 0,
+                            max_depth: float = 10, landcover: str = 'lc_2010') -> dict:
         """
-        returns all climate types in data for specific variable at certain depths
-
-        Parameters
-        ----------
-        self: type
-            description
-        variable: string, optional
-            one of
-                * 'soil moisture',
-                * 'soil temperature',
-                * 'soil suction',
-                * 'precipitation',
-                * 'air temperature',
-                * 'field capacity',
-                * 'permanent wilting point',
-                * 'plant available water',
-                * 'potential plant available water',
-                * 'saturation',
-                * 'silt fraction',
-                * 'snow depth',
-                * 'sand fraction',
-                * 'clay fraction',
-                * 'organic carbon',
-                * 'snow water equivalent',
-                * 'surface temperature',
-                * 'surface temperature quality flag original'
-        min_depth : float, optional
-            depth_from of variable has to be >= min_depth in order to be
-            included.
-        max_depth : float, optional
-            depth_to of variable has to be <= max_depth in order to be
-            included.
-        climate: string
-            * climate (default): return climate types in data from Koeppen Geiger classification
-            * climate_insitu: return climate types in data from in situ classification
+        See description of get_static_var_vals
         """
-        cls = ['climate', 'climate_insitu']
+        return self.get_static_var_vals(variable, min_depth, max_depth, landcover)
 
-        if max_depth < min_depth:
-            raise ValueError("max_depth can not be less than min_depth")
-
-        if climate not in cls:
-            raise ValueError("{} is no valid climate variable. Choose one of the following: {}".format(climate, cls))
-
-        ids = np.where((self.metadata['variable'] == variable) &
-                       (self.metadata['depth_to'] <= max_depth) &
-                       (self.metadata['depth_from'] >= min_depth) &
-                       (self.metadata[climate] != ''))[0]
-
-        meta = self.metadata[ids]
-        cl_types = np.unique(meta[climate])
-        cl_types = cl_types[~pd.isnull(cl_types)]
-        if climate == 'climate_insitu':
-            return cl_types
-        cl_types_dict = dict((k, self.climate[k]) for k in cl_types)
-        return cl_types_dict
+    def get_climate_types(self, variable: str = 'soil_moisture', min_depth: float = 0,
+                          max_depth: float = 10, climate: str = 'climate_KG') -> dict:
+        """
+        See description of get_static_var_vals
+        """
+        return self.get_static_var_vals(variable, min_depth, max_depth, climate)
 
     def get_variables(self):
         """
@@ -1089,7 +697,13 @@ class ISMN_Interface(object):
         variables : numpy.array
             array of variables available for the data
         """
-        return np.unique(self.metadata['variable'])
+        all_vars = np.array([])
+        for _, station in self.collection.iter_stations():
+            stat_vars = station.get_variables()
+            if not all(np.isin(stat_vars, all_vars)):
+                all_vars = np.union1d(stat_vars, all_vars)
+
+        return all_vars
 
     def print_landcover_dict(self):
         """
@@ -1110,3 +724,12 @@ class ISMN_Interface(object):
         print('-------------------------------------')
         for key in self.climate.keys():
             print('{:4}: {}'.format(key, self.climate[key]))
+
+    def close_files(self):
+        # close all open filehandlers
+        self.__file_collection.close()
+
+if __name__ == '__main__':
+    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212.zip"
+    ds = ISMN_Interface(path, keep_loaded_data=True, network=['FMI'])
+

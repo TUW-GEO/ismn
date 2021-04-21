@@ -3,16 +3,15 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - cython
   - numpy
-  - scipy
   - pandas
-  - matplotlib<3.1.0
+  - matplotlib
   - cartopy
-  - netCDF4
-  - hdf5
   - pip
   - pip:
-     - pygeogrids
+     - pygeogrids>=0.3.2
      - configparser
+     - tqdm
      - more_itertools
+     - pytest
+     - pytest-cov

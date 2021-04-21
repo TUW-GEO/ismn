@@ -1,0 +1,78 @@
+# This workflow will install Python dependencies and run tests on
+# windows and linux systems with a variety of Python versions
+
+# For more information see:
+# https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Build package and run tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *' # daily
+
+jobs:
+  build:
+    name: Build py${{ matrix.python-version }} @ ${{ matrix.os }} 🐍
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: ['3.6', '3.7']
+        os: ["ubuntu-latest", "windows-latest"]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - uses: conda-incubator/setup-miniconda@v2.0.1
+        with:
+          miniconda-version: "latest"
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+          environment-file: environment.yml
+          activate-environment: ismn
+          auto-activate-base: false
+      - name: Print environment infos
+        shell: bash -l {0}
+        run: |
+          conda info -a
+          conda list
+          pip list
+          which pip
+          which python
+      - name: Export Environment
+        shell: bash -l {0}
+        run: |
+          mkdir -p .artifacts
+          filename=env_py${{ matrix.python-version }}_${{ matrix.os }}.yml
+          conda env export --no-builds | grep -v "prefix" > .artifacts/$filename
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: os_py_environments
+          path: .artifacts/*
+      - name: Install package and test
+        shell: bash -l {0}
+        run: |
+          pip install .
+          python setup.py test
+      - name: Upload Coverage
+        shell: bash -l {0}
+        run: |
+          pip install coveralls && coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
+          COVERALLS_PARALLEL: true
+  coveralls:
+    name: Submit Coveralls 👚
+    needs: build
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+      - name: Finished
+        run: |
+          pip3 install --upgrade coveralls && coveralls --service=github --finish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
