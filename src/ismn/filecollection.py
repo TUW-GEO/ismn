@@ -38,9 +38,12 @@ from ismn.meta import MetaData, MetaVar, Depth
 
 
 def _read_station_dir(
-        root: Union[IsmnRoot, Path, str],  # Path for reading from zip, avoid serialisation error
-        stat_dir: Union[Path, str],
-        temp_root: Path) -> (dict, list):
+    root: Union[
+        IsmnRoot, Path, str
+    ],  # Path for reading from zip, avoid serialisation error
+    stat_dir: Union[Path, str],
+    temp_root: Path,
+) -> (dict, list):
     """
     Parallelizable function to read metadata for files in station dir
     """
@@ -52,23 +55,30 @@ def _read_station_dir(
     else:
         proc_root = False
 
-    csv = root.find_files(stat_dir, '*.csv')
+    csv = root.find_files(stat_dir, "*.csv")
 
     try:
         if len(csv) == 0:
-            raise IsmnFileError("Expected 1 csv file for station, found 0. "
-                                "Use empty static metadata.")
+            raise IsmnFileError(
+                "Expected 1 csv file for station, found 0. "
+                "Use empty static metadata."
+            )
         else:
             if len(csv) > 1:
-                infos.append(f"Expected 1 csv file for station, found {len(csv)}. "
-                             f"Use first file in dir.")
-            static_meta_file = StaticMetaFile(root, csv[0], load_metadata=True,
-                                              temp_root=temp_root)
+                infos.append(
+                    f"Expected 1 csv file for station, found {len(csv)}. "
+                    f"Use first file in dir."
+                )
+            static_meta_file = StaticMetaFile(
+                root, csv[0], load_metadata=True, temp_root=temp_root
+            )
             station_meta = static_meta_file.metadata
     except IsmnFileError:
-        station_meta = MetaData([MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()])
+        station_meta = MetaData(
+            [MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()]
+        )
 
-    data_files = root.find_files(stat_dir, '*.stm')
+    data_files = root.find_files(stat_dir, "*.stm")
 
     filelist = []
 
@@ -76,17 +86,20 @@ def _read_station_dir(
         try:
             f = DataFile(root, file_path, temp_root=temp_root)
         except IOError as e:
-            infos.append(f'Error loading ismn file: {e}')
+            infos.append(f"Error loading ismn file: {e}")
             continue
 
         f.metadata.merge(station_meta, inplace=True)
 
         f.metadata = f.metadata.best_meta_for_depth(
-            Depth(f.metadata['instrument'].depth.start,
-                  f.metadata['instrument'].depth.end))
+            Depth(
+                f.metadata["instrument"].depth.start,
+                f.metadata["instrument"].depth.end,
+            )
+        )
 
-        network = f.metadata['network'].val
-        station = f.metadata['station'].val
+        network = f.metadata["network"].val
+        station = f.metadata["station"].val
 
         filelist.append((network, station, f))
 
@@ -116,10 +129,7 @@ class IsmnFileCollection(object):
         Temporary root dir.
     """
 
-    def __init__(self,
-                 root,
-                 filelist,
-                 temp_root=gettempdir()):
+    def __init__(self, root, filelist, temp_root=gettempdir()):
         """
         Parameters
         ----------
@@ -141,8 +151,9 @@ class IsmnFileCollection(object):
         return f"{self.__class__.__name__} for {len(self.filelist.keys())} Networks"
 
     @classmethod
-    def build_from_scratch(cls, data_root, parallel=True, log_path=None,
-                           temp_root=gettempdir()):
+    def build_from_scratch(
+        cls, data_root, parallel=True, log_path=None, temp_root=gettempdir()
+    ):
         """
         Parameters
         ----------
@@ -173,25 +184,32 @@ class IsmnFileCollection(object):
 
         if log_file:
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
-            logging.basicConfig(filename=log_file, level=logging.INFO,
-                                format='%(levelname)s %(asctime)s %(message)s',
-                                datefmt='%Y-%m-%d %H:%M:%S')
+            logging.basicConfig(
+                filename=log_file,
+                level=logging.INFO,
+                format="%(levelname)s %(asctime)s %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
 
         n_proc = 1 if not parallel else cpu_count()
 
         logging.info(f"Collecting metadata with {n_proc} processes.")
 
-        print(f"Processing metadata for all ismn stations into folder {root.path}."
-              f" This may take a few minutes, but is only done once ...")
+        print(
+            f"Processing metadata for all ismn stations into folder {root.path}."
+            f" This may take a few minutes, but is only done once ..."
+        )
 
         process_stat_dirs = []
         for net_dir, stat_dirs in root.cont.items():
             process_stat_dirs += list(stat_dirs)
 
-        args = [(root.path if root.zip else root, d, temp_root)
-                for d in process_stat_dirs]
+        args = [
+            (root.path if root.zip else root, d, temp_root)
+            for d in process_stat_dirs
+        ]
 
-        pbar = tqdm(total=len(args), desc='Files Processed')
+        pbar = tqdm(total=len(args), desc="Files Processed")
 
         fl_elements = []
 
@@ -205,8 +223,12 @@ class IsmnFileCollection(object):
 
         with Pool(n_proc) as pool:
             for arg in args:
-                pool.apply_async(_read_station_dir, arg, callback=update,
-                                 error_callback=logging.error)
+                pool.apply_async(
+                    _read_station_dir,
+                    arg,
+                    callback=update,
+                    error_callback=logging.error,
+                )
 
             pool.close()
             pool.join()
@@ -225,8 +247,9 @@ class IsmnFileCollection(object):
         return cls(root, filelist=filelist)
 
     @classmethod
-    def from_metadata_csv(cls, data_root, meta_csv_file, network=None,
-                          temp_root=gettempdir()):
+    def from_metadata_csv(
+        cls, data_root, meta_csv_file, network=None, temp_root=gettempdir()
+    ):
         """
         Load a previously created and stored filelist from pkl.
 
@@ -252,12 +275,17 @@ class IsmnFileCollection(object):
 
         print(f"Found existing ismn metadata in {meta_csv_file}.")
 
-        metadata_df = pd.read_csv(meta_csv_file, index_col=0, header=[0, 1],
-                                  low_memory=False, engine='c')
+        metadata_df = pd.read_csv(
+            meta_csv_file,
+            index_col=0,
+            header=[0, 1],
+            low_memory=False,
+            engine="c",
+        )
 
         # parse date cols as datetime
-        for col in ['timerange_from', 'timerange_to']:
-            metadata_df[col, 'val'] = pd.to_datetime(metadata_df[col, 'val'])
+        for col in ["timerange_from", "timerange_to"]:
+            metadata_df[col, "val"] = pd.to_datetime(metadata_df[col, "val"])
 
         lvars = []
         for c in metadata_df.columns:
@@ -265,16 +293,20 @@ class IsmnFileCollection(object):
                 lvars.append(c[0])
 
         # we assume triples for all vars except these, so they must be at the end
-        assert lvars[-2:] == ['file_path', 'file_type'], \
-            "file_type and file_path must be at the end."
+        assert lvars[-2:] == [
+            "file_path",
+            "file_type",
+        ], "file_type and file_path must be at the end."
 
         filelist = OrderedDict([])
 
-        all_networks = metadata_df['network']['val'].values
+        all_networks = metadata_df["network"]["val"].values
 
         columns = np.array(list(metadata_df.columns))
 
-        for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
+        for i, row in enumerate(
+            metadata_df.values
+        ):  # todo: slow!?? parallelise?
             this_nw = all_networks[i]
             if (network is not None) and not np.isin([this_nw], network)[0]:
                 f = None
@@ -283,18 +315,26 @@ class IsmnFileCollection(object):
                 vars = np.unique(columns[:-2][:, 0])
                 vals = row[:-2].reshape(-1, 3)
 
-                metadata = MetaData([MetaVar.from_tuple((vars[i], vals[i][2], vals[i][0], vals[i][1]))
-                                     for i in range(len(vars))])
+                metadata = MetaData(
+                    [
+                        MetaVar.from_tuple(
+                            (vars[i], vals[i][2], vals[i][0], vals[i][1])
+                        )
+                        for i in range(len(vars))
+                    ]
+                )
 
-                f = DataFile(root=root,
-                             file_path=str(PurePosixPath(row[-2])),
-                             load_metadata=False,
-                             temp_root=temp_root)
+                f = DataFile(
+                    root=root,
+                    file_path=str(PurePosixPath(row[-2])),
+                    load_metadata=False,
+                    temp_root=temp_root,
+                )
 
                 f.metadata = metadata
                 f.file_type = row[-1]
 
-                this_nw = f.metadata['network'].val
+                this_nw = f.metadata["network"].val
 
             if this_nw not in filelist.keys():
                 filelist[this_nw] = []
@@ -319,18 +359,20 @@ class IsmnFileCollection(object):
 
         for i, filehandler in enumerate(self.iter_filehandlers()):
             df = filehandler.metadata.to_pd(True, dropna=False)
-            df['file_path'] = str(PurePosixPath(filehandler.file_path))
-            df['file_type'] = filehandler.file_type
+            df["file_path"] = str(PurePosixPath(filehandler.file_path))
+            df["file_type"] = filehandler.file_type
 
             df.index = [i]
             dfs.append(df)
             i += 1
 
         dfs = pd.concat(dfs, axis=0, sort=True)
-        cols_end = ['file_path', 'file_type']
+        cols_end = ["file_path", "file_type"]
 
-        dfs = dfs[[c for c in dfs.columns if c[0] not in cols_end] +
-                  [c for c in dfs.columns if c[0] in cols_end]]
+        dfs = dfs[
+            [c for c in dfs.columns if c[0] not in cols_end]
+            + [c for c in dfs.columns if c[0] in cols_end]
+        ]
         dfs = dfs.fillna(np.nan)
 
         os.makedirs(Path(os.path.dirname(meta_csv_file)), exist_ok=True)
@@ -378,7 +420,7 @@ class IsmnFileCollection(object):
             if (networks is None) or (net in networks):
                 for f in files:
                     yield f
-        yield from () # in case networks is an empty list
+        yield from ()  # in case networks is an empty list
 
     def close(self):
         # close root and all filehandlers

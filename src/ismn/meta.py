@@ -3,6 +3,7 @@ from typing import Optional, List, Any, Union
 import pandas as pd
 from ismn.const import *
 
+
 class Depth:
     """
     A class representing a depth
@@ -43,8 +44,9 @@ class Depth:
                 raise DepthError("Start must be negative for Depths across 0")
         else:
             if abs(start) > abs(end):
-                raise DepthError("Depth end can not be further from 0"
-                                 " than depth start")
+                raise DepthError(
+                    "Depth end can not be further from 0" " than depth start"
+                )
 
     @property
     def is_profile(self):
@@ -88,11 +90,14 @@ class Depth:
         for d in [self.start, self.end]:
             yield d
 
-    def __temp_pos_depths(self, other=None) -> ('Depth', 'Depth' or None):
+    def __temp_pos_depths(self, other=None) -> ("Depth", "Depth" or None):
         # Create temporary depths that are shifted to positive
 
-        shift = min([self.end, other.end] +
-                    [self.start, other.start] if other is not None else [])
+        shift = min(
+            [self.end, other.end] + [self.start, other.start]
+            if other is not None
+            else []
+        )
 
         if np.isfinite(shift) and (shift < 0):  # no neg depths
             # move both to pos range if necessary
@@ -102,7 +107,9 @@ class Depth:
                 temp_d1 = Depth(self.start - shift, self.end - shift)
 
             if other is not None:
-                if ((other.start < 0) or (other.end < 0)) and (not other.across0):
+                if ((other.start < 0) or (other.end < 0)) and (
+                    not other.across0
+                ):
                     temp_d2 = Depth(other.end - shift, other.start - shift)
                 else:
                     temp_d2 = Depth(other.start - shift, other.end - shift)
@@ -110,7 +117,9 @@ class Depth:
                 temp_d2 = None
         else:
             temp_d1 = Depth(self.start, self.end)
-            temp_d2 = Depth(other.start, other.end) if other is not None else None
+            temp_d2 = (
+                Depth(other.start, other.end) if other is not None else None
+            )
 
         return temp_d1, temp_d2
 
@@ -138,7 +147,9 @@ class Depth:
             # shift depths to pos ranges, flip start/end so that formulas work.
             temp_d1, temp_d2 = self.__temp_pos_depths(other)
 
-            r = max([temp_d1.end, temp_d2.end]) - min([temp_d1.start, temp_d2.start])
+            r = max([temp_d1.end, temp_d2.end]) - min(
+                [temp_d1.start, temp_d2.start]
+            )
 
             # Overlapping range normalised to the overall depth range r
             p_f = abs(temp_d1.start - temp_d2.start) / r
@@ -178,8 +189,9 @@ class Depth:
         this_start_encl = other.encloses(Depth(self.start, self.start))
         this_end_encl = other.encloses(Depth(self.end, self.end))
 
-        overlap = any([other_start_encl, other_end_encl,
-                       this_start_encl, this_end_encl])
+        overlap = any(
+            [other_start_encl, other_end_encl, this_start_encl, this_end_encl]
+        )
 
         if return_perc:
             return overlap, self.perc_overlap(other)
@@ -238,10 +250,7 @@ class MetaVar:
     and a depth (optional).
     """
 
-    def __init__(self,
-                 name: str,
-                 val: Any,
-                 depth: Depth = None):
+    def __init__(self, name: str, val: Any, depth: Depth = None):
         """
         A named value that can be representative of a depth.
 
@@ -259,14 +268,16 @@ class MetaVar:
         self.depth = depth
 
     def __repr__(self):
-        return f"{self.__class__.__name__}([{self.name}, {self.val}, " \
-               f"{None.__repr__() if not self.depth else self.depth.__repr__()}])"
+        return (
+            f"{self.__class__.__name__}([{self.name}, {self.val}, "
+            f"{None.__repr__() if not self.depth else self.depth.__repr__()}])"
+        )
 
     def __getitem__(self, item: int):
         return [self.name, self.val, self.depth][item]
 
     def __str__(self):
-        d = str(self.depth) if self.depth else 'no depth'
+        d = str(self.depth) if self.depth else "no depth"
         return f"{self.name} ({d}): {self.val}"
 
     def __iter__(self):
@@ -282,8 +293,9 @@ class MetaVar:
     def __eq__(self, other):
         try:
             assert self.name == other.name
-            assert (self.val == other.val) | \
-                   np.all(pd.isna([self.val, other.val]))
+            assert (self.val == other.val) | np.all(
+                pd.isna([self.val, other.val])
+            )
             assert self.depth == other.depth
             return True
         except (AssertionError, AttributeError, TypeError):
@@ -327,8 +339,7 @@ class MetaData:
     vars with the same name, e.g. for different depths)
     """
 
-    def __init__(self,
-                 vars: List[MetaVar] = None):
+    def __init__(self, vars: List[MetaVar] = None):
         """
         Parameters
         ----------
@@ -346,13 +357,15 @@ class MetaData:
             yield var
 
     def __repr__(self):
-        return f"{self.__class__.__name__}([\n" + \
-               ",\n".join(['  ' + var.__repr__() for var in self.metadata]) + \
-               "\n])"
+        return (
+            f"{self.__class__.__name__}([\n"
+            + ",\n".join(["  " + var.__repr__() for var in self.metadata])
+            + "\n])"
+        )
 
-    def __getitem__(self,
-                    item: Union[str, int, list]) \
-            -> Union['MetaData', MetaVar, None]:
+    def __getitem__(
+        self, item: Union[str, int, list]
+    ) -> Union["MetaData", MetaVar, None]:
         # get all variables with the selected name or at the selected index
         if not isinstance(item, list):
             if isinstance(item, int):
@@ -444,7 +457,7 @@ class MetaData:
             Metadata collection as a data frame.
         """
 
-        args = ['val', 'depth_from', 'depth_to']
+        args = ["val", "depth_from", "depth_to"]
 
         var_names, values = [], []
         for var_name in np.unique(self.keys()):
@@ -459,15 +472,17 @@ class MetaData:
 
         values = list(sum(values, ()))
 
-        index = pd.MultiIndex.from_product([var_names, args], names=['name', 'meta_args'])
+        index = pd.MultiIndex.from_product(
+            [var_names, args], names=["name", "meta_args"]
+        )
 
         df = pd.DataFrame(index=index, data=values).fillna(np.nan)
-        df = df.rename(columns={0: 'data'})
+        df = df.rename(columns={0: "data"})
 
         if dropna:
             df.dropna(inplace=True)
 
-        return df.loc[:, 'data'] if not transpose else df.T
+        return df.loc[:, "data"] if not transpose else df.T
 
     def merge(self, other, inplace=False, exclude_empty=True):
         """
@@ -497,8 +512,9 @@ class MetaData:
 
         for m in [self, *other]:
             for v in m.metadata:
-                if (not v.empty if exclude_empty else True) and \
-                        (v not in merged_meta):
+                if (not v.empty if exclude_empty else True) and (
+                    v not in merged_meta
+                ):
                     merged_meta.add(v.name, v.val, v.depth)
 
         if inplace:
@@ -537,7 +553,9 @@ class MetaData:
             self.metadata.append(MetaVar(name, val, depth))
 
         else:
-            raise MetadataError ("There is no MetaVar with name '{}'".format(name))
+            raise MetadataError(
+                "There is no MetaVar with name '{}'".format(name)
+            )
 
     def best_meta_for_depth(self, depth):
         """
@@ -568,7 +586,9 @@ class MetaData:
                     if p > best_p:
                         best_p = p
                         best_var = v
-                if depth.overlap(best_var.depth):  # only add if best var overlaps
+                if depth.overlap(
+                    best_var.depth
+                ):  # only add if best var overlaps
                     best_vars.append(best_var)
             else:
                 if var.depth is None:  # if var has no depth, use it

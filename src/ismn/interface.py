@@ -15,7 +15,7 @@ try:
     import cartopy.crs as ccrs
     import cartopy.feature as cfeature
 
-    if platform.system() == 'Darwin':
+    if platform.system() == "Darwin":
         import matplotlib
 
         matplotlib.use("TkAgg")
@@ -73,8 +73,15 @@ class ISMN_Interface:
         find nearest station for given coordinates
     """
 
-    def __init__(self, data_path, meta_path=None, network=None, parallel=True,
-                 keep_loaded_data=False, temp_root=gettempdir()):
+    def __init__(
+        self,
+        data_path,
+        meta_path=None,
+        network=None,
+        parallel=True,
+        keep_loaded_data=False,
+        temp_root=gettempdir(),
+    ):
 
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
         self.parallel = parallel
@@ -83,10 +90,13 @@ class ISMN_Interface:
 
         self.keep_loaded_data = keep_loaded_data
 
-        self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
+        self.activate_network(
+            network=network, meta_path=meta_path, temp_root=temp_root
+        )
 
-
-    def activate_network(self, network=None, meta_path=None, temp_root=gettempdir()):
+    def activate_network(
+        self, network=None, meta_path=None, temp_root=gettempdir()
+    ):
         """
         Load files for specific networks
 
@@ -100,10 +110,10 @@ class ISMN_Interface:
             See __init__ description
         """
 
-        meta_csv_filename = f'{self.root.name}.csv'
+        meta_csv_filename = f"{self.root.name}.csv"
 
         if meta_path is None:
-            meta_path = Path(self.root.root_dir) / 'python_metadata'
+            meta_path = Path(self.root.root_dir) / "python_metadata"
         else:
             meta_path = Path(meta_path)
 
@@ -111,21 +121,25 @@ class ISMN_Interface:
 
         if os.path.isfile(meta_csv_file):
             self.__file_collection = IsmnFileCollection.from_metadata_csv(
-                self.root, meta_csv_file, network=network)
+                self.root, meta_csv_file, network=network
+            )
         else:
             self.__file_collection = IsmnFileCollection.build_from_scratch(
-                self.root, parallel=self.parallel, log_path=meta_path, temp_root=temp_root)
+                self.root,
+                parallel=self.parallel,
+                log_path=meta_path,
+                temp_root=temp_root,
+            )
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
 
-
     def __collect_networks(self, network_names: list = None) -> list:
         """
         Build Networks and fill them with Stations and Sensors and apply
         according filehandlers from filelist for data reading.
-        
+
         Attributes
         ----------
         network_names: list
@@ -137,39 +151,45 @@ class ISMN_Interface:
 
         for f in self.__file_collection.iter_filehandlers(network_names):
 
-            nw_name, st_name, instrument = f.metadata['network'].val, \
-                                           f.metadata['station'].val, \
-                                           f.metadata['instrument'].val
+            nw_name, st_name, instrument = (
+                f.metadata["network"].val,
+                f.metadata["station"].val,
+                f.metadata["instrument"].val,
+            )
 
             if nw_name not in networks:
                 networks[nw_name] = Network(nw_name)
 
             if st_name not in networks[nw_name].stations:
-                networks[nw_name].add_station(st_name,
-                                              f.metadata['longitude'].val,
-                                              f.metadata['latitude'].val,
-                                              f.metadata['elevation'].val)
+                networks[nw_name].add_station(
+                    st_name,
+                    f.metadata["longitude"].val,
+                    f.metadata["latitude"].val,
+                    f.metadata["elevation"].val,
+                )
 
             # the senor name is the index in the list
-            networks[nw_name].stations[st_name]. \
-                add_sensor(instrument,
-                           f.metadata['variable'].val,
-                           f.metadata['variable'].depth,
-                           filehandler=f,  # todo: remove station meta from sensor
-                           name=None,
-                           keep_loaded_data=self.keep_loaded_data)
-
+            networks[nw_name].stations[st_name].add_sensor(
+                instrument,
+                f.metadata["variable"].val,
+                f.metadata["variable"].depth,
+                filehandler=f,  # todo: remove station meta from sensor
+                name=None,
+                keep_loaded_data=self.keep_loaded_data,
+            )
 
         return list(networks.values())  # , grid
-    
+
     def __getitem__(self, item):
         return self.collection[item]
 
     def __repr__(self):
-        return f"{self.root}\n" \
-               f"with Networks[Stations]:\n" \
-               f"------------------------\n" \
-               f"{self.collection.__repr__('  ')}"
+        return (
+            f"{self.root}\n"
+            f"with Networks[Stations]:\n"
+            f"------------------------\n"
+            f"{self.collection.__repr__('  ')}"
+        )
 
     @property
     def networks(self):
@@ -186,8 +206,10 @@ class ISMN_Interface:
         loaded at once.
         """
         if not self.keep_loaded_data:
-            raise IOError("Can only load all data when storing to memory is allowed. "
-                          "Pass keep_loaded_data=True when creating the NetworkCollection.")
+            raise IOError(
+                "Can only load all data when storing to memory is allowed. "
+                "Pass keep_loaded_data=True when creating the NetworkCollection."
+            )
         for net, stat, sens in self.collection.iter_sensors():
             assert sens.keep_loaded_data, "keep_loaded_data for sensor is off."
             sens.read_data()
@@ -202,7 +224,9 @@ class ISMN_Interface:
         # get station names for one of the active networks
         if network is not None:
             if network not in self.networks:
-                raise ISMNError(f'Network {network} not found in currently loaded networks.')
+                raise ISMNError(
+                    f"Network {network} not found in currently loaded networks."
+                )
             return np.array(list(self.networks[network].stations.keys()))
         else:
             stations = []
@@ -211,16 +235,20 @@ class ISMN_Interface:
             return np.array(stations)
 
     @deprecated
-    def list_sensors(self, network: str = None, station: str = None) -> np.array:
+    def list_sensors(
+        self, network: str = None, station: str = None
+    ) -> np.array:
         # List sensors names for a specific sensor in an active network
         sensors = np.array([])
         for net in self.networks.values():
             if network in [None, net.name]:
                 for stat in net.stations.values():
                     if station in [None, stat.name]:
-                        sensors = np.append(sensors,
-                                            # get the objects instead, use .values()?
-                                            np.array(list(stat.sensors.keys())))
+                        sensors = np.append(
+                            sensors,
+                            # get the objects instead, use .values()?
+                            np.array(list(stat.sensors.keys())),
+                        )
 
         return sensors
 
@@ -261,7 +289,8 @@ class ISMN_Interface:
                 warnings.warn(
                     "Future Versions of the package will always return the Network object (same as name_only=False now). "
                     "You can use Network.name to get the name of a network.",
-                    category=DeprecationWarning)
+                    category=DeprecationWarning,
+                )
                 return nw.name
             else:
                 return nw
@@ -303,12 +332,20 @@ class ISMN_Interface:
         ISMN_station : Station
         """
         for network in self.networks.values():
-            for station in network.iter_stations(variable=variable, **filter_kwargs):
+            for station in network.iter_stations(
+                variable=variable, **filter_kwargs
+            ):
                 yield station
 
-    def get_dataset_ids(self, variable, min_depth=0, max_depth=0.1,
-                        filter_meta_dict=None, check_only_sensor_depth_from=False,
-                        groupby=None):
+    def get_dataset_ids(
+        self,
+        variable,
+        min_depth=0,
+        max_depth=0.1,
+        filter_meta_dict=None,
+        check_only_sensor_depth_from=False,
+        groupby=None,
+    ):
         """
         Yield all sensors for a specific network and/or station and/or
         variable and/or depth. The id is defined by the position of the filehandler
@@ -340,12 +377,15 @@ class ISMN_Interface:
 
         depth = Depth(min_depth, max_depth)
 
-        for id, filehandler in enumerate(self.__file_collection.iter_filehandlers()):
+        for id, filehandler in enumerate(
+            self.__file_collection.iter_filehandlers()
+        ):
             eval = filehandler.check_metadata(
                 variable=variable,
                 allowed_depth=depth,
                 filter_meta_dict=filter_meta_dict,
-                check_only_sensor_depth_from=check_only_sensor_depth_from)
+                check_only_sensor_depth_from=check_only_sensor_depth_from,
+            )
 
             if eval:
                 if groupby is not None:
@@ -358,30 +398,61 @@ class ISMN_Interface:
 
         return ids
 
-    def read_ts(self, idx, return_meta=False):
+    def read_metadata(
+            self, idx, format='pandas'
+        ) -> Union[pd.DataFrame, dict, MetaData]:
         """
-        Read a time series directly by the id
+        Read only metadata by id as pd.DataFrame.
 
         Parameters
         ----------
         idx : int
-            id into self.metadata, best one of those returned
+            id of sensor to read, best one of those returned
+            from get_dataset_ids()
+        format : str, optional (default: 'pandas')
+            pandas : return metadata as dataframe
+            dict : return metadata as dict
+            obj : return metadata as MetaData object.
+
+        Returns
+        -------
+        metadata : pd.DataFrame | dict | MetaData
+            Metadata for the passed index.
+        """
+        filehandler = self.__file_collection.get_filehandler(idx)
+        if format.lower() == 'pandas':
+            return filehandler.metadata.to_pd()
+        elif format.lower() == 'dict':
+            return filehandler.metadata.to_dict()
+        elif format.lower() == 'obj':
+            return filehandler.metadata
+        else:
+            raise NotImplementedError(f"{format} is not a supported format.")
+
+
+    def read_ts(self, idx, return_meta=False):
+        """
+        Read a time series directly by the id.
+
+        Parameters
+        ----------
+        idx : int
+            id of sesnor to read, best one of those returned
             from get_dataset_ids()
         return_meta : bool, optional (default: False)
-            Also return the metadata for the sensor that is read.
+            Also return the metadata for this sensor.
 
         Returns
         -------
         timeseries : pd.DataFrame
             Observation time series
-        metadata : dict, optional
-            {name : (value, depth_from, depth_to), ...}
+        metadata : pd.DataFrame, optional
             All available metadata for that sensor.
         """
 
         filehandler = self.__file_collection.get_filehandler(idx)
         if return_meta:
-            return filehandler.read_data(), filehandler.metadata.to_dict()
+            return filehandler.read_data(), filehandler.metadata.to_pd()
         else:
             return filehandler.read_data()
 
@@ -389,8 +460,9 @@ class ISMN_Interface:
         # calls read_ts
         return self.read_ts(*args, **kwargs)
 
-    def find_nearest_station(self, lon, lat, return_distance=False,
-                             max_dist=np.inf):
+    def find_nearest_station(
+        self, lon, lat, return_distance=False, max_dist=np.inf
+    ):
         """
         finds the nearest station available in downloaded data
         Parameters
@@ -403,7 +475,7 @@ class ISMN_Interface:
             if True also distance is returned
         max_dist : float, optional (default: np.inf)
             Maximum distance allowed.
-            
+
         Returns
         -------
         station : ISMN_station
@@ -413,7 +485,9 @@ class ISMN_Interface:
             a great circle. Should be OK for small distances
         """
         # what happens if there is no point within max dist if that works?
-        gpi, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
+        gpi, d = self.collection.grid.find_nearest_gpi(
+            lon, lat, max_dist=max_dist
+        )
 
         if len(np.atleast_1d(gpi)) == 0:
             stat = None
@@ -426,10 +500,17 @@ class ISMN_Interface:
         else:
             return stat
 
-    def plot_station_locations(self, variable=None, min_depth=-np.inf,
-                               max_depth=np.inf, stats_text=True,
-                               check_only_sensor_depth_from=False,
-                               markersize=1, filename=None, ax=None):
+    def plot_station_locations(
+        self,
+        variable=None,
+        min_depth=-np.inf,
+        max_depth=np.inf,
+        stats_text=True,
+        check_only_sensor_depth_from=False,
+        markersize=1,
+        filename=None,
+        ax=None,
+    ):
         """
         Plots available stations on a world map in robinson projection.
 
@@ -468,11 +549,15 @@ class ISMN_Interface:
         """
 
         if filename and ax:
-            raise ValueError("Either pass a filename OR pass ax to use for plot, not both.")
+            raise ValueError(
+                "Either pass a filename OR pass ax to use for plot, not both."
+            )
 
         if not plotlibs:
-            warnings.warn("Could not import all plotting libs, plotting functions not available."
-                          "run 'pip install ismn[plot]' to install them")
+            warnings.warn(
+                "Could not import all plotting libs, plotting functions not available."
+                "run 'pip install ismn[plot]' to install them"
+            )
             return
 
         data_crs = ccrs.PlateCarree()
@@ -486,12 +571,12 @@ class ISMN_Interface:
         ax.coastlines(linewidth=0.5)
         # show global map
         ax.set_global()
-        ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor='gray')
+        ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor="gray")
         if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
-            ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor='gray')
-            colormap = plt.get_cmap('tab20')
+            ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor="gray")
+            colormap = plt.get_cmap("tab20")
         else:
-            colormap = plt.get_cmap('Set1')
+            colormap = plt.get_cmap("Set1")
 
         all_networks = list(self.networks.keys())
         colorsteps = np.arange(0, 1, 1 / float(len(all_networks)))
@@ -501,9 +586,11 @@ class ISMN_Interface:
         act_stations = []
 
         iterator = self.collection.iter_sensors(
-            variable=variable, depth=Depth(min_depth, max_depth),
+            variable=variable,
+            depth=Depth(min_depth, max_depth),
             filter_meta_dict=None,
-            check_only_sensor_depth_from=check_only_sensor_depth_from)
+            check_only_sensor_depth_from=check_only_sensor_depth_from,
+        )
 
         n_sens = 0
         for nw, stat, sens in iterator:
@@ -514,12 +601,17 @@ class ISMN_Interface:
 
             if stat.name not in act_stations:
                 act_stations.append(stat.name)
-                ax.plot(stat.lon, stat.lat,
-                        color=netcolor,
-                        markersize=markersize, marker='s', transform=data_crs)
+                ax.plot(
+                    stat.lon,
+                    stat.lat,
+                    color=netcolor,
+                    markersize=markersize,
+                    marker="s",
+                    transform=data_crs,
+                )
             n_sens += 1
 
-        nrows = 8. if len(act_networks) > 8 else len(act_networks)
+        nrows = 8.0 if len(act_networks) > 8 else len(act_networks)
 
         try:
             ncols = int(len(act_networks) / nrows)
@@ -529,21 +621,43 @@ class ISMN_Interface:
             ncols = 1
 
         handles, labels = ax.get_legend_handles_labels()
-        lgd = ax.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.1))
+        lgd = ax.legend(
+            handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.1)
+        )
 
-        ax.legend(rect, act_networks, loc='upper center', ncol=ncols,
-                  bbox_to_anchor=(0.5, -0.05), fontsize=4)
+        ax.legend(
+            rect,
+            act_networks,
+            loc="upper center",
+            ncol=ncols,
+            bbox_to_anchor=(0.5, -0.05),
+            fontsize=4,
+        )
 
-        postfix_depth = "when only considering depth_from of the sensor" if check_only_sensor_depth_from else ''
-        depth_text = f"between {min_depth} and {max_depth} m \n {postfix_depth}"
-        feedback = f"{n_sens} valid sensors in {len(act_stations)} stations " \
-                   f"in {len(act_networks)} networks (of {len(all_networks)} potential networks) \n" \
-                   f"for {f'variable {variable}' if variable is not None else 'all variables'} " \
-                   f"{depth_text}"
+        postfix_depth = (
+            "when only considering depth_from of the sensor"
+            if check_only_sensor_depth_from
+            else ""
+        )
+        depth_text = (
+            f"between {min_depth} and {max_depth} m \n {postfix_depth}"
+        )
+        feedback = (
+            f"{n_sens} valid sensors in {len(act_stations)} stations "
+            f"in {len(act_networks)} networks (of {len(all_networks)} potential networks) \n"
+            f"for {f'variable {variable}' if variable is not None else 'all variables'} "
+            f"{depth_text}"
+        )
 
         if stats_text:
-            text = ax.text(0.5, 1.05, feedback, transform=ax.transAxes, fontsize='xx-small',
-                           horizontalalignment='center')
+            text = ax.text(
+                0.5,
+                1.05,
+                feedback,
+                transform=ax.transAxes,
+                fontsize="xx-small",
+                horizontalalignment="center",
+            )
         else:
             text = None
 
@@ -551,15 +665,22 @@ class ISMN_Interface:
             fig.set_size_inches([6, 3.5 + 0.25 * nrows])
 
         if filename is not None:
-            fig.savefig(filename, bbox_extra_artists=(lgd, text) if stats_text else (lgd),
-                        dpi=300)
+            fig.savefig(
+                filename,
+                bbox_extra_artists=(lgd, text) if stats_text else (lgd),
+                dpi=300,
+            )
         else:
             counts = (len(act_networks), len(act_stations), n_sens)
             return fig, ax, counts
 
-    def get_min_max_obs_timestamps(self, variable="soil_moisture",
-                                   min_depth=-np.inf, max_depth=np.inf,
-                                   filter_meta_dict=None):
+    def get_min_max_obs_timestamps(
+        self,
+        variable="soil_moisture",
+        min_depth=-np.inf,
+        max_depth=np.inf,
+        filter_meta_dict=None,
+    ):
         """
         Filter the active file list and return the min/max time stamp from ALL
         time series that match the passed criteria.
@@ -600,11 +721,13 @@ class ISMN_Interface:
         t_max = None
 
         for net, stat, sens in self.collection.iter_sensors(
-                variable=variable, depth=Depth(min_depth, max_depth),
-                filter_meta_dict=filter_meta_dict):
+            variable=variable,
+            depth=Depth(min_depth, max_depth),
+            filter_meta_dict=filter_meta_dict,
+        ):
 
-            time_from = pd.Timestamp(sens.metadata['timerange_from'].val)
-            time_to = pd.Timestamp(sens.metadata['timerange_to'].val)
+            time_from = pd.Timestamp(sens.metadata["timerange_from"].val)
+            time_to = pd.Timestamp(sens.metadata["timerange_to"].val)
 
             if t_min is None:
                 t_min = time_from
@@ -620,8 +743,13 @@ class ISMN_Interface:
 
         return t_min, t_max
 
-    def get_static_var_vals(self, variable='soil_moisture', min_depth=0,
-                            max_depth=10, static_var_name='lc_2010'):
+    def get_static_var_vals(
+        self,
+        variable="soil_moisture",
+        min_depth=0,
+        max_depth=10,
+        static_var_name="lc_2010",
+    ) -> dict:
         """
         Get unique meta values for the selected static variable in the active
         networks.
@@ -653,15 +781,21 @@ class ISMN_Interface:
         """
 
         if static_var_name not in CSV_META_TEMPLATE_SURF_VAR.keys():
-            raise ValueError(f"{static_var_name} is not in the list of supported variables."
-                             f"Choose one of {list(CSV_META_TEMPLATE_SURF_VAR.keys())}")
+            raise ValueError(
+                f"{static_var_name} is not in the list of supported variables."
+                f"Choose one of {list(CSV_META_TEMPLATE_SURF_VAR.keys())}"
+            )
 
         vals = []
         for net in self.networks.values():
             for sta in net.stations.values():
                 for sen in sta.sensors.values():
-                    if sen.eval(variable=variable, depth=Depth(min_depth, max_depth)):
-                        vals.append(sen.filehandler.metadata[static_var_name].val)
+                    if sen.eval(
+                        variable=variable, depth=Depth(min_depth, max_depth)
+                    ):
+                        vals.append(
+                            sen.filehandler.metadata[static_var_name].val
+                        )
 
         val_dict = {}
         for val in np.unique(np.array(vals)):
@@ -674,19 +808,33 @@ class ISMN_Interface:
 
         return val_dict
 
-    def get_landcover_types(self, variable: str = 'soil_moisture', min_depth: float = 0,
-                            max_depth: float = 10, landcover: str = 'lc_2010') -> dict:
+    def get_landcover_types(
+        self,
+        variable: str = "soil_moisture",
+        min_depth: float = 0,
+        max_depth: float = 10,
+        landcover: str = "lc_2010",
+    ) -> dict:
         """
         See description of get_static_var_vals
         """
-        return self.get_static_var_vals(variable, min_depth, max_depth, landcover)
+        return self.get_static_var_vals(
+            variable, min_depth, max_depth, landcover
+        )
 
-    def get_climate_types(self, variable: str = 'soil_moisture', min_depth: float = 0,
-                          max_depth: float = 10, climate: str = 'climate_KG') -> dict:
+    def get_climate_types(
+        self,
+        variable: str = "soil_moisture",
+        min_depth: float = 0,
+        max_depth: float = 10,
+        climate: str = "climate_KG",
+    ) -> dict:
         """
         See description of get_static_var_vals
         """
-        return self.get_static_var_vals(variable, min_depth, max_depth, climate)
+        return self.get_static_var_vals(
+            variable, min_depth, max_depth, climate
+        )
 
     def get_variables(self):
         """
@@ -694,7 +842,7 @@ class ISMN_Interface:
 
         Returns
         -------
-        variables : numpy.array
+        variables : np.array
             array of variables available for the data
         """
         all_vars = np.array([])
@@ -705,31 +853,39 @@ class ISMN_Interface:
 
         return all_vars
 
-    def print_landcover_dict(self):
+    def print_landcover_dict(self) -> None:
         """
         print all classes provided by the CCI Landcover Classification
-        :return: None
         """
-        print('CCI Landcover Classification')
-        print('----------------------------')
+        print("CCI Landcover Classification")
+        print("----------------------------")
         for key in self.landcover.keys():
-            print('{:4}: {}'.format(key, self.landcover[key]))
+            print("{:4}: {}".format(key, self.landcover[key]))
 
-    def print_climate_dict(self):
+    def print_climate_dict(self) -> None:
         """
         print all classes provided by the Koeppen-Geiger climate Classification
-        :return: None
         """
-        print('KOEPPEN GEIGER Climate Classification')
-        print('-------------------------------------')
+        print("KOEPPEN GEIGER Climate Classification")
+        print("-------------------------------------")
         for key in self.climate.keys():
-            print('{:4}: {}'.format(key, self.climate[key]))
+            print("{:4}: {}".format(key, self.climate[key]))
 
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
 
-if __name__ == '__main__':
-    path = "/home/wolfgang/data-read/ismn/Data_separate_files_20090804_20201212.zip"
-    ds = ISMN_Interface(path, keep_loaded_data=True, network=['FMI'])
 
+if __name__ == "__main__":
+    path = "/data-read/USERS/wpreimes/ISMN/v20210131/"
+    networks = ['AMMA-CATCH', 'CARBOAFRICA', 'DAHRA', 'CTP_SMTMN', 'MySMNet', 'OZNET',
+                'BIEBRZA_S-1', 'FMI', 'FR_Aqui', 'HOBE', 'REMEDHUS', 'RSMN', 'SMOSMANIA',
+                'TERENO', 'WEGENERNET', 'WSMN', 'BNZ-LTER', 'COSMOS', 'FLUXNET-AMERIFLUX',
+                'iRON', 'PBO_H2O', 'RISMA','SCAN', 'USCRN', 'LAB-net']
+    ds = ISMN_Interface(path, network=networks)
+    ds.plot_station_locations('soil_moisture', min_depth=0, max_depth=0.05,
+                              filename='/home/wpreimes/Temp/ismn_stations_c3s_pqar_0_005.png')
+    ds.plot_station_locations('soil_moisture', min_depth=0.05, max_depth=0.1,
+                              filename='/home/wpreimes/Temp/ismn_stations_c3s_pqar_005_010.png')
+    ds.plot_station_locations('soil_moisture', min_depth=0.05, max_depth=1000,
+                              filename='/home/wpreimes/Temp/ismn_stations_c3s_pqar_alldepth.png')
