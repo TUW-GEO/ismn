@@ -11,7 +11,7 @@ jobs:
   publish:
     name: Upload to Pypi 🚀
     # needs original repo (TUW-GEO) and tagged commit (v*)
-    if: startsWith(github.ref, 'refs/tags/v') && startsWith(github.repository, 'wpreimes/') # todo: change account
+    if: startsWith(github.ref, 'refs/tags/v') && startsWith(github.repository, 'TUW-GEO/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -36,5 +36,4 @@ jobs:
           verify_metadata: true
           packages_dir: dist/
           user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }} # todo: change token for real pypi in github actions secrets of the repo
-          repository_url: https://test.pypi.org/legacy/ # todo: delete for real pypi
+          password: ${{ secrets.PYPI_API_TOKEN }} # todo: add token to github actions secrets

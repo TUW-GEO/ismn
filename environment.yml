@@ -7,6 +7,7 @@ dependencies:
   - pandas
   - matplotlib
   - cartopy
+  - scipy
   - pip
   - pip:
      - pygeogrids>=0.3.2
