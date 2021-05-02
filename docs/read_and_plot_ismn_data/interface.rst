@@ -17,12 +17,11 @@ a zip archive of the data directly (reading from zip is significantly
 slower). To read only a selection of networks stored in the passed data
 path, you can pass a list of network names.
 
-.. code:: ipython3
+.. code:: python
 
     from ismn.interface import ISMN_Interface
     import numpy as np
     import matplotlib.pyplot as plt
-    %matplotlib inline
     
     # Enter the path to your ISMN data
     path_to_ismn_data = r"C:\Temp\delete_me\ismn\stick\Data_separate_files_20090804_20201212.zip"
@@ -71,7 +70,7 @@ The collection lists the network name and names of all stations in a
 network (either all Networks if no network(s) was/were specified during
 initialisation or the selected networks).
 
-.. code:: ipython3
+.. code:: python
 
     collection = ismn_data.collection
     collection
@@ -95,12 +94,12 @@ The collection also contains a grid object that contains the locations
 of all **stations** in all active networks. For more details see
 https://github.com/TUW-GEO/pygeogrids
 
-.. code:: ipython3
+.. code:: python
 
     import pandas as pd
     grid = collection.grid
     gpis, lons, lats = grid.get_grid_points()
-    display(pd.DataFrame(index=pd.Index(gpis, name='gpi'), data={'lon': lons, 'lat': lats}).T)
+    display(pd.DataFrame(index=pd.Index(gpis, name='gpi'), data={'lon': lons, 'lat': lats}))
 
 
 
@@ -205,7 +204,7 @@ https://github.com/TUW-GEO/pygeogrids
 Using the GPI or coordinates, a station from **all** stations in **all**
 networks in the collection can be selected.
 
-.. code:: ipython3
+.. code:: python
 
     station, dist = collection.get_nearest_station(27.0, 68.0)
     assert collection.station4gpi(0) == station # same result when selecting with GPI
@@ -232,7 +231,7 @@ Network
 
 A single network from the collection can be accessed via its name.
 
-.. code:: ipython3
+.. code:: python
 
     network = collection['SMOSMANIA']
     network
@@ -252,7 +251,7 @@ Station
 A network consists of multiple stations, multiple variables can be
 measured by different sensors at a station:
 
-.. code:: ipython3
+.. code:: python
 
     station = network.stations['SaintFelixdeLauragais']
     station
@@ -275,7 +274,7 @@ DataFrame (``to_pd()``) or as a dictionary (``to_dict()``) of form:
 
    {name: [(value, depth_from, depth_to), ...], ...}
 
-.. code:: ipython3
+.. code:: python
 
     from pprint import pprint
     pprint(station.metadata.to_dict())
@@ -344,7 +343,7 @@ Accessing sensors at a station works similar to accessing stations in a
 network. By default the name is created from the instrument type, the
 measurued variable and the depth layer that the senosor measures in.
 
-.. code:: ipython3
+.. code:: python
 
     sensor = station['ThetaProbe-ML2X_soil_moisture_0.050000_0.050000']
     sensor
@@ -361,7 +360,7 @@ measurued variable and the depth layer that the senosor measures in.
 A data file is assigned to each sensor, that contains the sensor
 variable time series and quality flags.
 
-.. code:: ipython3
+.. code:: python
 
     ts = sensor.read_data()
     ax = ts.plot(figsize=(12,4))
@@ -476,7 +475,7 @@ variable time series and quality flags.
 
 
 
-.. image:: interface_files%5Cinterface_24_1.png
+.. image:: interface_files/5Cinterface_24_1.png
 
 
 Additionally, metadata is assigned to each sensor. Some metadata is
@@ -489,7 +488,7 @@ value applies to (for soil properties multiple layers are provided
 together with the ISMN data, during metadata generation the best
 matching depth for a sensor is selected).
 
-.. code:: ipython3
+.. code:: python
 
     sensor.metadata.to_pd()
 
@@ -546,7 +545,7 @@ Find network for a specific station
 ``ISMN_Interface`` provides a function to find the network when only the
 name of a station is known.
 
-.. code:: ipython3
+.. code:: python
 
     ismn_data.network_for_station('SAA111', name_only=False)
 
@@ -565,7 +564,7 @@ Read via index
 You can filter the dataset a priori and get ids of sensors that measure
 a specific variable. The id can then be used to read the data directly.
 
-.. code:: ipython3
+.. code:: python
 
     ids = ismn_data.get_dataset_ids(variable='soil_temperature', max_depth=1, filter_meta_dict={'lc_2005': 130, 'climate_KG': 'Csb'})
     print(ids)
@@ -576,7 +575,7 @@ a specific variable. The id can then be used to read the data directly.
     [1376, 1377, 1378, 1379]
     
 
-.. code:: ipython3
+.. code:: python
 
     ts, meta = ismn_data.read(ids[1], return_meta=True)
     pprint(meta)
@@ -618,14 +617,14 @@ a specific variable. The id can then be used to read the data directly.
 
 
 
-.. image:: interface_files%5Cinterface_33_2.png
+.. image:: interface_files/5Cinterface_33_2.png
 
 
 Station locations for a specific variable can be visualised on a map. If
 a min/max depth is passed, only stations with a sensor that measures
 within the passed range are included.
 
-.. code:: ipython3
+.. code:: python
 
     import cartopy.crs as ccrs
     #plot available station on a map
@@ -637,7 +636,7 @@ within the passed range are included.
 
 
 
-.. image:: interface_files%5Cinterface_35_0.png
+.. image:: interface_files/5Cinterface_35_0.png
 
 
 Selecting and interating over data
@@ -657,7 +656,7 @@ In this example we iterate over all sensors in the previously loaded
 collection (i.e. over all active networks) that measure ‘soil_moisture’
 in any depth (range) between 0 and 0.05 metres.
 
-.. code:: ipython3
+.. code:: python
 
     for network, station, sensor in ismn_data.collection.iter_sensors(variable='soil_moisture', 
                                                                       depth=[0., 0.05]):
@@ -724,7 +723,7 @@ in any depth (range) between 0 and 0.05 metres.
 
 
 
-.. image:: interface_files%5Cinterface_39_3.png
+.. image:: interface_files/5Cinterface_39_3.png
 
 
 Selecting by variable and other metadata (1)
@@ -734,7 +733,7 @@ In this example we iterate over all sensors for the network ‘RMSN’ and
 filter those that measure precipitation within an ESA CCI Landcover
 pixel that is marked as ‘Cropland, rainfed’ (10) or ‘Grassland’ (130).
 
-.. code:: ipython3
+.. code:: python
 
     ismn_data.print_landcover_dict()
 
@@ -781,7 +780,7 @@ pixel that is marked as ‘Cropland, rainfed’ (10) or ‘Grassland’ (130).
     Permanent snow and ice: 220
     
 
-.. code:: ipython3
+.. code:: python
 
     for station, sensor in ismn_data.collection['RSMN'].iter_sensors(variable='precipitation', 
                                                                      filter_meta_dict={'lc_2010': [10, 130]}):
@@ -834,7 +833,7 @@ pixel that is marked as ‘Cropland, rainfed’ (10) or ‘Grassland’ (130).
 
 
 
-.. image:: interface_files%5Cinterface_42_3.png
+.. image:: interface_files/5Cinterface_42_3.png
 
 
 Selecting by variable, depth and metadata (2)
@@ -847,7 +846,7 @@ Landcover pixel that is marked as ‘Cropland, rainfed’ (10) or
 Csc, Cfa, Dfc. In addition we set all those soil moisture values that
 are **not** flagged as ‘good’ (G) to NaN.
 
-.. code:: ipython3
+.. code:: python
 
     display(ismn_data.print_climate_dict())
 
@@ -898,7 +897,7 @@ are **not** flagged as ‘good’ (G) to NaN.
     None
 
 
-.. code:: ipython3
+.. code:: python
 
     from ismn.meta import Depth
     for network, station, sensor in ismn_data.collection \
@@ -979,5 +978,5 @@ are **not** flagged as ‘good’ (G) to NaN.
 
 
 
-.. image:: interface_files%5Cinterface_45_4.png
+.. image:: interface_files/5Cinterface_45_4.png
 
