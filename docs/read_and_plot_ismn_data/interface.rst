@@ -617,7 +617,7 @@ a specific variable. The id can then be used to read the data directly.
 
 
 
-.. image:: interface_files/5Cinterface_33_2.png
+.. image:: interface_files/interface_33_2.png
 
 
 Station locations for a specific variable can be visualised on a map. If
@@ -636,7 +636,7 @@ within the passed range are included.
 
 
 
-.. image:: interface_files/5Cinterface_35_0.png
+.. image:: interface_files/interface_35_0.png
 
 
 Selecting and interating over data
@@ -723,7 +723,7 @@ in any depth (range) between 0 and 0.05 metres.
 
 
 
-.. image:: interface_files/5Cinterface_39_3.png
+.. image:: interface_files/interface_39_3.png
 
 
 Selecting by variable and other metadata (1)
@@ -833,7 +833,7 @@ pixel that is marked as ‘Cropland, rainfed’ (10) or ‘Grassland’ (130).
 
 
 
-.. image:: interface_files/5Cinterface_42_3.png
+.. image:: interface_files/interface_42_3.png
 
 
 Selecting by variable, depth and metadata (2)
@@ -978,5 +978,5 @@ are **not** flagged as ‘good’ (G) to NaN.
 
 
 
-.. image:: interface_files/5Cinterface_45_4.png
+.. image:: interface_files/interface_45_4.png
 
