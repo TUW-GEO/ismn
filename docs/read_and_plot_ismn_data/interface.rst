@@ -99,7 +99,7 @@ https://github.com/TUW-GEO/pygeogrids
     import pandas as pd
     grid = collection.grid
     gpis, lons, lats = grid.get_grid_points()
-    display(pd.DataFrame(index=pd.Index(gpis, name='gpi'), data={'lon': lons, 'lat': lats}))
+    print(pd.DataFrame(index=pd.Index(gpis, name='gpi'), data={'lon': lons, 'lat': lats}))
 
 
 
@@ -390,7 +390,8 @@ variable time series and quality flags.
     ax = ts.plot(figsize=(12,4))
     ax.set_xlabel("Time [year]")
     ax.set_ylabel("Soil Moisture [$m^3 m^{-3}$]")
-    display(ts)
+    print(ts)
+    plt.show()
 
 
 
@@ -606,6 +607,7 @@ a specific variable. The id can then be used to read the data directly.
     ax = ts.plot(figsize=(12,4), title=f'Time series for ID {ids[1]}')
     ax.set_xlabel("Time [year]")
     ax.set_ylabel("Soil Temp. [°C]")
+    plt.show()
 
 
 .. parsed-literal::
@@ -685,12 +687,13 @@ in any depth (range) between 0 and 0.05 metres.
     for network, station, sensor in ismn_data.collection.iter_sensors(variable='soil_moisture', 
                                                                       depth=[0., 0.05]):
         data = sensor.read_data()
-        display(station)
+        print(station)
         print('\033[1m' + f'Metadata for sensor {sensor}:')
-        display(sensor.metadata.to_pd())
+        print(sensor.metadata.to_pd())
         ax = data.plot(figsize=(12,4), title=f'Time series for sensor {sensor.name}')
         ax.set_xlabel("Time [year]")
         ax.set_ylabel("Soil Moisture [$m^3 m^{-3}$]")
+        plt.show()
         break # for this example we stop after the first sensor
 
 
@@ -810,12 +813,13 @@ pixel that is marked as ‘Cropland, rainfed’ (10) or ‘Grassland’ (130).
                                                                      filter_meta_dict={'lc_2010': [10, 130]}):
         data = sensor.read_data()
         metadata = sensor.metadata
-        display(station)
+        print(station)
         print('\033[1m' + f'Metadata for sensor {sensor}:')
-        display(metadata.to_pd())
+        print(metadata.to_pd())
         ax = data.plot(figsize=(12,4), title=f'Time series for sensor {sensor.name}')
         ax.set_xlabel("Time [year]")
         ax.set_ylabel("Precipitation [mm]")
+        plt.show()
         break # for this example we stop after the first sensor
 
 
@@ -872,7 +876,7 @@ are **not** flagged as ‘good’ (G) to NaN.
 
 .. code:: python
 
-    display(ismn_data.print_climate_dict())
+    print(ismn_data.print_climate_dict())
 
 
 .. parsed-literal::
@@ -933,13 +937,14 @@ are **not** flagged as ‘good’ (G) to NaN.
         data = sensor.read_data()
         data.loc[data['soil_moisture_flag'] != 'G', 'soil_moisture'] = np.nan
         metadata = sensor.metadata
-        display(network)
-        display(station)
+        print(network)
+        print(station)
         print('\033[1m' + f'Metadata for sensor {sensor}:')
-        display(metadata.to_pd())
+        print(metadata.to_pd())
         ax = data.plot(figsize=(12,4), title=f"G-flagged SM for '{sensor.name}' at station '{station.name}' in network '{network.name}''")
         ax.set_xlabel("Time [year]")
         ax.set_ylabel("Soil Moisture [$m^3 m^{-3}$]")
+        plt.show()
         break # for this example we stop after the first sensor
 
 
