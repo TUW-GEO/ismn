@@ -105,100 +105,124 @@ https://github.com/TUW-GEO/pygeogrids
 
 .. raw:: html
 
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-    
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-    
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
+
     <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th>gpi</th>
-          <th>0</th>
-          <th>1</th>
-          <th>2</th>
-          <th>3</th>
-          <th>4</th>
-          <th>5</th>
-          <th>6</th>
-          <th>7</th>
-          <th>8</th>
-          <th>9</th>
-          <th>...</th>
-          <th>100</th>
-          <th>101</th>
-          <th>102</th>
-          <th>103</th>
-          <th>104</th>
-          <th>105</th>
-          <th>106</th>
-          <th>107</th>
-          <th>108</th>
-          <th>109</th>
-        </tr>
-      </thead>
-      <tbody>
+        <thead>
         <tr>
-          <th>lon</th>
-          <td>27.55062</td>
-          <td>27.55076</td>
-          <td>27.53543</td>
-          <td>26.63378</td>
-          <td>26.63378</td>
-          <td>26.63378</td>
-          <td>26.65176</td>
-          <td>26.65162</td>
-          <td>26.65196</td>
-          <td>26.65064</td>
-          <td>...</td>
-          <td>15.81499</td>
-          <td>15.94361</td>
-          <td>15.96578</td>
-          <td>15.75960</td>
-          <td>15.85507</td>
-          <td>15.90710</td>
-          <td>15.92462</td>
-          <td>16.04056</td>
-          <td>15.78112</td>
-          <td>16.03337</td>
+            <th>gpi</th>
+            <th>lon</th>
+            <th>lat</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>0</td>
+            <td>27.55062</td>
+            <td>68.33019</td>
         </tr>
         <tr>
-          <th>lat</th>
-          <td>68.33019</td>
-          <td>68.33025</td>
-          <td>68.33881</td>
-          <td>67.36187</td>
-          <td>67.36179</td>
-          <td>67.36195</td>
-          <td>67.36691</td>
-          <td>67.36685</td>
-          <td>67.36691</td>
-          <td>67.36702</td>
-          <td>...</td>
-          <td>46.97232</td>
-          <td>46.97125</td>
-          <td>46.95952</td>
-          <td>46.94327</td>
-          <td>46.99726</td>
-          <td>46.93296</td>
-          <td>46.93291</td>
-          <td>46.93427</td>
-          <td>46.91691</td>
-          <td>46.92135</td>
+            <td>1</td>
+            <td>27.55076</td>
+            <td>68.33025</td>
         </tr>
-      </tbody>
-    </table>
-    <p>2 rows × 110 columns</p>
-    </div>
+        <tr>
+            <td>2</td>
+            <td>27.53543</td>
+            <td>68.33881</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>26.63378</td>
+            <td>67.36187</td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>26.63378</td>
+            <td>67.36179</td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td>26.63378</td>
+            <td>67.36195</td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td>26.65176</td>
+            <td>67.36691</td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td>26.65162</td>
+            <td>67.36685</td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td>26.65196</td>
+            <td>67.36691</td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td>26.65064</td>
+            <td>67.36702</td>
+        </tr>
+        <tr>
+            <td>...</td>
+            <td>...</td>
+            <td>...</td>
+        </tr>
+        <tr>
+            <td>100</td>
+            <td>15.81499</td>
+            <td>46.97232</td>
+        </tr>
+        <tr>
+            <td>101</td>
+            <td>15.94361</td>
+            <td>46.97125</td>
+        </tr>
+        <tr>
+            <td>102</td>
+            <td>15.96578</td>
+            <td>46.95952</td>
+        </tr>
+        <tr>
+            <td>103</td>
+            <td>15.7596</td>
+            <td>46.94327</td>
+        </tr>
+        <tr>
+            <td>104</td>
+            <td>15.85507</td>
+            <td>46.99726</td>
+        </tr>
+        <tr>
+            <td>105</td>
+            <td>15.9071</td>
+            <td>46.93296</td>
+        </tr>
+        <tr>
+            <td>106</td>
+            <td>15.92462</td>
+            <td>46.93291</td>
+        </tr>
+        <tr>
+            <td>107</td>
+            <td>16.04056</td>
+            <td>46.93427</td>
+        </tr>
+        <tr>
+            <td>108</td>
+            <td>15.78112</td>
+            <td>46.91691</td>
+        </tr>
+        <tr>
+            <td>109</td>
+            <td>16.03337</td>
+            <td>46.92135</td>
+        </tr>
+        </tbody>
+        </table>
+    <p>110 rows × 2 columns</p>
 
 
 Using the GPI or coordinates, a station from **all** stations in **all**
