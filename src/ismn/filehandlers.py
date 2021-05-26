@@ -166,9 +166,7 @@ class StaticMetaFile(IsmnFile):
     See Parent Class (IsmnFile)
     """
 
-    def __init__(
-        self, root, file_path, load_metadata=True, temp_root=gettempdir()
-    ):
+    def __init__(self, root, file_path, load_metadata=True, temp_root=gettempdir()):
         """
         Parameters
         ----------
@@ -243,18 +241,14 @@ class StaticMetaFile(IsmnFile):
         if self.root.zip:
             if not self.root.isopen:
                 self.root.open()
-            with TemporaryDirectory(
-                prefix="ismn", dir=self.temp_root
-            ) as tempdir:
+            with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
                 extracted = self.root.extract_file(self.file_path, tempdir)
                 data = self.__read_csv(extracted)
         else:
             data = self.__read_csv(self.root.path / self.file_path)
 
         # read landcover classifications
-        lc = data.loc[["land cover classification"]][
-            ["value", "quantity_source_name"]
-        ]
+        lc = data.loc[["land cover classification"]][["value", "quantity_source_name"]]
 
         lc_dict = {
             "CCI_landcover_2000": const.CSV_META_TEMPLATE["lc_2000"],
@@ -272,9 +266,7 @@ class StaticMetaFile(IsmnFile):
             if key in lc["quantity_source_name"].values:
                 if key != "insitu":
                     lc_dict[key] = np.int(
-                        lc.loc[lc["quantity_source_name"] == key][
-                            "value"
-                        ].values[0]
+                        lc.loc[lc["quantity_source_name"] == key]["value"].values[0]
                     )
                 else:
                     lc_dict[key] = lc.loc[lc["quantity_source_name"] == key][
@@ -285,9 +277,7 @@ class StaticMetaFile(IsmnFile):
                     )
 
         # read climate classifications
-        cl = data.loc[["climate classification"]][
-            ["value", "quantity_source_name"]
-        ]
+        cl = data.loc[["climate classification"]][["value", "quantity_source_name"]]
         for key in cl_dict.keys():
             if key in cl["quantity_source_name"].values:
                 cl_dict[key] = cl.loc[cl["quantity_source_name"] == key][
@@ -346,9 +336,7 @@ class DataFile(IsmnFile):
         File type information (e.g. ceop).
     """
 
-    def __init__(
-        self, root, file_path, load_metadata=True, temp_root=gettempdir()
-    ):
+    def __init__(self, root, file_path, load_metadata=True, temp_root=gettempdir()):
         """
         Parameters
         ----------
@@ -551,9 +539,7 @@ class DataFile(IsmnFile):
                 if not self.root.isopen:
                     self.root.open()
 
-                with TemporaryDirectory(
-                    prefix="ismn", dir=self.temp_root
-                ) as tempdir:
+                with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
                     filename = self.root.extract_file(self.file_path, tempdir)
                     headr, secnd, last = self.__read_lines(filename)
 
@@ -628,9 +614,7 @@ class DataFile(IsmnFile):
         )
         if self.root.zip:
 
-            with TemporaryDirectory(
-                prefix="ismn", dir=self.temp_root
-            ) as tempdir:
+            with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
                 filename = self.root.extract_file(self.file_path, tempdir)
                 data = readf(filename)
 
@@ -700,8 +684,6 @@ class DataFile(IsmnFile):
             metadata = metadata.best_meta_for_depth(depth)
 
         self.metadata = metadata
-        self.metadata.replace(
-            "network", self.__get_parent_path(self.posix_path)
-        )
+        self.metadata.replace("network", self.__get_parent_path(self.posix_path))
 
         return self.metadata

@@ -210,19 +210,19 @@ class TestReaders(unittest.TestCase):
         assert self.filehandler_header_values.file_type == "header_values"
 
     def test_get_min_max_from_file(self):
-        assert self.filehandler_ceop_sep.metadata[
-            "timerange_from"
-        ].val == Timestamp(2007, 1, 1, 1)
-        assert self.filehandler_ceop_sep.metadata[
-            "timerange_to"
-        ].val == Timestamp(2007, 1, 31, 23)
+        assert self.filehandler_ceop_sep.metadata["timerange_from"].val == Timestamp(
+            2007, 1, 1, 1
+        )
+        assert self.filehandler_ceop_sep.metadata["timerange_to"].val == Timestamp(
+            2007, 1, 31, 23
+        )
 
         assert self.filehandler_header_values.metadata[
             "timerange_from"
         ].val == Timestamp(2007, 1, 1, 1)
-        assert self.filehandler_ceop_sep.metadata[
-            "timerange_to"
-        ].val == Timestamp(2007, 1, 31, 23)
+        assert self.filehandler_ceop_sep.metadata["timerange_to"].val == Timestamp(
+            2007, 1, 31, 23
+        )
 
 
 if __name__ == "__main__":

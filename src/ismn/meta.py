@@ -107,9 +107,7 @@ class Depth:
                 temp_d1 = Depth(self.start - shift, self.end - shift)
 
             if other is not None:
-                if ((other.start < 0) or (other.end < 0)) and (
-                    not other.across0
-                ):
+                if ((other.start < 0) or (other.end < 0)) and (not other.across0):
                     temp_d2 = Depth(other.end - shift, other.start - shift)
                 else:
                     temp_d2 = Depth(other.start - shift, other.end - shift)
@@ -117,9 +115,7 @@ class Depth:
                 temp_d2 = None
         else:
             temp_d1 = Depth(self.start, self.end)
-            temp_d2 = (
-                Depth(other.start, other.end) if other is not None else None
-            )
+            temp_d2 = Depth(other.start, other.end) if other is not None else None
 
         return temp_d1, temp_d2
 
@@ -147,9 +143,7 @@ class Depth:
             # shift depths to pos ranges, flip start/end so that formulas work.
             temp_d1, temp_d2 = self.__temp_pos_depths(other)
 
-            r = max([temp_d1.end, temp_d2.end]) - min(
-                [temp_d1.start, temp_d2.start]
-            )
+            r = max([temp_d1.end, temp_d2.end]) - min([temp_d1.start, temp_d2.start])
 
             # Overlapping range normalised to the overall depth range r
             p_f = abs(temp_d1.start - temp_d2.start) / r
@@ -293,9 +287,7 @@ class MetaVar:
     def __eq__(self, other):
         try:
             assert self.name == other.name
-            assert (self.val == other.val) | np.all(
-                pd.isna([self.val, other.val])
-            )
+            assert (self.val == other.val) | np.all(pd.isna([self.val, other.val]))
             assert self.depth == other.depth
             return True
         except (AssertionError, AttributeError, TypeError):
@@ -512,9 +504,7 @@ class MetaData:
 
         for m in [self, *other]:
             for v in m.metadata:
-                if (not v.empty if exclude_empty else True) and (
-                    v not in merged_meta
-                ):
+                if (not v.empty if exclude_empty else True) and (v not in merged_meta):
                     merged_meta.add(v.name, v.val, v.depth)
 
         if inplace:
@@ -553,9 +543,7 @@ class MetaData:
             self.metadata.append(MetaVar(name, val, depth))
 
         else:
-            raise MetadataError(
-                "There is no MetaVar with name '{}'".format(name)
-            )
+            raise MetadataError("There is no MetaVar with name '{}'".format(name))
 
     def best_meta_for_depth(self, depth):
         """
@@ -586,9 +574,7 @@ class MetaData:
                     if p > best_p:
                         best_p = p
                         best_var = v
-                if depth.overlap(
-                    best_var.depth
-                ):  # only add if best var overlaps
+                if depth.overlap(best_var.depth):  # only add if best var overlaps
                     best_vars.append(best_var)
             else:
                 if var.depth is None:  # if var has no depth, use it

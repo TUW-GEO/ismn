@@ -19,13 +19,11 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
     def setUpClass(cls):
         super(Test_ISMN_Interface_CeopUnzipped, cls).setUpClass()
 
-        testdata = os.path.join(
-            testdata_root, "Data_seperate_files_20170810_20180809"
-        )
+        testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
         metadata_path = os.path.join(testdata, "python_metadata")
 
         cleanup(metadata_path)
-        ds = ISMN_Interface(testdata, network=[])
+        ds = ISMN_Interface(testdata, network=[], parallel=True)
         assert ds.networks == OrderedDict()
         cls.testdata = testdata
 
@@ -38,11 +36,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
 
     def test_list(self):
         assert len(self.ds.list_networks()) == 1
-        assert (
-            len(self.ds.list_stations())
-            == len(self.ds.list_stations("COSMOS"))
-            == 2
-        )
+        assert len(self.ds.list_stations()) == len(self.ds.list_stations("COSMOS")) == 2
         assert len(self.ds.list_sensors()) == 2
         assert len(self.ds.list_sensors(station="Barrow-ARM")) == 1
 
@@ -58,9 +52,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
             raise AssertionError("Found var that doesnt exist")
 
     def test_get_dataset_ids(self):
-        ids = self.ds.get_dataset_ids(
-            "soil_moisture", max_depth=100, groupby="network"
-        )
+        ids = self.ds.get_dataset_ids("soil_moisture", max_depth=100, groupby="network")
         assert list(ids.keys()) == ["COSMOS"]
         assert ids["COSMOS"] == [0, 1]
 
@@ -81,14 +73,10 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         ids = self.ds.get_dataset_ids("novar")
         assert len(ids) == 0
 
-        ids = self.ds.get_dataset_ids(
-            "soil_moisture", 0.0, 0.19
-        )  # should get 1
+        ids = self.ds.get_dataset_ids("soil_moisture", 0.0, 0.19)  # should get 1
         assert len(ids) == 1
 
-        ids = self.ds.get_dataset_ids(
-            "soil_moisture", 0.0, 1.0
-        )  # should get 2
+        ids = self.ds.get_dataset_ids("soil_moisture", 0.0, 1.0)  # should get 2
         assert len(ids) == 2
 
         ids = self.ds.get_dataset_ids(
@@ -106,13 +94,11 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         data2, meta = self.ds.read_ts(1, return_meta=True)
         assert not data2.empty
 
-        assert all(meta == self.ds.read_metadata(1, format='pandas'))
-        assert self.ds.read_metadata(1, format='dict') is not None
-        assert self.ds.read_metadata(1, format='obj') is not None
+        assert all(meta == self.ds.read_metadata(1, format="pandas"))
+        assert self.ds.read_metadata(1, format="dict") is not None
+        assert self.ds.read_metadata(1, format="obj") is not None
 
-        assert len(data1.index) != len(
-            data2.index
-        )  # make sure they are not same
+        assert len(data1.index) != len(data2.index)  # make sure they are not same
 
     def test_find_nearest_station(self):
         should_lon, should_lat = -156.62870, 71.32980
@@ -131,17 +117,13 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
             assert len(os.listdir(out_dir)) == 1
 
     def test_get_min_max_obs_timestamps(self):
-        tmin, tmax = self.ds.get_min_max_obs_timestamps(
-            "soil_moisture", max_depth=0.19
-        )
+        tmin, tmax = self.ds.get_min_max_obs_timestamps("soil_moisture", max_depth=0.19)
         assert tmin == datetime(2017, 8, 10, 0)
         assert tmax == datetime(2018, 8, 9, 23)
 
     def test_get_min_max_obs_timestamps_for_station(self):
         station = self.ds.collection.networks["COSMOS"].stations["ARM-1"]
-        tmin, tmax = station.get_min_max_obs_timestamp(
-            "soil_moisture", 0, 0.19
-        )
+        tmin, tmax = station.get_min_max_obs_timestamp("soil_moisture", 0, 0.19)
         assert tmin == datetime(2017, 8, 10, 0)
         assert tmax == datetime(2018, 8, 9, 23)
 
@@ -181,9 +163,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert i == 2
 
         i = 0
-        for se in (
-            self.ds.networks["COSMOS"].stations["Barrow-ARM"].iter_sensors()
-        ):
+        for se in self.ds.networks["COSMOS"].stations["Barrow-ARM"].iter_sensors():
             data = se.read_data()
             assert not data.empty
             # check something for that one station
@@ -207,9 +187,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
     def test_get_nearest_station(self):
         should_lon, should_lat = -156.62870, 71.32980
 
-        station, dist = self.ds.collection.get_nearest_station(
-            should_lon, should_lat
-        )
+        station, dist = self.ds.collection.get_nearest_station(should_lon, should_lat)
         assert dist == 0
         assert station.lon == should_lon
         assert station.lat == should_lat
@@ -228,9 +206,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert station == dist == None
 
 
-class Test_ISMN_Interface_HeaderValuesUnzipped(
-    Test_ISMN_Interface_CeopUnzipped
-):
+class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
     @classmethod
     def setUpClass(cls):
         super(Test_ISMN_Interface_HeaderValuesUnzipped, cls).setUpClass()

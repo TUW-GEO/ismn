@@ -22,9 +22,7 @@ def zip(func):
 def dir(func):
     def wrapper(cls, *args, **kwargs):
         if cls.zip:
-            raise IOError(
-                "Unzipped archive expected, use @zip functions instead."
-            )
+            raise IOError("Unzipped archive expected, use @zip functions instead.")
         return func(cls, *args, **kwargs)
 
     return wrapper
@@ -82,9 +80,7 @@ class IsmnRoot:
         """Simplified representation of object as string"""
         __type = type(self)
         __zip = "Zip" if self.zip else "Unzipped"
-        return (
-            f"{__type.__module__}.{__type.__qualname__} {__zip} at {self.path}"
-        )
+        return f"{__type.__module__}.{__type.__qualname__} {__zip} at {self.path}"
 
     def __contains__(self, filepath) -> bool:
         """Check if files exists in archive"""
@@ -167,9 +163,7 @@ class IsmnRoot:
                         if net not in cont.keys():
                             cont[net] = np.array([])
                         if station_subdirs:
-                            cont[net] = np.append(
-                                cont[net], Path(net, stat.name)
-                            )
+                            cont[net] = np.append(cont[net], Path(net, stat.name))
                         else:
                             cont[net] = np.append(cont[net], stat.name)
 
@@ -178,9 +172,7 @@ class IsmnRoot:
         return self.cont
 
     @dir
-    def __find_files_dir(
-        self, subpath: str = None, fn_templ: str = "*.csv"
-    ) -> list:
+    def __find_files_dir(self, subpath: str = None, fn_templ: str = "*.csv") -> list:
         """
         Find files in the archive or a subdirectory of the archive
         that match to the passed filename template.
@@ -195,9 +187,7 @@ class IsmnRoot:
         return filenames
 
     @zip
-    def __find_files_zip(
-        self, subpath: str = None, fn_templ: str = "*.csv"
-    ) -> list:
+    def __find_files_zip(self, subpath: str = None, fn_templ: str = "*.csv") -> list:
         """
         Find files in zip archive that match the passed template and subdir.
         """

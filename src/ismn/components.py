@@ -114,11 +114,7 @@ class Sensor(IsmnComponent):
 
     @property
     def metadata(self) -> MetaData:
-        return (
-            MetaData()
-            if self.filehandler is None
-            else self.filehandler.metadata
-        )
+        return MetaData() if self.filehandler is None else self.filehandler.metadata
 
     def read_data(self):
         """
@@ -389,9 +385,7 @@ class Station(IsmnComponent):
             but can fill up memory if stations / networks are loaded.
         """
         if name is None:
-            name = (
-                f"{instrument}_{variable}_{depth.start:1.6f}_{depth.end:1.6f}"
-            )
+            name = f"{instrument}_{variable}_{depth.start:1.6f}_{depth.end:1.6f}"
 
         if name not in self.sensors:
             self.sensors[name] = Sensor(
@@ -650,11 +644,7 @@ class NetworkCollection(IsmnComponent):
             lons += net_lons
             lats += net_lats
 
-        self.grid = (
-            BasicGrid(lons, lats)
-            if (len(lons) > 0 and len(lats) > 0)
-            else None
-        )
+        self.grid = BasicGrid(lons, lats) if (len(lons) > 0 and len(lats) > 0) else None
 
     def __repr__(self, indent=""):
         return ",\n".join(
@@ -713,9 +703,7 @@ class NetworkCollection(IsmnComponent):
         in_grid = np.isin(idxs, self.grid.activegpis)
 
         if not all(in_grid):
-            raise ValueError(
-                f"Index not found in loaded grid: {idxs[~in_grid]}"
-            )
+            raise ValueError(f"Index not found in loaded grid: {idxs[~in_grid]}")
 
         lon, lat = self.grid.gpi2lonlat(idxs)
 

@@ -55,9 +55,7 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
             # check that FR_Aqui is in data AND network name is network folder
             assert list(self.coll.filelist.keys()) == ["COSMOS", "FR_Aqui"]
             # check that files are associated to right network name
-            files = [
-                f for f in self.coll.iter_filehandlers(networks="FR_Aqui")
-            ]
+            files = [f for f in self.coll.iter_filehandlers(networks="FR_Aqui")]
             assert files != []
         else:
             assert list(self.coll.filelist.keys()) == ["COSMOS"]
@@ -109,18 +107,12 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
         for thisfile, otherfile in zip(
             self.coll.iter_filehandlers(), other.iter_filehandlers()
         ):
-            assert (
-                thisfile.file_path == otherfile.file_path
-            ), "Paths dont match"
-            assert (
-                thisfile.root.path == otherfile.root.path
-            ), "Paths dont match"
+            assert thisfile.file_path == otherfile.file_path, "Paths dont match"
+            assert thisfile.root.path == otherfile.root.path, "Paths dont match"
             assert thisfile.metadata == otherfile.metadata, "Meta dont match"
 
 
-class Test_FileCollectionHeaderValuesUnzipped(
-    Test_FileCollectionCeopSepUnzipped
-):
+class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
     @classmethod
     def setUpClass(cls):
@@ -133,9 +125,7 @@ class Test_FileCollectionHeaderValuesUnzipped(
         metadata_path = os.path.join(testdata_path_unzipped, "python_metadata")
         cleanup(metadata_path)
 
-        cls.coll = IsmnFileCollection.build_from_scratch(
-            testdata_path_unzipped
-        )
+        cls.coll = IsmnFileCollection.build_from_scratch(testdata_path_unzipped)
 
 
 @pytest.mark.zip
@@ -157,9 +147,7 @@ class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
 
 
 @pytest.mark.zip
-class Test_FileCollectionHeaderValuesZipped(
-    Test_FileCollectionCeopSepUnzipped
-):
+class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
     @classmethod
     def setUpClass(cls):

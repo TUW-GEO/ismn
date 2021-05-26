@@ -22,9 +22,7 @@ testdata_path = Path(os.path.join(os.path.dirname(__file__), "test_data"))
 class Test_StaticMetaUnzipped(unittest.TestCase):
     def setUp(self) -> None:
         root = testdata_path / "Data_seperate_files_20170810_20180809"
-        filepath = Path(
-            "COSMOS", "ARM-1", "COSMOS_COSMOS_ARM-1_static_variables.csv"
-        )
+        filepath = Path("COSMOS", "ARM-1", "COSMOS_COSMOS_ARM-1_static_variables.csv")
         self.file = StaticMetaFile(root, filepath)
 
     def test_read_metadata(self):
@@ -32,12 +30,7 @@ class Test_StaticMetaUnzipped(unittest.TestCase):
         for k in CSV_META_TEMPLATE.keys():
             assert k in meta.keys()
 
-        assert (
-            meta["lc_2010"].val
-            == meta["lc_2005"].val
-            == meta["lc_2000"].val
-            == 130
-        )
+        assert meta["lc_2010"].val == meta["lc_2005"].val == meta["lc_2000"].val == 130
         assert meta["climate_KG"].val == "Cfa"
 
         assert self.file.check_metadata(
@@ -77,9 +70,7 @@ class Test_StaticMetaUnzipped(unittest.TestCase):
         assert allmeta != meta_for_depth
 
         assert len([k for k in allmeta.keys() if k == "saturation"]) > 1
-        assert (
-            len([k for k in meta_for_depth.keys() if k == "saturation"]) == 1
-        )
+        assert len([k for k in meta_for_depth.keys() if k == "saturation"]) == 1
 
         assert (
             meta_for_depth["saturation"].depth.start
@@ -92,10 +83,7 @@ class Test_StaticMetaUnzipped(unittest.TestCase):
             == 0.3
         )
 
-        assert (
-            allmeta["saturation"][0].depth
-            == meta_for_depth["saturation"].depth
-        )
+        assert allmeta["saturation"][0].depth == meta_for_depth["saturation"].depth
 
         assert allmeta["saturation"][1].depth.start == 0.3
         assert allmeta["saturation"][1].depth.end == 1.0
@@ -112,9 +100,7 @@ class Test_StaticMetaZipped(Test_StaticMetaUnzipped):
             / "ceop"
             / "Data_seperate_files_20170810_20180809.zip"
         )
-        filepath = Path(
-            "COSMOS", "ARM-1", "COSMOS_COSMOS_ARM-1_static_variables.csv"
-        )
+        filepath = Path("COSMOS", "ARM-1", "COSMOS_COSMOS_ARM-1_static_variables.csv")
 
         self.file = StaticMetaFile(root, filepath)
 

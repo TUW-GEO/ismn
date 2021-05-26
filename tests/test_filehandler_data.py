@@ -50,9 +50,7 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
         """test reading the loaded metadata for a file (incl. static meta)"""
 
         assert self.file.check_metadata()
-        assert not self.file.check_metadata(
-            filter_meta_dict={"network": "WRONGNAME"}
-        )
+        assert not self.file.check_metadata(filter_meta_dict={"network": "WRONGNAME"})
 
         flag = self.file.check_metadata(
             self.variable,
@@ -94,9 +92,7 @@ class Test_DataFileCeopSepUnzipped(unittest.TestCase):
         data = self.file.read_data()
         data_is = data.loc[timestamp]
 
-        assert (
-            data_is[self.variable] == self.data_should_201708113[self.variable]
-        )
+        assert data_is[self.variable] == self.data_should_201708113[self.variable]
         assert (
             data_is[f"{self.variable}_flag"]
             == self.data_should_201708113[f"{self.variable}_flag"]

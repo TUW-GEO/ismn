@@ -74,9 +74,7 @@ def _read_station_dir(
             )
             station_meta = static_meta_file.metadata
     except IsmnFileError:
-        station_meta = MetaData(
-            [MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()]
-        )
+        station_meta = MetaData([MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()])
 
     data_files = root.find_files(stat_dir, "*.stm")
 
@@ -196,8 +194,9 @@ class IsmnFileCollection(object):
         logging.info(f"Collecting metadata with {n_proc} processes.")
 
         print(
-            f"Processing metadata for all ismn stations into folder {root.path}."
-            f" This may take a few minutes, but is only done once ..."
+            f"Processing metadata for all ismn stations into folder {root.path}. "
+            f"This may take a few minutes, but is only done once ... "
+            f"{'Hint: Use `parallel=True` to speed up metadata generation for large datasets' if not parallel else ''}"
         )
 
         process_stat_dirs = []
@@ -205,8 +204,7 @@ class IsmnFileCollection(object):
             process_stat_dirs += list(stat_dirs)
 
         args = [
-            (root.path if root.zip else root, d, temp_root)
-            for d in process_stat_dirs
+            (root.path if root.zip else root, d, temp_root) for d in process_stat_dirs
         ]
 
         pbar = tqdm(total=len(args), desc="Files Processed")
@@ -221,17 +219,22 @@ class IsmnFileCollection(object):
                 fl_elements.append(elements)
             pbar.update()
 
-        with Pool(n_proc) as pool:
+        if n_proc == 1:
             for arg in args:
-                pool.apply_async(
-                    _read_station_dir,
-                    arg,
-                    callback=update,
-                    error_callback=logging.error,
-                )
+                r = _read_station_dir(*arg)
+                update(r)
+        else:
+            with Pool(n_proc) as pool:
+                for arg in args:
+                    pool.apply_async(
+                        _read_station_dir,
+                        arg,
+                        callback=update,
+                        error_callback=logging.error,
+                    )
 
-            pool.close()
-            pool.join()
+                pool.close()
+                pool.join()
 
         fl_elements.sort(key=itemgetter(0, 1))  # sort by net name, stat name
 
@@ -304,9 +307,7 @@ class IsmnFileCollection(object):
 
         columns = np.array(list(metadata_df.columns))
 
-        for i, row in enumerate(
-            metadata_df.values
-        ):  # todo: slow!?? parallelise?
+        for i, row in enumerate(metadata_df.values):  # todo: slow!?? parallelise?
             this_nw = all_networks[i]
             if (network is not None) and not np.isin([this_nw], network)[0]:
                 f = None
@@ -386,7 +387,7 @@ class IsmnFileCollection(object):
 
         Parameters
         ----------
-        idx int
+        idx: int
             Index of filehandler to read.
 
         Returns

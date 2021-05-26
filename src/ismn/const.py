@@ -61,7 +61,6 @@ class DepthError(ValueError):
 # ==============================================================================
 # Variable short names
 
-# todo: long names dont match with old data, e.g soil_moisture vs soil moisture
 VARIABLE_LUT = OrderedDict(
     [
         ("sm", "soil_moisture"),

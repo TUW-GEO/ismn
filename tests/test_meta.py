@@ -37,9 +37,7 @@ class Test_MetaData(unittest.TestCase):
 
         self.dat = MetaData(vars)
 
-        self.other = MetaData(
-            [MetaVar("dup", "3rd", Depth(2, 4)), MetaVar("4", 4)]
-        )
+        self.other = MetaData([MetaVar("dup", "3rd", Depth(2, 4)), MetaVar("4", 4)])
 
     def test_format(self):
         df = self.dat.to_pd()
@@ -101,9 +99,7 @@ class Test_MetaData(unittest.TestCase):
 
         # both duplicate depths overlap, equally good -> keep first
         best_meta_23 = self.dat.best_meta_for_depth(Depth(2, 3))
-        assert (
-            len(best_meta_23) == len(self.dat) - 3
-        )  # one dup and first and neg
+        assert len(best_meta_23) == len(self.dat) - 3  # one dup and first and neg
         assert best_meta_23["dup"].depth.start == 1.0
         assert best_meta_23["dup"].depth.end == 3.0
 
@@ -125,9 +121,7 @@ class Test_MetaData(unittest.TestCase):
         # check with negative
         best_meta_only_neg = self.dat.best_meta_for_depth(Depth(-0.5, -1.0))
         # only keep meta without depths and for neg depth
-        assert sorted(best_meta_only_neg.keys()) == sorted(
-            ["second", "neg", "4"]
-        )
+        assert sorted(best_meta_only_neg.keys()) == sorted(["second", "neg", "4"])
         assert best_meta_only_neg["neg"].depth.start == -0.25
         assert best_meta_only_neg["neg"].depth.end == -1
 

@@ -45,18 +45,14 @@ class NetCollTest(unittest.TestCase):
         net1.stations["station_1_1"].add_sensor(
             "sens_1_1_1", "var1", Depth(0.5, 1), None
         )
-        net1.stations["station_1_1"].add_sensor(
-            "sens_1_1_2", "var1", Depth(1, 2), None
-        )
+        net1.stations["station_1_1"].add_sensor("sens_1_1_2", "var1", Depth(1, 2), None)
 
         net2 = Network("Net2")
         net2.add_station("station_2_1", 1, 1, 1)
         net2.stations["station_2_1"].add_sensor(
             "sens_2_1_1", "var1", Depth(0.5, 1), None
         )
-        net2.stations["station_2_1"].add_sensor(
-            "sens_2_1_2", "var1", Depth(1, 2), None
-        )
+        net2.stations["station_2_1"].add_sensor("sens_2_1_2", "var1", Depth(1, 2), None)
 
         self.netcol = NetworkCollection([net1, net2])
 
@@ -69,9 +65,7 @@ class NetCollTest(unittest.TestCase):
         assert self.netcol.station4gpi(1).name == "station_2_1"
 
     def test_get_nearest_station(self):
-        assert (
-            self.netcol.get_nearest_station(0.1, 0.1)[0].name == "station_1_1"
-        )
+        assert self.netcol.get_nearest_station(0.1, 0.1)[0].name == "station_1_1"
         assert self.netcol.get_nearest_station(1, 1)[0].name == "station_2_1"
 
 
@@ -120,27 +114,17 @@ class NetworkTest(unittest.TestCase):
         self.network.stations["station1"].add_sensor(
             "sens1", "var1", Depth(0.5, 1), None
         )
-        self.network.stations["station1"].add_sensor(
-            "sens2", "var1", Depth(1, 2), None
-        )
+        self.network.stations["station1"].add_sensor("sens2", "var1", Depth(1, 2), None)
 
-        for s in self.network.iter_stations(
-            variable="var1", depth=Depth(0, 1)
-        ):
+        for s in self.network.iter_stations(variable="var1", depth=Depth(0, 1)):
             # sensor 1 applies to conditions, therefore station is found.
             assert s.name == "station1"
 
         self.network.add_station("station2", 1, 1, 1)
-        self.network.stations["station2"].add_sensor(
-            "sens1", "var1", Depth(0, 1), None
-        )
-        self.network.stations["station2"].add_sensor(
-            "sens2", "var2", Depth(1, 2), None
-        )
+        self.network.stations["station2"].add_sensor("sens1", "var1", Depth(0, 1), None)
+        self.network.stations["station2"].add_sensor("sens2", "var2", Depth(1, 2), None)
 
-        for s in self.network.iter_stations(
-            variable="var1", depth=Depth(0, 0.5)
-        ):
+        for s in self.network.iter_stations(variable="var1", depth=Depth(0, 0.5)):
             raise ValueError(
                 "Found station but shouldn't ..."
             )  # this should never be reached
@@ -156,9 +140,7 @@ class StationTest(unittest.TestCase):
         name = "sensor1"
         d = Depth(0, 0.05)
         variable = "sm"
-        se_name = "{}_{}_{:1.6f}_{:1.6f}".format(
-            name, variable, d.start, d.end
-        )
+        se_name = "{}_{}_{:1.6f}_{:1.6f}".format(name, variable, d.start, d.end)
 
         self.station.add_sensor(name, variable, d, None)
 
@@ -222,12 +204,7 @@ class StationTest(unittest.TestCase):
             variable, depth_from=depth.start, depth_to=depth.end
         )
         assert len(sensors) == len(
-            [
-                s
-                for s in self.station.iter_sensors(
-                    variable=variable, depth=depth
-                )
-            ]
+            [s for s in self.station.iter_sensors(variable=variable, depth=depth)]
         )
 
 
@@ -254,9 +231,7 @@ class SensorTest(unittest.TestCase):
             instrument, variable, d, filehandler=DataFile(root, subpath)
         )
 
-        name = "{}_{}_{:1.6f}_{:1.6f}".format(
-            instrument, variable, d.start, d.end
-        )
+        name = "{}_{}_{:1.6f}_{:1.6f}".format(instrument, variable, d.start, d.end)
 
         assert self.sensor.name == name
 
