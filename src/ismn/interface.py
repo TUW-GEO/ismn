@@ -353,8 +353,8 @@ class ISMN_Interface:
 
         Parameters
         ----------
-        variable : str
-            Variable to filer out
+        variable : str or None
+            Variable to filer out, None to allow all variables.
         min_depth : float, optional (default: 0)
             Min depth of sensors to search
         max_depth : float, optional (default: 0.1)
@@ -421,8 +421,10 @@ class ISMN_Interface:
         """
         if idx is None:
             #  get all ids of active networks
-            idx = np.array(ds.get_dataset_ids(None, -np.inf, np.inf,
-                                               check_only_sensor_depth_from=True))
+            idx = np.array(self.get_dataset_ids(variable=None,
+                                                min_depth=-np.inf,
+                                                max_depth=np.inf,
+                                                check_only_sensor_depth_from=True))
         else:
             idx = np.atleast_1d(idx)
 
