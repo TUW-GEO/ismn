@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 from ismn.base import IsmnRoot
-from ismn import testdata_path
 from pathlib import Path
+
+testdata_path = os.path.join(os.path.dirname(__file__), "test_data")
 
 testdata = Path(testdata_path)
 

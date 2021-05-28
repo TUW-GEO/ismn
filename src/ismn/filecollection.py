@@ -256,8 +256,10 @@ class IsmnFileCollection(object):
             filelist[net].append(fh)
 
         t1 = time.time()
-        info = f"Metadata generation finished after {int(t1-t0)} Seconds. " \
-               f"Metadata and Log stored in {os.path.dirname(log_file)}"
+        info = f"Metadata generation finished after {int(t1-t0)} Seconds."
+        if log_file is not None:
+            info += f"\nMetadata and Log stored in {os.path.dirname(log_file)}"
+
         logging.info(info)
         print(info)
 
