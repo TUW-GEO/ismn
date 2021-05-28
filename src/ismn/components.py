@@ -500,7 +500,10 @@ class Network(IsmnComponent):
         # Provide basic Network information.
         return f"Stations in '{self.name}': {list(self.stations.keys())}"
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Union[int, str]):
+        # shortcut to access networks directly
+        if isinstance(item, int):
+            item = list(self.stations.keys())[item]
         return self.stations[item]
 
     @property

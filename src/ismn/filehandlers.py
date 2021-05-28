@@ -277,16 +277,19 @@ class StaticMetaFile(IsmnFile):
                     )
 
         # read climate classifications
-        cl = data.loc[["climate classification"]][["value", "quantity_source_name"]]
-        for key in cl_dict.keys():
-            if key in cl["quantity_source_name"].values:
-                cl_dict[key] = cl.loc[cl["quantity_source_name"] == key][
-                    "value"
-                ].values[0]
-                if key == "insitu":
-                    logging.info(
-                        f"insitu climate classification available: {self.file_path}"
-                    )
+        try:
+            cl = data.loc[["climate classification"]][["value", "quantity_source_name"]]
+            for key in cl_dict.keys():
+                if key in cl["quantity_source_name"].values:
+                    cl_dict[key] = cl.loc[cl["quantity_source_name"] == key][
+                        "value"
+                    ].values[0]
+                    if key == "insitu":
+                        logging.info(
+                            f"insitu climate classification available: {self.file_path}"
+                        )
+        except KeyError:
+            logging.info(f"No climate metadata found for {self.file_path}")
 
         metavars = [
             MetaVar("lc_2000", lc_dict["CCI_landcover_2000"]),

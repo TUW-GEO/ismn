@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2019 TU Wien
+# Copyright (c) 2021 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 import os
 import logging
+
 import pandas as pd
 from tempfile import gettempdir
 from pathlib import Path, PurePosixPath
@@ -73,7 +74,8 @@ def _read_station_dir(
                 root, csv[0], load_metadata=True, temp_root=temp_root
             )
             station_meta = static_meta_file.metadata
-    except IsmnFileError:
+    except IsmnFileError as e:
+        infos.append(f"Error loading static meta for station: {e}")
         station_meta = MetaData([MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()])
 
     data_files = root.find_files(stat_dir, "*.stm")
@@ -168,6 +170,7 @@ class IsmnFileCollection(object):
             Temporary folder where extracted data is copied during reading from
             zip archive.
         """
+        t0 = time.time()
         if isinstance(data_root, IsmnRoot):
             root = data_root
         else:
@@ -219,10 +222,17 @@ class IsmnFileCollection(object):
                 fl_elements.append(elements)
             pbar.update()
 
+        def error(e):
+            logging.error(e)
+            pbar.update()
+
         if n_proc == 1:
             for arg in args:
-                r = _read_station_dir(*arg)
-                update(r)
+                try:
+                    r = _read_station_dir(*arg)
+                    update(r)
+                except Exception as e:
+                    error(e)
         else:
             with Pool(n_proc) as pool:
                 for arg in args:
@@ -230,14 +240,14 @@ class IsmnFileCollection(object):
                         _read_station_dir,
                         arg,
                         callback=update,
-                        error_callback=logging.error,
+                        error_callback=error,
                     )
-
                 pool.close()
                 pool.join()
 
-        fl_elements.sort(key=itemgetter(0, 1))  # sort by net name, stat name
+        pbar.close()
 
+        fl_elements.sort(key=itemgetter(0, 1))  # sort by net name, stat name
         # to ensure alphabetical order... not sure if necessary, slow?
         filelist = OrderedDict([])
         for net, stat, fh in fl_elements:
@@ -245,7 +255,11 @@ class IsmnFileCollection(object):
                 filelist[net] = []
             filelist[net].append(fh)
 
-        logging.info(f"All processes finished.")
+        t1 = time.time()
+        info = f"Metadata generation finished after {int(t1-t0)} Seconds. " \
+               f"Log stored in {log_file}"
+        logging.info(info)
+        print(info)
 
         return cls(root, filelist=filelist)
 

@@ -132,7 +132,7 @@ class ISMN_Interface:
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
 
-    def __collect_networks(self, network_names: list = None) -> list:
+    def __collect_networks(self, network_names: list = None) -> (list, pd.DataFrame):
         """
         Build Networks and fill them with Stations and Sensors and apply
         according filehandlers from filelist for data reading.
@@ -175,7 +175,7 @@ class ISMN_Interface:
                 keep_loaded_data=self.keep_loaded_data,
             )
 
-        return list(networks.values())  # , grid
+        return list(networks.values())
 
     def __getitem__(self, item):
         return self.collection[item]
@@ -195,6 +195,11 @@ class ISMN_Interface:
     @property
     def grid(self):
         return self.collection.grid
+
+    @property
+    def metadata(self):
+        return self.__metadata
+
 
     def load_all(self):
         """
@@ -390,7 +395,7 @@ class ISMN_Interface:
         return ids
 
     def read_metadata(
-        self, idx, format="pandas"
+        self, idx=None, format="pandas"
     ) -> Union[pd.DataFrame, dict, MetaData]:
         """
         Read only metadata by id as pd.DataFrame.
@@ -419,6 +424,20 @@ class ISMN_Interface:
             return filehandler.metadata
         else:
             raise NotImplementedError(f"{format} is not a supported format.")
+
+
+    def read_metadata_list(
+            self, idxs=None) -> pd.DataFrame:
+        if idxs is None:
+            idxs = range(len(self.__file_collection.filelist))
+        dfs = []
+        for idx in idxs:
+            filehandler = self.__file_collection.get_filehandler(idx)
+            df = filehandler.metadata.to_pd(transpose=True, dropna=False)
+            df.index = [idx]
+            dfs.append(df)
+        df = pd.concat(dfs, axis=0)
+        return df
 
     def read_ts(self, idx, return_meta=False):
         """
@@ -848,3 +867,9 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
+
+if __name__ == '__main__':
+    ds = ISMN_Interface(r"/data-read/USERS/wpreimes/ISMN/v20210131/")
+    all_ids = ds.get_dataset_ids(None, -np.inf, np.inf, check_only_sensor_depth_from=True)
+    for id in all_ids:
+        df = ds.read_metadata(id)
