@@ -98,6 +98,8 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert self.ds.read_metadata(1, format="dict") is not None
         assert self.ds.read_metadata(1, format="obj") is not None
 
+        assert self.ds.read_metadata(None).index.size == 2
+
         assert len(data1.index) != len(data2.index)  # make sure they are not same
 
     def test_find_nearest_station(self):
