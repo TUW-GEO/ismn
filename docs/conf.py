@@ -16,6 +16,36 @@ import shutil
 __location__ = os.path.join(os.getcwd(), os.path.dirname(
     inspect.getfile(inspect.currentframe())))
 
+import subprocess
+
+# Create kernel for notebooks
+on_rtd = "READTHEDOCS" in os.environ and os.environ["READTHEDOCS"]
+if on_rtd:
+    interpreter = (
+        "/home/docs/checkouts/readthedocs.org/user_builds/ismn/"
+        "conda/latest/bin/python"
+    )
+else:
+    interpreter = "python"
+
+print("Installing kernel")
+subprocess.run(
+    [
+        interpreter,
+        "-m",
+        "ipykernel",
+        "install",
+        "--user",
+        "--name",
+        "conda-env-ismn-py",
+        "--display-name",
+        "Python [conda env:ismn]"
+    ],
+    check=True,
+    capture_output=True,
+)
+print("Done")
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -66,7 +96,7 @@ except Exception as e:
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
               'sphinx.ext.autosummary', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
               'sphinx.ext.doctest', 'sphinx.ext.ifconfig', 'sphinx.ext.mathjax',
-              'sphinx.ext.napoleon']
+              'sphinx.ext.napoleon', 'nbsphinx']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
