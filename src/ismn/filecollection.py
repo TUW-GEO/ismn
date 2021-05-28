@@ -197,9 +197,9 @@ class IsmnFileCollection(object):
         logging.info(f"Collecting metadata with {n_proc} processes.")
 
         print(
-            f"Processing metadata for all ismn stations into folder {root.path}. "
-            f"This may take a few minutes, but is only done once ... "
-            f"{'Hint: Use `parallel=True` to speed up metadata generation for large datasets' if not parallel else ''}"
+            f"Processing metadata for all ismn stations into folder {root.path}.\n"
+            f"This may take a few minutes, but is only done once..."
+            f"\n{'Hint: Use `parallel=True` to speed up metadata generation for large datasets' if not parallel else ''}"
         )
 
         process_stat_dirs = []
@@ -257,7 +257,7 @@ class IsmnFileCollection(object):
 
         t1 = time.time()
         info = f"Metadata generation finished after {int(t1-t0)} Seconds. " \
-               f"Log stored in {log_file}"
+               f"Metadata and Log stored in {os.path.dirname(log_file)}"
         logging.info(info)
         print(info)
 

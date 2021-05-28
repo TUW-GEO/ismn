@@ -6,6 +6,8 @@ import platform
 import os
 import sys
 
+import pandas as pd
+
 from ismn.filecollection import IsmnFileCollection
 from ismn.components import *
 from ismn.const import *
@@ -395,49 +397,60 @@ class ISMN_Interface:
         return ids
 
     def read_metadata(
-        self, idx=None, format="pandas"
+        self, idx, format="pandas"
     ) -> Union[pd.DataFrame, dict, MetaData]:
         """
         Read only metadata by id as pd.DataFrame.
 
         Parameters
         ----------
-        idx : int
+        idx : int or list or None
             id of sensor to read, best one of those returned
-            from get_dataset_ids()
+            from get_dataset_ids().
         format : str, optional (default: 'pandas')
-            pandas : return metadata as dataframe
-            dict : return metadata as dict
-            obj : return metadata as MetaData object.
+            This only affects the return value when a SINGLE idx is passed.
+            If multiple indices or None is passed, a DataFrame is returned.
+                pandas : return metadata as dataframe (Default)
+                dict : return metadata as dict (only for single idx)
+                obj : return metadata as MetaData object (only for single idx)
 
         Returns
         -------
         metadata : pd.DataFrame | dict | MetaData
             Metadata for the passed index.
         """
-        filehandler = self.__file_collection.get_filehandler(idx)
-        if format.lower() == "pandas":
-            return filehandler.metadata.to_pd()
-        elif format.lower() == "dict":
-            return filehandler.metadata.to_dict()
-        elif format.lower() == "obj":
-            return filehandler.metadata
+        if idx is None:
+            #  get all ids of active networks
+            idx = np.array(ds.get_dataset_ids(None, -np.inf, np.inf,
+                                               check_only_sensor_depth_from=True))
         else:
-            raise NotImplementedError(f"{format} is not a supported format.")
+            idx = np.atleast_1d(idx)
 
+        if len(idx) == 1:
+            filehandler = self.__file_collection.get_filehandler(idx[0])
+            if format.lower() == 'pandas':
+                return filehandler.metadata.to_pd()
+            elif format.lower() == 'dict':
+                return filehandler.metadata.to_dict()
+            elif format.lower() == "obj":
+                return filehandler.metadata
+            else:
+                raise NotImplementedError(f"{format} is not a supported format.")
+        else:
+            if format.lower() != 'pandas':
+                warnings.warn("Multiple indices passed (or None), return format will be 'pandas'")
 
-    def read_metadata_list(
-            self, idxs=None) -> pd.DataFrame:
-        if idxs is None:
-            idxs = range(len(self.__file_collection.filelist))
-        dfs = []
-        for idx in idxs:
-            filehandler = self.__file_collection.get_filehandler(idx)
-            df = filehandler.metadata.to_pd(transpose=True, dropna=False)
-            df.index = [idx]
-            dfs.append(df)
-        df = pd.concat(dfs, axis=0)
-        return df
+            dfs = []
+            for i in idx:
+                filehandler = self.__file_collection.get_filehandler(i)
+                if len(idx) == 1:
+                    return filehandler.metadata.to_pd()
+                else:
+                    df = filehandler.metadata.to_pd(transpose=True, dropna=False)
+                    df.index = [i]
+                    dfs.append(df)
+
+            return pd.concat(dfs, axis=0).dropna(axis=1, how='all')
 
     def read_ts(self, idx, return_meta=False):
         """
@@ -867,9 +880,3 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-
-if __name__ == '__main__':
-    ds = ISMN_Interface(r"/data-read/USERS/wpreimes/ISMN/v20210131/")
-    all_ids = ds.get_dataset_ids(None, -np.inf, np.inf, check_only_sensor_depth_from=True)
-    for id in all_ids:
-        df = ds.read_metadata(id)
