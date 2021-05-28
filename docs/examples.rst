@@ -5,5 +5,5 @@ This example shows how to initialise a reader, select networks, stations and ite
 extract meta data.
 
 .. include::
-   ./examples/interface.rst
+   ./examples/interface.ipynb
 
