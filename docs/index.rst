@@ -1,17 +1,16 @@
-.. include:: ../README.rst
-.. include:: examples.rst
-
-Contents
-========
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
+   :glob:
 
-   Examples <examples>
+   README <readme>
+   Examples <examples/index>
    License <license>
    Authors <authors>
-   Changelog <changes>
+   Changelog <changelog>
    Module Reference <api/modules>
+
+.. include:: ../README.rst
 
 
 Indices and tables
