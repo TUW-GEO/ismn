@@ -8,7 +8,7 @@ import sys
 
 import pandas as pd
 
-from ismn.filecollection import IsmnFileCollection
+from ismn.filecollection import IsmnFileCollection, _load_metadata_df
 from ismn.components import *
 from ismn.const import *
 from ismn.base import IsmnRoot
@@ -118,10 +118,14 @@ class ISMN_Interface:
 
         meta_csv_file = meta_path / meta_csv_filename
 
+        if network is not None:
+            network = np.atleast_1d(network)
+
         if os.path.isfile(meta_csv_file):
             self.__file_collection = IsmnFileCollection.from_metadata_csv(
                 self.root, meta_csv_file, network=network
             )
+            metadata = self.__file_collection.metadata_df
         else:
             self.__file_collection = IsmnFileCollection.build_from_scratch(
                 self.root,
@@ -130,6 +134,12 @@ class ISMN_Interface:
                 temp_root=temp_root,
             )
             self.__file_collection.to_metadata_csv(meta_csv_file)
+            metadata = _load_metadata_df(meta_csv_file)
+            if network is not None:
+                flags = np.isin(metadata['network']['val'].values, network)
+                metadata = metadata.loc[flags]
+
+        self.metadata = metadata.dropna(axis=1, how='all')
 
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
@@ -197,11 +207,6 @@ class ISMN_Interface:
     @property
     def grid(self):
         return self.collection.grid
-
-    @property
-    def metadata(self):
-        return self.__metadata
-
 
     def load_all(self):
         """

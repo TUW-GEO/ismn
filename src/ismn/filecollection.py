@@ -110,6 +110,33 @@ def _read_station_dir(
 
     return filelist, infos
 
+def _load_metadata_df(meta_csv_file: Union[str,Path]) -> pd.DataFrame:
+    # load metadata data frame from csv file
+
+    metadata_df = pd.read_csv(
+        meta_csv_file,
+        index_col=0,
+        header=[0, 1],
+        low_memory=False,
+        engine="c",
+    )
+
+    # parse date cols as datetime
+    for col in ["timerange_from", "timerange_to"]:
+        metadata_df[col, "val"] = pd.to_datetime(metadata_df[col, "val"])
+
+    lvars = []
+    for c in metadata_df.columns:
+        if c[0] not in lvars:
+            lvars.append(c[0])
+
+    # we assume triples for all vars except these, so they must be at the end
+    assert lvars[-2:] == [
+        "file_path",
+        "file_type",
+    ], "file_type and file_path must be at the end."
+
+    return metadata_df
 
 class IsmnFileCollection(object):
     """
@@ -294,28 +321,7 @@ class IsmnFileCollection(object):
 
         print(f"Found existing ismn metadata in {meta_csv_file}.")
 
-        metadata_df = pd.read_csv(
-            meta_csv_file,
-            index_col=0,
-            header=[0, 1],
-            low_memory=False,
-            engine="c",
-        )
-
-        # parse date cols as datetime
-        for col in ["timerange_from", "timerange_to"]:
-            metadata_df[col, "val"] = pd.to_datetime(metadata_df[col, "val"])
-
-        lvars = []
-        for c in metadata_df.columns:
-            if c[0] not in lvars:
-                lvars.append(c[0])
-
-        # we assume triples for all vars except these, so they must be at the end
-        assert lvars[-2:] == [
-            "file_path",
-            "file_type",
-        ], "file_type and file_path must be at the end."
+        metadata_df = _load_metadata_df(meta_csv_file)
 
         filelist = OrderedDict([])
 
@@ -357,6 +363,12 @@ class IsmnFileCollection(object):
                 filelist[this_nw] = []
 
             filelist[this_nw].append(f)
+
+        if network is None:
+            cls.metadata_df = metadata_df
+        else:
+            flags = np.isin(metadata_df['network']['val'].values, network)
+            cls.metadata_df = metadata_df.loc[flags]
 
         return cls(root, filelist=filelist)
 
