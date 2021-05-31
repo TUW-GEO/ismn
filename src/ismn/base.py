@@ -1,4 +1,26 @@
 # -*- coding: utf-8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2021 TU Wien
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import os
 import numpy as np
 import zipfile
@@ -7,7 +29,7 @@ import glob
 import fnmatch
 import warnings
 from pathlib import Path, PurePosixPath
-from typing import Union
+from typing import Union, List
 
 
 def zip(func):
@@ -236,14 +258,14 @@ class IsmnRoot:
         Parameters
         ----------
         subpath: str, optional (default: None)
-            Use linux slashes /, no leading / to define a subpath
+            Use linux slashes '/' (and no leading '/') to define a subpath
             in the zip file. If None is selected, the whole archive is searched.
         fn_templ : str, optional (default: '*.csv')
             Filename template for files that are searched in the passed dir.
 
         Returns
         -------
-        files : list[str]
+        files : List[str]
             Found files that match the passed template.
         """
 
@@ -260,7 +282,7 @@ class IsmnRoot:
         Parameters
         ----------
         file_in_archive : Path or str
-            Use linux slashes /, no leading / to define a subpath
+            Use linux slashes '/' (no leading '/') to define a subpath
             Relative path in the archive (network/station/filename)
         out_path : Path or str
             Directory where the extracted file is stored.

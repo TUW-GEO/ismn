@@ -39,9 +39,7 @@ from ismn.meta import MetaData, MetaVar, Depth
 
 
 def _read_station_dir(
-    root: Union[
-        IsmnRoot, Path, str
-    ],  # Path for reading from zip, avoid serialisation error
+    root: Union[IsmnRoot, Path, str],
     stat_dir: Union[Path, str],
     temp_root: Path,
 ) -> (dict, list):
@@ -112,7 +110,9 @@ def _read_station_dir(
 
 
 def _load_metadata_df(meta_csv_file: Union[str, Path]) -> pd.DataFrame:
-    # load metadata data frame from csv file
+    """
+    Load metadata data frame from csv file
+    """
 
     metadata_df = pd.read_csv(
         meta_csv_file,
@@ -301,7 +301,8 @@ class IsmnFileCollection(object):
         cls, data_root, meta_csv_file, network=None, temp_root=gettempdir()
     ):
         """
-        Load a previously created and stored filelist from pkl.
+        Load a previously created and stored filelist from
+        :func:`ismn.filecollection.IsmnFileCollection.to_metadata_csv`
 
         Parameters
         ----------
@@ -310,7 +311,8 @@ class IsmnFileCollection(object):
         meta_csv_file : str or Path
             Csv file where the metadata is stored.
         network : list, optional (default: None)
-            List of networks that are considered. Other filehandlers are set to None.
+            List of networks that are considered.
+            Filehandlers for other networks are set to None.
         temp_root : str or Path, optional (default: gettempdir())
             Temporary folder where extracted data is copied during reading from
             zip archive.
@@ -379,8 +381,9 @@ class IsmnFileCollection(object):
     def to_metadata_csv(self, meta_csv_file):
         """
         Write filehandle metadata from filelist to metdata csv that contains
-        ALL metadata / variables of the filehander. Can be read back in as
-        filelist with filehandlers using from_metadata_csv().
+        ALL metadata / variables of the filehander.
+        Can be read back in as filelist with filehandlers using
+        :func:`ismn.filecollection.IsmnFileCollection.from_metadata_csv`.
 
         Parameters
         ----------

@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2019 TU Wien
+# Copyright (c) 2021 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -89,9 +89,9 @@ class Sensor(IsmnComponent):
             Sensing depth.
         name : str or int, optional (default: None)
             Id or Name of the sensor. If None is passed, a name is generated.
-        filehandler : DataFile, optional
+        filehandler : DataFile, optional (default: None)
             File handler that allows access to observation data and
-            sensor metadata via its read_data() function (default: None).
+            sensor metadata via :func:`ismn.filehandlers.DataFile.read_data`.
         keep_loaded_data : bool, optional (default: False)
             Keep data for a file in memory once it is loaded. This makes subsequent
             calls of data faster (if e.g. a station is accessed multiple times)
@@ -118,7 +118,8 @@ class Sensor(IsmnComponent):
 
     def read_data(self):
         """
-        Load data from filehandler for this Sensor by calling read_data().
+        Load data from filehandler for this Sensor by calling
+        :func:`ismn.filehandlers.DataFile.read_data`.
 
         Returns
         -------
@@ -153,7 +154,8 @@ class Sensor(IsmnComponent):
         Parameters
         ----------
         variable : str, optional (default: None)
-            Check if the variable name matches, e.g. soil_moisture
+            Check if the variable name matches, e.g. soil_moisture.
+            One of :const:`ismn.const.VARIABLE_LUT`
         depth : Depth or list or tuple, optional (default: None)
             Check if the passed depth encloses the sensor depth.
             A list/tuple must contain 2 values where the first is the depth start
@@ -171,7 +173,7 @@ class Sensor(IsmnComponent):
         Returns
         -------
         flag : bool
-            Indicates weather metadata for this Sensor matches with the passed
+            Indicates whether metadata for this Sensor matches with the passed
             requirements.
         """
         if isinstance(depth, (list, tuple)):
@@ -266,7 +268,7 @@ class Station(IsmnComponent):
         """
         return len(self.sensors)
 
-    def __getitem__(self, item: int or str) -> Sensor:
+    def __getitem__(self, item: Union[int, str]) -> Sensor:
         if isinstance(item, int):
             return self.sensors[list(self.sensors.keys())[item]]
         else:
@@ -423,7 +425,8 @@ class Station(IsmnComponent):
         Keyword arguments are used to check all sensors at all stations,
         only stations that have at least one matching sensor are returned.
 
-        For a description of possible filter kwargs, see Sensor.eval() function
+        For a description of possible filter kwargs, see
+        :func:`ismn.components.Sensor.eval`
 
         Yields
         ------
@@ -439,6 +442,7 @@ class Station(IsmnComponent):
         """
         get the sensors at which the variable was measured at the
         given depth
+
         Parameters
         ----------
         variable : string
@@ -576,7 +580,8 @@ class Network(IsmnComponent):
         Parameters are used to check all sensors at all stations, only stations
         that have at least one matching sensor are returned.
 
-        For a description of possible filter kwargs, see Sensor.eval() function
+        For a description of possible filter kwargs, see
+        :func:`ismn.components.Sensor.eval`
 
         Yields
         ------
@@ -597,7 +602,8 @@ class Network(IsmnComponent):
 
         Parameters
         ----------
-        Keyword arguments are used to evaluate the sensors, see Sensor.eval()
+        Keyword arguments are used to evaluate the sensors, see
+        :func:`ismn.components.Sensor.eval`
 
         Yields
         ------
@@ -634,7 +640,7 @@ class NetworkCollection(IsmnComponent):
         Parameters
         ----------
         networks : list[Network]
-            List of Networks that build the collection from.
+            List of Networks that build the collection.
         """
 
         self.networks = OrderedDict([])
@@ -649,7 +655,7 @@ class NetworkCollection(IsmnComponent):
 
         self.grid = BasicGrid(lons, lats) if (len(lons) > 0 and len(lats) > 0) else None
 
-    def __repr__(self, indent=""):
+    def __repr__(self, indent: str = ""):
         return ",\n".join(
             [
                 f"{indent}{net.name}: {list(net.stations.keys())}"
@@ -736,7 +742,7 @@ class NetworkCollection(IsmnComponent):
         -------
         station : Station or List[Station]
             The nearest Station(s) to the passed coordinates.
-        dist : float
+        dist : float or List[float]
             Distance in meter between the passed coordinates and the
             actual location of the station.
         """

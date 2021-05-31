@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2019 TU Wien
+# Copyright (c) 2021 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -189,7 +189,7 @@ class StaticMetaFile(IsmnFile):
             self.metadata = self.read_metadata()
 
     @staticmethod
-    def __read_field(data, fieldname: str, new_name=None) -> np.array:
+    def __read_field(data: pd.DataFrame, fieldname: str, new_name=None) -> np.array:
         """
         Extract a field from the loaded csv metadata
         """
@@ -334,7 +334,7 @@ class DataFile(IsmnFile):
 
     Attributes
     ----------
-    See Parent Attributes (IsmnFile)
+    See :class:`ismn.filehandlers.IsmnFile`
     file_type : str
         File type information (e.g. ceop).
     """
@@ -389,7 +389,7 @@ class DataFile(IsmnFile):
         return headr, scnd, last
 
     @staticmethod
-    def __get_parent_path(filepath):
+    def __get_parent_path(filepath: Union[str, Path]):
         """
         returns the parent directory of a full path
         """
@@ -517,7 +517,7 @@ class DataFile(IsmnFile):
 
         Parameters
         ----------
-        delim : str, optional
+        delim : str, optional (default: '_')
             File basename delimiter.
         only_basename_elements : bool, optional (default: False)
             Parse only the filename and not the file contents.
@@ -594,9 +594,9 @@ class DataFile(IsmnFile):
 
         Parameters
         ----------
-        names : list, optional
+        names : list, optional (default: None)
             List of column names to use.
-        usecols : list, optional
+        usecols : list, optional (default: None)
             Return a subset of the columns.
         skiprows : list-like, int or callable, optional (default: 0)
             See pd.read_csv()
@@ -644,7 +644,7 @@ class DataFile(IsmnFile):
         if self.file_type == "ceop":
             # todo: what is this format, should we support it?
             # self._read_format_ceop()
-            raise NotImplementedError
+            raise NotImplementedError("Ceop (old) format is no longer supported")
         elif self.file_type == "ceop_sep":
             return self.__read_format_ceop_sep()
         elif self.file_type == "header_values":

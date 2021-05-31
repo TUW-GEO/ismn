@@ -1,4 +1,25 @@
 # -*- coding: utf-8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2021 TU Wien
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 from pathlib import Path
 from tempfile import gettempdir
@@ -77,7 +98,7 @@ class ISMN_Interface:
         Switch to keep data in memory after loading (not recommended).
     metadata : pd.DataFrame
         Metadata for active networks, with idx that could also be passed
-        to :func:`.ISMN_Interface.read_metadata`
+        to :func:`ismn.interface.read_metadata`
     landcover : OrderedDict
         All Landcover classes and their descriptions.
     parallel : bool
@@ -111,13 +132,14 @@ class ISMN_Interface:
 
         self.keep_loaded_data = keep_loaded_data
 
-        self.activate_network(network=network, meta_path=meta_path,
-                              temp_root=temp_root)
+        self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
 
-    def activate_network(self,
-                         network: Union[list, str] = None,
-                         meta_path: str = None,
-                         temp_root: str = gettempdir()):
+    def activate_network(
+        self,
+        network: Union[list, str] = None,
+        meta_path: str = None,
+        temp_root: str = gettempdir(),
+    ):
         """
         Load (file) collection for specific networks.
         """
@@ -157,8 +179,7 @@ class ISMN_Interface:
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
 
-    def __collect_networks(self,
-                           network_names: Optional[list] = None) -> list:
+    def __collect_networks(self, network_names: Optional[list] = None) -> list:
         """
         Build Networks and fill them with Stations and Sensors and apply
         according filehandlers from filelist for data reading.
@@ -394,10 +415,7 @@ class ISMN_Interface:
 
         return ids
 
-    def read_metadata(
-        self,
-        idx,
-        format="pandas"):
+    def read_metadata(self, idx, format="pandas"):
         """
         Read only metadata by id as pd.DataFrame.
 
@@ -405,7 +423,7 @@ class ISMN_Interface:
         ----------
         idx : int or list
             id of sensor to read, best one of those returned
-            from :func:`.ISMN_Interface.get_dataset_ids` or one in
+            from :func:`ismn.interface.get_dataset_ids` or one in
             :attr:`.ISMN_Interface.metadata`.
         format : str, optional (default: 'pandas')
             This only affects the return value when a SINGLE idx is passed.
@@ -457,7 +475,7 @@ class ISMN_Interface:
         ----------
         idx : int
             id of filehandler to read, best one of those returned
-            by :func:`.ISMN_Interface.get_dataset_ids()`
+            by :func:`ismn.interface.ISMN_Interface.get_dataset_ids`
         return_meta : bool, optional (default: False)
             Also return the metadata for this sensor (as a second return value)
 
@@ -477,7 +495,7 @@ class ISMN_Interface:
             return filehandler.read_data()
 
     def read(self, *args, **kwargs):
-        # alias of :func:`.ISMN_Interface.read_ts`
+        # alias of :func:`ismn.interface.ISMN_Interface.read_ts`
         return self.read_ts(*args, **kwargs)
 
     def find_nearest_station(self, lon, lat, return_distance=False, max_dist=np.inf):
@@ -706,7 +724,7 @@ class ISMN_Interface:
         ----------
         variable : str, optional (default: 'soil_moisture')
             One of those in :const:`ismn.const.VARIABLE_LUT` or returned by
-            :func:`.ISMN_Interface.get_variables`:
+            :func:`ismn.interface.ISMN_Interface.get_variables`:
             'soil_moisture', 'soil_temperature', 'soil_suction',
             'precipitation', 'air_temperature', 'field_capacity',
             'permanent_wilting_point', 'plant_available_water',
@@ -774,7 +792,7 @@ class ISMN_Interface:
         ----------
         variable : str, optional (default: 'soil_moisture')
             One of those in :const:`ismn.const.VARIABLE_LUT` or returned by
-            :func:`.ISMN_Interface.get_variables`:
+            :func:`ismn.interface.ISMN_Interface.get_variables`:
             'soil_moisture', 'soil_temperature', 'soil_suction',
             'precipitation', 'air_temperature', 'field_capacity',
             'permanent_wilting_point', 'plant_available_water',
@@ -829,7 +847,7 @@ class ISMN_Interface:
         landcover: str = "lc_2010",
     ) -> dict:
         """
-        See :func:`.ISMN_Interface.get_static_var_vals`
+        See :func:`ismn.interface.ISMN_Interface.get_static_var_vals`
         """
         return self.get_static_var_vals(variable, min_depth, max_depth, landcover)
 
@@ -841,7 +859,7 @@ class ISMN_Interface:
         climate: str = "climate_KG",
     ) -> dict:
         """
-        See :func:`.ISMN_Interface.get_static_var_vals`
+        See :func:`ismn.interface.ISMN_Interface.get_static_var_vals`
         """
         return self.get_static_var_vals(variable, min_depth, max_depth, climate)
 
