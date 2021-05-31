@@ -17,6 +17,12 @@ ismn
 
 Readers for the data from the International Soil Moisture Database (ISMN).
 
+Documentation
+-------------
+The full documentation is available at https://ismn.readthedocs.io and includes
+a tutorial on reading ISMN data after downloading it from
+https://ismn.earth
+
 Citation
 ========
 
@@ -73,7 +79,7 @@ After that you should be able to run:
 
 .. code::
 
-    python setup.py test
+    pytest
 
 to run the test suite.
 
@@ -190,9 +196,6 @@ get_climate_types method of your ISMN_Interface object and set climate='climate_
 * EF: Polar Eternal Winter
 * W: Water
 
-Documentation
--------------
-https://ismn.readthedocs.io
 
 Contribute
 ==========
