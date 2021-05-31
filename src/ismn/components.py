@@ -1,6 +1,6 @@
 # The MIT License (MIT)
 #
-# Copyright (c) 2019 TU Wien
+# Copyright (c) 2021 TU Wien
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,12 +36,13 @@ logger = logging.getLogger(__name__)
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
-formatter = logging.Formatter('%(levelname)s - %(asctime)s: %(message)s')
+formatter = logging.Formatter("%(levelname)s - %(asctime)s: %(message)s")
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-class IsmnComponent: pass
+class IsmnComponent:
+    pass
 
 
 class Sensor(IsmnComponent):
@@ -66,8 +67,15 @@ class Sensor(IsmnComponent):
         Container for data in memory (if it is being kept)
     """
 
-    def __init__(self, instrument, variable, depth, name=None,
-                 filehandler=None, keep_loaded_data=False):
+    def __init__(
+        self,
+        instrument,
+        variable,
+        depth,
+        name=None,
+        filehandler=None,
+        keep_loaded_data=False,
+    ):
         """
         Initialise Sensor object.
 
@@ -81,9 +89,9 @@ class Sensor(IsmnComponent):
             Sensing depth.
         name : str or int, optional (default: None)
             Id or Name of the sensor. If None is passed, a name is generated.
-        filehandler : DataFile, optional
+        filehandler : DataFile, optional (default: None)
             File handler that allows access to observation data and
-            sensor metadata via its read_data() function (default: None).
+            sensor metadata via :func:`ismn.filehandlers.DataFile.read_data`.
         keep_loaded_data : bool, optional (default: False)
             Keep data for a file in memory once it is loaded. This makes subsequent
             calls of data faster (if e.g. a station is accessed multiple times)
@@ -99,17 +107,19 @@ class Sensor(IsmnComponent):
         self.name = name if name is not None else self.__repr__()
 
     def __repr__(self):
-        return f"{self.instrument}_{self.variable}_" \
-               f"{self.depth.start:1.6f}_{self.depth.end:1.6f}"
+        return (
+            f"{self.instrument}_{self.variable}_"
+            f"{self.depth.start:1.6f}_{self.depth.end:1.6f}"
+        )
 
     @property
     def metadata(self) -> MetaData:
-        return MetaData() if self.filehandler is None \
-            else self.filehandler.metadata
+        return MetaData() if self.filehandler is None else self.filehandler.metadata
 
     def read_data(self):
         """
-        Load data from filehandler for this Sensor by calling read_data().
+        Load data from filehandler for this Sensor by calling
+        :func:`ismn.filehandlers.DataFile.read_data`.
 
         Returns
         -------
@@ -130,8 +140,13 @@ class Sensor(IsmnComponent):
             else:
                 return self.data
 
-    def eval(self, variable=None, depth=None, filter_meta_dict=None,
-             check_only_sensor_depth_from=False):
+    def eval(
+        self,
+        variable=None,
+        depth=None,
+        filter_meta_dict=None,
+        check_only_sensor_depth_from=False,
+    ):
         """
         Evaluate whether the sensor complies with the passed metadata
         requirements.
@@ -139,7 +154,8 @@ class Sensor(IsmnComponent):
         Parameters
         ----------
         variable : str, optional (default: None)
-            Check if the variable name matches, e.g. soil_moisture
+            Check if the variable name matches, e.g. soil_moisture.
+            One of :const:`ismn.const.VARIABLE_LUT`
         depth : Depth or list or tuple, optional (default: None)
             Check if the passed depth encloses the sensor depth.
             A list/tuple must contain 2 values where the first is the depth start
@@ -157,7 +173,7 @@ class Sensor(IsmnComponent):
         Returns
         -------
         flag : bool
-            Indicates weather metadata for this Sensor matches with the passed
+            Indicates whether metadata for this Sensor matches with the passed
             requirements.
         """
         if isinstance(depth, (list, tuple)):
@@ -182,9 +198,11 @@ class Sensor(IsmnComponent):
             else:
                 # checks also if the metadata in file matches
                 flag = self.filehandler.check_metadata(
-                    variable, allowed_depth=depth,
+                    variable,
+                    allowed_depth=depth,
                     filter_meta_dict=filter_meta_dict,
-                    check_only_sensor_depth_from=check_only_sensor_depth_from)
+                    check_only_sensor_depth_from=check_only_sensor_depth_from,
+                )
 
         return flag
 
@@ -250,7 +268,7 @@ class Station(IsmnComponent):
         """
         return len(self.sensors)
 
-    def __getitem__(self, item: int or str) -> Sensor:
+    def __getitem__(self, item: Union[int, str]) -> Sensor:
         if isinstance(item, int):
             return self.sensors[list(self.sensors.keys())[item]]
         else:
@@ -288,14 +306,15 @@ class Station(IsmnComponent):
 
         return depths
 
-    def get_min_max_obs_timestamp(self, variable="soil moisture", min_depth=None,
-                                  max_depth=None):
+    def get_min_max_obs_timestamp(
+        self, variable="soil moisture", min_depth=None, max_depth=None
+    ):
         """
         Goes through the sensors associated with this station
         and checks the metadata to get and approximate time coverage of the station.
         This is just an overview. If holes have to be detected the
         complete file must be read.
-        
+
         Parameters
         ----------
         variable: str, optional (default: 'soil_moisture')
@@ -316,14 +335,16 @@ class Station(IsmnComponent):
             Latest date observed by any sensor at the station after filtering
             for the passed requirements.
         """
-        depth = Depth(-np.inf if min_depth is None else min_depth,
-                      np.inf if max_depth is None else max_depth)
+        depth = Depth(
+            -np.inf if min_depth is None else min_depth,
+            np.inf if max_depth is None else max_depth,
+        )
 
         min_from, max_to = None, None
 
         for sensor in self.iter_sensors(variable=variable, depth=depth):
-            time_from = sensor.metadata['timerange_from'].val
-            time_to = sensor.metadata['timerange_to'].val
+            time_from = sensor.metadata["timerange_from"].val
+            time_to = sensor.metadata["timerange_to"].val
             if (min_from is None) or (time_from < min_from):
                 min_from = time_from
             if (max_to is None) or (time_to > max_to):
@@ -334,8 +355,15 @@ class Station(IsmnComponent):
 
         return min_from, max_to
 
-    def add_sensor(self, instrument, variable, depth, filehandler=None,
-                   name=None, keep_loaded_data=False):
+    def add_sensor(
+        self,
+        instrument,
+        variable,
+        depth,
+        filehandler=None,
+        name=None,
+        keep_loaded_data=False,
+    ):
         """
         Add a new Sensor to this Station.
 
@@ -362,10 +390,16 @@ class Station(IsmnComponent):
             name = f"{instrument}_{variable}_{depth.start:1.6f}_{depth.end:1.6f}"
 
         if name not in self.sensors:
-            self.sensors[name] = Sensor(instrument, variable, depth, name,
-                                        filehandler, keep_loaded_data)
+            self.sensors[name] = Sensor(
+                instrument,
+                variable,
+                depth,
+                name,
+                filehandler,
+                keep_loaded_data,
+            )
         else:
-            logger.warning(f'Sensor already exists: {name}')
+            logger.warning(f"Sensor already exists: {name}")
 
     def remove_sensor(self, name):
         """
@@ -379,7 +413,7 @@ class Station(IsmnComponent):
         if name in self.sensors:
             del self.sensors[name]
         else:
-            logger.warning(f'Sensor not found: {name}')
+            logger.warning(f"Sensor not found: {name}")
 
     def iter_sensors(self, **filter_kwargs):
         """
@@ -391,7 +425,8 @@ class Station(IsmnComponent):
         Keyword arguments are used to check all sensors at all stations,
         only stations that have at least one matching sensor are returned.
 
-        For a description of possible filter kwargs, see Sensor.eval() function
+        For a description of possible filter kwargs, see
+        :func:`ismn.components.Sensor.eval`
 
         Yields
         ------
@@ -407,6 +442,7 @@ class Station(IsmnComponent):
         """
         get the sensors at which the variable was measured at the
         given depth
+
         Parameters
         ----------
         variable : string
@@ -420,9 +456,14 @@ class Station(IsmnComponent):
         sensors : numpy.array
             array of sensors found for the given combination of variable and depths
         """
-        return np.array([s for s in
-                         self.iter_sensors(variable=variable,
-                                           depth=Depth(depth_from, depth_to))])
+        return np.array(
+            [
+                s
+                for s in self.iter_sensors(
+                    variable=variable, depth=Depth(depth_from, depth_to)
+                )
+            ]
+        )
 
 
 class Network(IsmnComponent):
@@ -439,9 +480,7 @@ class Network(IsmnComponent):
         Station is added.
     """
 
-    def __init__(self,
-                 name,
-                 stations=None):
+    def __init__(self, name, stations=None):
         """
         Initialise Network object.
 
@@ -465,7 +504,10 @@ class Network(IsmnComponent):
         # Provide basic Network information.
         return f"Stations in '{self.name}': {list(self.stations.keys())}"
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Union[int, str]):
+        # shortcut to access networks directly
+        if isinstance(item, int):
+            item = list(self.stations.keys())[item]
         return self.stations[item]
 
     @property
@@ -510,12 +552,9 @@ class Network(IsmnComponent):
             Elevation.
         """
         if name not in self.stations:
-            self.stations[name] = Station(name,
-                                          lon,
-                                          lat,
-                                          elev)
+            self.stations[name] = Station(name, lon, lat, elev)
         else:
-            logger.warning(f'Station already exists: {name}')
+            logger.warning(f"Station already exists: {name}")
 
     def remove_station(self, name):
         """
@@ -529,7 +568,7 @@ class Network(IsmnComponent):
         if name in self.stations:
             del self.stations[name]
         else:
-            logger.warning(f'Station not found {name}')
+            logger.warning(f"Station not found {name}")
 
     def iter_stations(self, **filter_kwargs):
         """
@@ -541,7 +580,8 @@ class Network(IsmnComponent):
         Parameters are used to check all sensors at all stations, only stations
         that have at least one matching sensor are returned.
 
-        For a description of possible filter kwargs, see Sensor.eval() function
+        For a description of possible filter kwargs, see
+        :func:`ismn.components.Sensor.eval`
 
         Yields
         ------
@@ -562,7 +602,8 @@ class Network(IsmnComponent):
 
         Parameters
         ----------
-        Keyword arguments are used to evaluate the sensors, see Sensor.eval()
+        Keyword arguments are used to evaluate the sensors, see
+        :func:`ismn.components.Sensor.eval`
 
         Yields
         ------
@@ -599,7 +640,7 @@ class NetworkCollection(IsmnComponent):
         Parameters
         ----------
         networks : list[Network]
-            List of Networks that build the collection from.
+            List of Networks that build the collection.
         """
 
         self.networks = OrderedDict([])
@@ -614,9 +655,13 @@ class NetworkCollection(IsmnComponent):
 
         self.grid = BasicGrid(lons, lats) if (len(lons) > 0 and len(lats) > 0) else None
 
-    def __repr__(self, indent=''):
-        return ',\n'.join([f"{indent}{net.name}: {list(net.stations.keys())}"
-                           for net in self.networks.values()])
+    def __repr__(self, indent: str = ""):
+        return ",\n".join(
+            [
+                f"{indent}{net.name}: {list(net.stations.keys())}"
+                for net in self.networks.values()
+            ]
+        )
 
     def __getitem__(self, item: Union[int, str]):
         # shortcut to access networks directly
@@ -625,14 +670,14 @@ class NetworkCollection(IsmnComponent):
         return self.networks[item]
 
     def iter_networks(self) -> Network:
-        """ 
+        """
         Iterate through all networks in the Collection.
         """
         for nw in self.networks.values():
             yield nw
 
     def iter_stations(self, **filter_kwargs) -> (Network, Station):
-        """ 
+        """
         Iterate through Networks in the Collection and get (all/filtered)
         Stations.
         """
@@ -697,7 +742,7 @@ class NetworkCollection(IsmnComponent):
         -------
         station : Station or List[Station]
             The nearest Station(s) to the passed coordinates.
-        dist : float
+        dist : float or List[float]
             Distance in meter between the passed coordinates and the
             actual location of the station.
         """

@@ -1,9 +1,9 @@
 Reading and plotting data from the ISMN
 =======================================
 
-This example program chooses a random Network and Station and plots the first
-variable,depth,sensor combination.
+This example shows how to initialise a reader, select networks, stations and iterate over sensors to read data and
+extract meta data.
 
 .. include::
-   ./read_and_plot_ismn_data/interface.rst
+   ./examples/index.rst
 

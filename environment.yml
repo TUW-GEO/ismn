@@ -7,11 +7,16 @@ dependencies:
   - pandas
   - matplotlib
   - cartopy
+  - scipy
+  - ipykernel
   - pip
   - pip:
      - pygeogrids>=0.3.2
      - configparser
      - tqdm
      - more_itertools
+     - setuptools_scm
+     - nbsphinx
+     - sphinx_rtd_theme
      - pytest
      - pytest-cov

@@ -17,6 +17,12 @@ ismn
 
 Readers for the data from the International Soil Moisture Database (ISMN).
 
+Documentation
+-------------
+The full documentation is available at https://ismn.readthedocs.io and includes
+a tutorial on reading ISMN data after downloading it from
+https://ismn.earth
+
 Citation
 ========
 
@@ -73,7 +79,7 @@ After that you should be able to run:
 
 .. code::
 
-    python setup.py test
+    pytest
 
 to run the test suite.
 
@@ -190,9 +196,6 @@ get_climate_types method of your ISMN_Interface object and set climate='climate_
 * EF: Polar Eternal Winter
 * W: Water
 
-Documentation
--------------
-https://ismn.readthedocs.io
 
 Contribute
 ==========
@@ -220,5 +223,18 @@ If you want to contribute please follow these steps:
 - make a new feature branch from the ismn master branch
 - Add your feature
 - Please include tests for your contributions in one of the test directories.
-  We use py.test so a simple function called test_my_feature is enough
+  We use pytest so a simple function called test_my_feature is enough
 - submit a pull request to our master branch
+
+Release new version
+-------------------
+
+To release a new version of this package, make sure all tests are passing on the
+master branch and the CHANGELOG.rst is up-to-date, with changes for the new version
+at the top.
+Then draft a new release at https://github.com/TUW-GEO/ismn/releases.
+Create a version tag following the `v{MAJOR}.{MINOR}.{PATCH}` pattern.
+This will trigger a new build on GitHub.
+After the build has finished successfully, the `whl` and `dist` packages should
+be available on https://pypi.org/project/ismn/ and `pip install ismn` should
+download the newest version.
