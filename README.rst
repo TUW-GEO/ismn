@@ -3,8 +3,8 @@ ismn
 ====
 
 
-.. image:: https://github.com/TUW-GEO/ismn/workflows/test/badge.svg
-   :target: https://github.com/TUW-GEO/ismn/actions?query=workflow%3A%22Build+package+and+run+tests%22
+.. image:: https://github.com/TUW-GEO/ismn/workflows/Automated%20Tests/badge.svg?branch=master&event=push
+   :target: https://github.com/TUW-GEO/ismn/actions
 
 .. image:: https://coveralls.io/repos/TUW-GEO/ismn/badge.png?branch=master
   :target: https://coveralls.io/r/TUW-GEO/ismn?branch=master
