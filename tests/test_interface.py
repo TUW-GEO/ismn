@@ -94,13 +94,17 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         data2, meta = self.ds.read_ts(1, return_meta=True)
         assert not data2.empty
 
+    def test_read_metadata(self):
+        data2, meta = self.ds.read_ts(1, return_meta=True)
         assert all(meta == self.ds.read_metadata(1, format="pandas"))
         assert self.ds.read_metadata(1, format="dict") is not None
-        assert self.ds.read_metadata(1, format="obj") is not None
+        assert self.ds.read_metadata([1], format="obj") is not None
 
         assert self.ds.read_metadata(None).index.size == 2
 
-        assert len(data1.index) != len(data2.index)  # make sure they are not same
+        assert not self.ds.metadata.empty
+        assert self.ds.metadata.loc[1]['station']['val'] \
+               == self.ds.read_metadata(1)['station']['val']
 
     def test_find_nearest_station(self):
         should_lon, should_lat = -156.62870, 71.32980

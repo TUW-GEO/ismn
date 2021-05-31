@@ -411,7 +411,7 @@ class ISMN_Interface:
         ----------
         idx : int or list or None
             id of sensor to read, best one of those returned
-            from get_dataset_ids().
+            from get_dataset_ids() or one in self.metadata.index.
         format : str, optional (default: 'pandas')
             This only affects the return value when a SINGLE idx is passed.
             If multiple indices or None is passed, a DataFrame is returned.
@@ -887,3 +887,4 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
+

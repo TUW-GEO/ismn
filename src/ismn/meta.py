@@ -465,7 +465,7 @@ class MetaData:
         values = list(sum(values, ()))
 
         index = pd.MultiIndex.from_product(
-            [var_names, args], names=["name", "meta_args"]
+            [var_names, args], names=["variable", "key"]
         )
 
         df = pd.DataFrame(index=index, data=values).fillna(np.nan)

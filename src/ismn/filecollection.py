@@ -136,6 +136,8 @@ def _load_metadata_df(meta_csv_file: Union[str,Path]) -> pd.DataFrame:
         "file_type",
     ], "file_type and file_path must be at the end."
 
+    metadata_df.index.name = 'idx'
+
     return metadata_df
 
 class IsmnFileCollection(object):
@@ -388,8 +390,8 @@ class IsmnFileCollection(object):
 
         for i, filehandler in enumerate(self.iter_filehandlers()):
             df = filehandler.metadata.to_pd(True, dropna=False)
-            df["file_path"] = str(PurePosixPath(filehandler.file_path))
-            df["file_type"] = filehandler.file_type
+            df[("file_path", "val")] = str(PurePosixPath(filehandler.file_path))
+            df[("file_type", "val")] = filehandler.file_type
 
             df.index = [i]
             dfs.append(df)
