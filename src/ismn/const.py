@@ -32,7 +32,7 @@ def deprecated(func):
     def new_func(*args, **kwargs):
         warnings.simplefilter("always", DeprecationWarning)
         warnings.warn(
-            f"Function {func.__name__} is deprecated and will be removed soon.",
+            f"Function {func.__name__} is deprecated and will be removed in future version of ismn.",
             category=DeprecationWarning,
             stacklevel=2,
         )

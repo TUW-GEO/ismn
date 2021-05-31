@@ -5,6 +5,7 @@ from tempfile import gettempdir
 import platform
 import os
 import sys
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -32,7 +33,8 @@ except ImportError:
 class ISMN_Interface:
     """
     Class provides interface to ISMN data downloaded from the ISMN website
-    upon initialization it collects metadata from all files in
+    https://ismn.earth.
+    Upon initialization it collects metadata from all files in
     path_to_data and saves metadata information in a csv file into the folder
     python_metadata in meta_path (or data_path if no meta_path is defined).
     First initialization can take some time if all ISMN
@@ -43,37 +45,53 @@ class ISMN_Interface:
     data_path : str or Path
         Path to ISMN data to read, either to a zip archive or to the extracted
         directory that contains the network folders.
+        Download data from https://ismn.earth after registration.
     meta_path : str or Path
         Path where the metadata csv file(s) is / are stored. The actual filename
         is defined by the name of data_path and will be generated automatically
         if it does not yet exist.
     network : str or list, optional (default: None)
         Name(s) of network(s) to load. Other data in the data_path will be ignored.
-        By default or if None is passed, all networks are activated. If an empty list is passed
-        no networks are activated.
-    parallel: bool, optional (default: True)
+        By default or if None is passed, all networks are activated.
+        If an empty list is passed no networks are activated.
+    parallel: bool, optional (default: False)
         Activate parallel processes to speed up metadata generation.
+        All available CPUs will be used.
     keep_loaded_data : bool, optional (default: False)
         Keep data for a file in memory once it is loaded. This makes subsequent
         calls of data faster (if e.g. a station is accessed multiple times)
         but can fill up memory if multiple networks are loaded.
 
-
     Raises
     ------
     ISMNError
-        if given network was not found in path_to_data
+        if given, network was not found :attr:`.ISMN_Interface.data_path`
 
     Attributes
     ----------
-    metadata : numpy.array
-        metadata array for all stations contained in the path given during initialization
+    climate : OrderedDict
+        All Climate classes and their descriptions.
+    collection : NetworkCollection
+        Contains all loaded networks with stations and sensors.
+    keep_loaded_data : bool
+        Switch to keep data in memory after loading (not recommended).
+    metadata : pd.DataFrame
+        Metadata for active networks, with idx that could also be passed
+        to :func:`.ISMN_Interface.read_metadata`
+    landcover : OrderedDict
+        All Landcover classes and their descriptions.
+    parallel : bool
+        Switch to activate parallel processing where possible.
+    root : IsmnRoot
+        ISMN data folder or .zip access
+
+
+    Properties
+    ----------
+    networks : OrderedDict
+        Access Networks container from collection directly.
     grid : pygeogrids.grid.BasicGrid
-        Grid object used for finding nearest insitu station for given lon lat
-    Methods
-    -------
-    find_nearest_station(lon,lat)
-        find nearest station for given coordinates
+        Grid from collection that contains all station lats and lons
     """
 
     def __init__(
@@ -93,20 +111,15 @@ class ISMN_Interface:
 
         self.keep_loaded_data = keep_loaded_data
 
-        self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
+        self.activate_network(network=network, meta_path=meta_path,
+                              temp_root=temp_root)
 
-    def activate_network(self, network=None, meta_path=None, temp_root=gettempdir()):
+    def activate_network(self,
+                         network: Union[list, str] = None,
+                         meta_path: str = None,
+                         temp_root: str = gettempdir()):
         """
-        Load files for specific networks
-
-        Parameters
-        ----------
-        network : list or str, optional (default: None)
-            See __init__ description
-        meta_path : str, optional (default: None)
-            See __init__ description
-        temp_root: str, optional (default: None)
-            See __init__ description
+        Load (file) collection for specific networks.
         """
 
         meta_csv_filename = f"{self.root.name}.csv"
@@ -136,25 +149,19 @@ class ISMN_Interface:
             self.__file_collection.to_metadata_csv(meta_csv_file)
             metadata = _load_metadata_df(meta_csv_file)
             if network is not None:
-                flags = np.isin(metadata['network']['val'].values, network)
+                flags = np.isin(metadata["network"]["val"].values, network)
                 metadata = metadata.loc[flags]
 
-        self.metadata = metadata.dropna(axis=1, how='all')
+        self.metadata = metadata.dropna(axis=1, how="all")
 
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
 
-    def __collect_networks(self, network_names: list = None) -> (list, pd.DataFrame):
+    def __collect_networks(self,
+                           network_names: Optional[list] = None) -> list:
         """
         Build Networks and fill them with Stations and Sensors and apply
         according filehandlers from filelist for data reading.
-
-        Attributes
-        ----------
-        network_names: list
-            list of metwork names to collect. If None, all networks are collected
-        nw_from_folder: bool
-            If True, the network name is parsed from the folder name
         """
         networks = OrderedDict([])
 
@@ -208,28 +215,13 @@ class ISMN_Interface:
     def grid(self):
         return self.collection.grid
 
-    def load_all(self):
-        """
-        Load data for all file handlers in the current network collection.
-        This may take some time and fill up your memory if multiple networks are
-        loaded at once.
-        """
-        if not self.keep_loaded_data:
-            raise IOError(
-                "Can only load all data when storing to memory is allowed. "
-                "Pass keep_loaded_data=True when creating the NetworkCollection."
-            )
-        for net, stat, sens in self.collection.iter_sensors():
-            assert sens.keep_loaded_data, "keep_loaded_data for sensor is off."
-            sens.read_data()
-
     @deprecated
     def list_networks(self) -> np.array:
         # get network names from list of active files
         return np.array(list(self.networks.keys()))
 
     @deprecated
-    def list_stations(self, network=None) -> np.array:
+    def list_stations(self, network: str = None) -> np.array:
         # get station names for one of the active networks
         if network is not None:
             if network not in self.networks:
@@ -267,8 +259,8 @@ class ISMN_Interface:
         ----------
         stationname : str
             Station name to search in the active networks.
-        name_only : bool, optional (default: False)
-            Returns only the name of the network and not the Network object.
+        name_only : bool, optional (default: True)
+            Returns only the name of the network and not the Network.
 
         Returns
         -------
@@ -332,7 +324,8 @@ class ISMN_Interface:
         filter_kwargs :
             Parameters are used to check all sensors at all stations, only stations
             that have at least one matching sensor are returned.
-            For a description of possible filter kwargs, see Sensor.eval() function
+            For a description of possible filter kwargs, see
+            :func:`ismn.components.Sensor.eval`
 
         Yields
         -------
@@ -402,50 +395,47 @@ class ISMN_Interface:
         return ids
 
     def read_metadata(
-        self, idx, format="pandas"
-    ) -> Union[pd.DataFrame, dict, MetaData]:
+        self,
+        idx,
+        format="pandas"):
         """
         Read only metadata by id as pd.DataFrame.
 
         Parameters
         ----------
-        idx : int or list or None
+        idx : int or list
             id of sensor to read, best one of those returned
-            from get_dataset_ids() or one in self.metadata.index.
+            from :func:`.ISMN_Interface.get_dataset_ids` or one in
+            :attr:`.ISMN_Interface.metadata`.
         format : str, optional (default: 'pandas')
             This only affects the return value when a SINGLE idx is passed.
             If multiple indices or None is passed, a DataFrame is returned.
-                pandas : return metadata as dataframe (Default)
-                dict : return metadata as dict (only for single idx)
-                obj : return metadata as MetaData object (only for single idx)
+                - pandas : return metadata as dataframe (Default)
+                - dict : return metadata as dict (only for single idx)
+                - obj : return metadata as MetaData object (only for single idx)
 
         Returns
         -------
-        metadata : pd.DataFrame | dict | MetaData
+        metadata : pd.DataFrame or dict or MetaData
             Metadata for the passed index.
         """
-        if idx is None:
-            #  get all ids of active networks
-            idx = np.array(self.get_dataset_ids(variable=None,
-                                                min_depth=-np.inf,
-                                                max_depth=np.inf,
-                                                check_only_sensor_depth_from=True))
-        else:
-            idx = np.atleast_1d(idx)
+        idx = np.atleast_1d(idx)
 
         if len(idx) == 1:
             filehandler = self.__file_collection.get_filehandler(idx[0])
-            if format.lower() == 'pandas':
+            if format.lower() == "pandas":
                 return filehandler.metadata.to_pd()
-            elif format.lower() == 'dict':
+            elif format.lower() == "dict":
                 return filehandler.metadata.to_dict()
             elif format.lower() == "obj":
                 return filehandler.metadata
             else:
                 raise NotImplementedError(f"{format} is not a supported format.")
         else:
-            if format.lower() != 'pandas':
-                warnings.warn("Multiple indices passed (or None), return format will be 'pandas'")
+            if format.lower() != "pandas":
+                warnings.warn(
+                    "Multiple indices passed (or None), return format will be 'pandas'"
+                )
 
             dfs = []
             for i in idx:
@@ -457,26 +447,27 @@ class ISMN_Interface:
                     df.index = [i]
                     dfs.append(df)
 
-            return pd.concat(dfs, axis=0).dropna(axis=1, how='all')
+            return pd.concat(dfs, axis=0).dropna(axis=1, how="all")
 
     def read_ts(self, idx, return_meta=False):
         """
-        Read a time series directly by the id.
+        Read a time series directly by the filehandler id.
 
         Parameters
         ----------
         idx : int
-            id of sesnor to read, best one of those returned
-            from get_dataset_ids()
+            id of filehandler to read, best one of those returned
+            by :func:`.ISMN_Interface.get_dataset_ids()`
         return_meta : bool, optional (default: False)
-            Also return the metadata for this sensor.
+            Also return the metadata for this sensor (as a second return value)
 
         Returns
         -------
         timeseries : pd.DataFrame
             Observation time series
         metadata : pd.DataFrame, optional
-            All available metadata for that sensor.
+            All available metadata for that sensor. Only returned when
+            `return_meta=False`
         """
 
         filehandler = self.__file_collection.get_filehandler(idx)
@@ -486,27 +477,30 @@ class ISMN_Interface:
             return filehandler.read_data()
 
     def read(self, *args, **kwargs):
-        # calls read_ts
+        # alias of :func:`.ISMN_Interface.read_ts`
         return self.read_ts(*args, **kwargs)
 
     def find_nearest_station(self, lon, lat, return_distance=False, max_dist=np.inf):
         """
-        finds the nearest station available in downloaded data
+        Finds the nearest station to passed coordinates available in downloaded
+        data.
+
         Parameters
         ----------
         lon : float
             Longitude of point
         lat : float
             Latitude of point
-        return_distance : boolean, optional
+        return_distance : boolean, optional (default: False)
             if True also distance is returned
         max_dist : float, optional (default: np.inf)
-            Maximum distance allowed.
+            Maximum distance allowed. If no station is within this distance
+            None is returned.
 
         Returns
         -------
-        station : ISMN_station
-            ISMN_station object
+        station : ismn.components.Station
+            Nearest station object that was found in within the selected distance
         distance : float, optional
             distance to station in meters, measured in cartesian coordinates and not on
             a great circle. Should be OK for small distances
@@ -567,7 +561,7 @@ class ISMN_Interface:
         fig: matplotlib.Figure
             created figure instance. If axes was given this will be None.
         ax: matplitlib.Axes
-            used axes instance.
+            used axes instance, can be added to another figure for example.
         count : dict
             Number of valid sensors and stations that contain at least one valid
             sensor and networks that contain at least one valid station.
@@ -711,7 +705,8 @@ class ISMN_Interface:
         Parameters
         ----------
         variable : str, optional (default: 'soil_moisture')
-            One of:
+            One of those in :const:`ismn.const.VARIABLE_LUT` or returned by
+            :func:`.ISMN_Interface.get_variables`:
             'soil_moisture', 'soil_temperature', 'soil_suction',
             'precipitation', 'air_temperature', 'field_capacity',
             'permanent_wilting_point', 'plant_available_water',
@@ -719,9 +714,9 @@ class ISMN_Interface:
             'snow_depth', 'sand_fraction', 'clay_fraction', 'organic_carbon',
             'snow_water_equivalent', 'surface_temperature',
             'surface_temperature_quality_flag_original'
-        min_depth : float, optional (default: 0)
+        min_depth : float, optional (default: -np.inf)
             Only sensors in this depth are considered.
-        max_depth : float, optional (default: 10)
+        max_depth : float, optional (default: np.inf)
             Only sensors in this depth are considered.
         filter_meta_dict: dict, optional (default: None)
             Additional metadata keys and values for which the file list is filtered
@@ -767,8 +762,8 @@ class ISMN_Interface:
     def get_static_var_vals(
         self,
         variable="soil_moisture",
-        min_depth=0,
-        max_depth=10,
+        min_depth=-np.inf,
+        max_depth=np.inf,
         static_var_name="lc_2010",
     ) -> dict:
         """
@@ -778,7 +773,8 @@ class ISMN_Interface:
         Parameters
         ----------
         variable : str, optional (default: 'soil_moisture')
-            One of:
+            One of those in :const:`ismn.const.VARIABLE_LUT` or returned by
+            :func:`.ISMN_Interface.get_variables`:
             'soil_moisture', 'soil_temperature', 'soil_suction',
             'precipitation', 'air_temperature', 'field_capacity',
             'permanent_wilting_point', 'plant_available_water',
@@ -786,9 +782,9 @@ class ISMN_Interface:
             'snow_depth', 'sand_fraction', 'clay_fraction', 'organic_carbon',
             'snow_water_equivalent', 'surface_temperature',
             'surface_temperature_quality_flag_original'
-        min_depth : float, optional (default: 0)
+        min_depth : float, optional (default: -np.inf)
             Only sensors in this depth are considered.
-        max_depth : float, optional (default: 10)
+        max_depth : float, optional (default: np.inf)
             Only sensors in this depth are considered.
         static_var_name : str, optional (default: 'lc_2010')
             One of:
@@ -833,7 +829,7 @@ class ISMN_Interface:
         landcover: str = "lc_2010",
     ) -> dict:
         """
-        See description of get_static_var_vals
+        See :func:`.ISMN_Interface.get_static_var_vals`
         """
         return self.get_static_var_vals(variable, min_depth, max_depth, landcover)
 
@@ -845,18 +841,13 @@ class ISMN_Interface:
         climate: str = "climate_KG",
     ) -> dict:
         """
-        See description of get_static_var_vals
+        See :func:`.ISMN_Interface.get_static_var_vals`
         """
         return self.get_static_var_vals(variable, min_depth, max_depth, climate)
 
-    def get_variables(self):
+    def get_variables(self) -> np.array:
         """
-        get a list of variables available for the data
-
-        Returns
-        -------
-        variables : np.array
-            array of variables available for the data
+        get a list of variables available in the data
         """
         all_vars = np.array([])
         for _, station in self.collection.iter_stations():
@@ -887,4 +878,3 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-

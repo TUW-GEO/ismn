@@ -100,11 +100,9 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert self.ds.read_metadata(1, format="dict") is not None
         assert self.ds.read_metadata([1], format="obj") is not None
 
-        assert self.ds.read_metadata(None).index.size == 2
-
         assert not self.ds.metadata.empty
         assert self.ds.metadata.loc[1]['station']['val'] \
-               == self.ds.read_metadata(1)['station']['val']
+               == self.ds.read_metadata([0,1]).loc[1, ('station', 'val')]
 
     def test_find_nearest_station(self):
         should_lon, should_lat = -156.62870, 71.32980

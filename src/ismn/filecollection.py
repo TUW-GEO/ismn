@@ -110,7 +110,8 @@ def _read_station_dir(
 
     return filelist, infos
 
-def _load_metadata_df(meta_csv_file: Union[str,Path]) -> pd.DataFrame:
+
+def _load_metadata_df(meta_csv_file: Union[str, Path]) -> pd.DataFrame:
     # load metadata data frame from csv file
 
     metadata_df = pd.read_csv(
@@ -136,9 +137,10 @@ def _load_metadata_df(meta_csv_file: Union[str,Path]) -> pd.DataFrame:
         "file_type",
     ], "file_type and file_path must be at the end."
 
-    metadata_df.index.name = 'idx'
+    metadata_df.index.name = "idx"
 
     return metadata_df
+
 
 class IsmnFileCollection(object):
     """
@@ -369,7 +371,7 @@ class IsmnFileCollection(object):
         if network is None:
             cls.metadata_df = metadata_df
         else:
-            flags = np.isin(metadata_df['network']['val'].values, network)
+            flags = np.isin(metadata_df["network"]["val"].values, network)
             cls.metadata_df = metadata_df.loc[flags]
 
         return cls(root, filelist=filelist)
