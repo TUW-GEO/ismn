@@ -7,7 +7,6 @@ dependencies:
   - pandas
   - matplotlib
   - cartopy
-  - scipy
   - ipykernel
   - pip
   - pip:
@@ -15,7 +14,6 @@ dependencies:
      - configparser
      - tqdm
      - more_itertools
-     - setuptools_scm
      - nbsphinx
      - sphinx_rtd_theme
      - pytest

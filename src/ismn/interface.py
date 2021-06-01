@@ -593,7 +593,7 @@ class ISMN_Interface:
         if not plotlibs:
             warnings.warn(
                 "Could not import all plotting libs, plotting functions not available."
-                "run 'pip install ismn[plot]' to install them"
+                "Please install cartopy and matplotlib."
             )
             return
 
