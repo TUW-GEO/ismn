@@ -5,6 +5,13 @@ Changelog
 Unreleased
 ==========
 
+-
+
+Version 1.1
+===========
+
+- Remove setuptools_scm from dependencies
+- Remove option to pip install ismn[plot] for now.
 
 Version 1.0
 ===========
