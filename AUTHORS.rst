@@ -2,7 +2,9 @@
 Contributors
 ============
 
-* Christoph Paulik <christoph.paulik@geo.tuwien.ac.at>
+* Christoph Paulik <cpaulik@vandersat.com>
 * Irene Himmelbauer <irene.himmelbauer@geo.tuwien.ac.at>
 * Luca Zappa <luca.zappa@geo.tuwien.ac.at>
 * Philip Buttinger <philip.buttinger@geo.tuwien.ac.at>
+* Pietro Stradiotti <pietro.stradiotti@geo.tuwien.ac.at>
+* Wolfgang Preimesberger <wolfgang.preimesberger@geo.tuwien.ac.at>
