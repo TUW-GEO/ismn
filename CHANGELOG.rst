@@ -5,6 +5,10 @@ Changelog
 Unreleased
 ==========
 
+
+Version 1.0
+===========
+
 - Rewrite package, objects for Networks, Stations, Sensors etc.
 - Update ISMN_Interface to use new components, similar behaviour to old interface.
 - Add MetaVar and MetaData modules for ismn metadata handling.
