@@ -27,6 +27,8 @@ This module tests the ISMN components.
 import os
 import unittest
 
+import pytest
+
 from ismn.components import NetworkCollection, Network, Station, Sensor, Depth
 from pygeogrids.grids import BasicGrid
 
@@ -199,13 +201,14 @@ class StationTest(unittest.TestCase):
         assert self.station.n_sensors == 1
 
     def test_get_sensors(self):
-        variable, depth = "soil_moisture", Depth(0, 0.05)
-        sensors = self.station.get_sensors(
-            variable, depth_from=depth.start, depth_to=depth.end
-        )
-        assert len(sensors) == len(
-            [s for s in self.station.iter_sensors(variable=variable, depth=depth)]
-        )
+        with pytest.deprecated_call():
+            variable, depth = "soil_moisture", Depth(0, 0.05)
+            sensors = self.station.get_sensors(
+                variable, depth_from=depth.start, depth_to=depth.end
+            )
+            assert len(sensors) == len(
+                [s for s in self.station.iter_sensors(variable=variable, depth=depth)]
+            )
 
 
 class SensorTest(unittest.TestCase):

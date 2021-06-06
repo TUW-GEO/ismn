@@ -35,10 +35,11 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         logging.shutdown()
 
     def test_list(self):
-        assert len(self.ds.list_networks()) == 1
-        assert len(self.ds.list_stations()) == len(self.ds.list_stations("COSMOS")) == 2
-        assert len(self.ds.list_sensors()) == 2
-        assert len(self.ds.list_sensors(station="Barrow-ARM")) == 1
+        with pytest.deprecated_call():
+            assert len(self.ds.list_networks()) == 1
+            assert len(self.ds.list_stations()) == len(self.ds.list_stations("COSMOS")) == 2
+            assert len(self.ds.list_sensors()) == 2
+            assert len(self.ds.list_sensors(station="Barrow-ARM")) == 1
 
     def test_network_for_station(self):
         assert self.ds.network_for_station("Barrow-ARM") == "COSMOS"
