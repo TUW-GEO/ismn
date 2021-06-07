@@ -239,13 +239,13 @@ master branch and the CHANGELOG.rst is up-to-date, with changes for the new vers
 at the top.
 
 Then draft a new release at https://github.com/TUW-GEO/ismn/releases.
-Create a version tag following the `v{MAJOR}.{MINOR}.{PATCH}` pattern.
+Create a version tag following the ``v{MAJOR}.{MINOR}.{PATCH}`` pattern.
 This will trigger a new build on GitHub and should push the packages to pypi after
 all tests have passed.
 
 If this does not work (tests pass but upload fails) you can download the
-`whl` and `dist` packages for each workflow run from
+``whl`` and ``dist`` packages for each workflow run from
 https://github.com/TUW-GEO/ismn/actions (Artifacts) and push them manually to
 https://pypi.org/project/ismn/ (you need to be a package maintainer on pypi for that).
 
-In any case, `pip install ismn` should download the newest version afterwards.
+In any case, ``pip install ismn`` should download the newest version afterwards.
