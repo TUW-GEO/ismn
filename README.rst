@@ -20,7 +20,7 @@ Readers for the data from the International Soil Moisture Database (ISMN).
 Documentation
 -------------
 The full documentation is available at https://ismn.readthedocs.io and includes
-a tutorial on reading ISMN data after downloading it from
+a tutorial on reading ISMN data in python after downloading it from
 https://ismn.earth
 
 Citation
@@ -47,10 +47,15 @@ This package should be installable through pip:
 
     pip install ismn
 
-The cartopy-package needs to be installed manually by using the following command:
+Optional dependencies
+---------------------
+
+The ``cartopy`` and ``matplotlib`` packages are only needed when creating data visualisations.
+They can be installed separately with:
 
 .. code::
 
+    conda install -c conda-forge matplotlib
     conda install -c conda-forge cartopy
 
 Example installation script
@@ -86,10 +91,10 @@ to run the test suite.
 Description
 ===========
 
-ISMN data can be downloaded for free after registration from the `ISMN Website
+ISMN data can be downloaded for free after creating an account on the `ISMN Website
 <http://ismn.geo.tuwien.ac.at/>`_
 
-In case of the ISMN, two different formats are provided:
+ISMN data can be downloaded in two different formats:
 
 * Variables stored in separate files (CEOP formatted)
 
@@ -211,7 +216,7 @@ For Development we also recommend a ``conda`` environment. You can create one
 including test dependencies and debugger by running
 ``conda env create -f environment.yml``. This will create a new
 ``ismn`` environment which you can activate by using
-``source activate ismn``.
+``conda activate ismn``.
 
 Guidelines
 ----------
@@ -232,9 +237,15 @@ Release new version
 To release a new version of this package, make sure all tests are passing on the
 master branch and the CHANGELOG.rst is up-to-date, with changes for the new version
 at the top.
+
 Then draft a new release at https://github.com/TUW-GEO/ismn/releases.
-Create a version tag following the `v{MAJOR}.{MINOR}.{PATCH}` pattern.
-This will trigger a new build on GitHub.
-After the build has finished successfully, the `whl` and `dist` packages should
-be available on https://pypi.org/project/ismn/ and `pip install ismn` should
-download the newest version.
+Create a version tag following the ``v{MAJOR}.{MINOR}.{PATCH}`` pattern.
+This will trigger a new build on GitHub and should push the packages to pypi after
+all tests have passed.
+
+If this does not work (tests pass but upload fails) you can download the
+``whl`` and ``dist`` packages for each workflow run from
+https://github.com/TUW-GEO/ismn/actions (Artifacts) and push them manually to
+https://pypi.org/project/ismn/ (you need to be a package maintainer on pypi for that).
+
+In any case, ``pip install ismn`` should download the newest version afterwards.
