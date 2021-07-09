@@ -156,12 +156,7 @@ class ISMN_Interface:
         if network is not None:
             network = np.atleast_1d(network)
 
-        if os.path.isfile(meta_csv_file):
-            self.__file_collection = IsmnFileCollection.from_metadata_csv(
-                self.root, meta_csv_file, network=network
-            )
-            metadata = self.__file_collection.metadata_df
-        else:
+        if not os.path.isfile(meta_csv_file):
             self.__file_collection = IsmnFileCollection.build_from_scratch(
                 self.root,
                 parallel=self.parallel,
@@ -169,12 +164,15 @@ class ISMN_Interface:
                 temp_root=temp_root,
             )
             self.__file_collection.to_metadata_csv(meta_csv_file)
-            metadata = _load_metadata_df(meta_csv_file)
-            if network is not None:
-                flags = np.isin(metadata["network"]["val"].values, network)
-                metadata = metadata.loc[flags]
 
-        self.metadata = metadata.dropna(axis=1, how="all")
+        self.__file_collection = IsmnFileCollection.from_metadata_csv(
+                self.root, meta_csv_file, network=network
+            )
+
+        metadata = self.__file_collection.metadata_df
+
+        metadata.index = range(len(metadata.index))
+        self.metadata = metadata
 
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
@@ -372,8 +370,8 @@ class ISMN_Interface:
 
         Parameters
         ----------
-        variable : str or None
-            Variable to filer out, None to allow all variables.
+        variable : str or list[str] or None
+            Variable(s) to filer out, None to allow all variables.
         min_depth : float, optional (default: 0)
             Min depth of sensors to search
         max_depth : float, optional (default: 0.1)
@@ -553,8 +551,8 @@ class ISMN_Interface:
 
         Parameters
         ----------
-        variable : str, optional (default: None)
-            Show only stations that measure this variable, e.g. soil_moisture
+        variable : str or list[str], optional (default: None)
+            Show only stations that measure this/these variable(s), e.g. soil_moisture
             If None is passed, no filtering for variable is performed.
         min_depth : float, optional (default: -np.inf)
             Minimum depth, only stations that have a valid sensor measuring the

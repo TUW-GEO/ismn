@@ -153,9 +153,9 @@ class Sensor(IsmnComponent):
 
         Parameters
         ----------
-        variable : str, optional (default: None)
+        variable : str or list[str], optional (default: None)
             Check if the variable name matches, e.g. soil_moisture.
-            One of :const:`ismn.const.VARIABLE_LUT`
+            One or multiple of :const:`ismn.const.VARIABLE_LUT`
         depth : Depth or list or tuple, optional (default: None)
             Check if the passed depth encloses the sensor depth.
             A list/tuple must contain 2 values where the first is the depth start
@@ -189,8 +189,16 @@ class Sensor(IsmnComponent):
         else:
             d = self.depth
 
-        if (variable in [None, self.variable]) and depth.encloses(d):
+        if variable is not None:
+            variable = np.atleast_1d(variable)
+
+            if any([v in [None, self.variable] for v in variable]):
+                flag = True
+        else:
             flag = True
+
+        if not depth.encloses(d):
+            flag = False
 
         if flag and filter_meta_dict:
             if self.filehandler is None:
