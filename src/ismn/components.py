@@ -30,7 +30,7 @@ import pandas as pd
 from collections import OrderedDict
 
 from ismn.meta import MetaData, Depth
-from ismn.const import deprecated
+from ismn.const import deprecated, CITATIONS
 
 logger = logging.getLogger(__name__)
 
@@ -625,6 +625,23 @@ class Network(IsmnComponent):
                 if sensor.eval(**filter_kwargs):
                     yield station, sensor
 
+    def get_references(self):
+        """
+        Return reference(s) for this network. Users of ISMN should cite the
+        networks they are using in a publication. This information can also
+        be found on the ISMN website.
+
+        Returns
+        -------
+        references : list
+            A list of references / citations / acknowledgements for this Network.
+        """
+        try:
+            refs = CITATIONS[self.name]
+        except KeyError:
+            refs = [f'No reference(s) for network {self.name} available.']
+
+        return refs
 
 class NetworkCollection(IsmnComponent):
     """
@@ -758,3 +775,36 @@ class NetworkCollection(IsmnComponent):
         station = self.station4gpi(gpi)
 
         return station, dist
+
+    def export_references(self, out_file=None):
+        """
+        Returns the references for all networks in the collection.
+        Optionally, they are also written to file.
+        Information on how to correctly cite ISMN networks can be found
+        on the ISMN website.
+
+        Parameters
+        ----------
+        out_file : str, optional (default: None)
+            If a path is passed here, a new file will be generated with all
+            references for the  current collection.
+
+        Returns
+        -------
+        references: OrderedDict
+            Network names as keys and network references as values
+        """
+        refs = OrderedDict([(net.name, net.get_references())
+                            for net in self.iter_networks()])
+
+        if out_file is not None:
+            with open(out_file, mode='w') as out_file:
+                for name, reflist in refs.items():
+                    out_file.write(f'References for Network {name}:\n')
+                    out_file.write("-----------------------------------------\n")
+                    for ref in reflist:
+                        out_file.write(f"{ref}\n")
+                        out_file.write('\n')
+                    out_file.write('\n')
+
+        return refs

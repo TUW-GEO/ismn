@@ -225,6 +225,15 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         )
         assert station == dist == None
 
+    def test_citation(self):
+        with TemporaryDirectory() as out_dir:
+            out_file = os.path.join(out_dir, 'citation.txt')
+            refs = self.ds.collection.export_references(out_file=out_file)
+            assert all([net in refs.keys() for net in list(self.ds.collection.networks.keys())])
+            assert os.path.exists(out_file)
+            with open(out_file, mode='r') as f:
+                lines = f.readlines()
+                assert len(lines) > 0
 
 class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
     @classmethod
