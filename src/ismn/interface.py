@@ -166,8 +166,8 @@ class ISMN_Interface:
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
         self.__file_collection = IsmnFileCollection.from_metadata_csv(
-                self.root, meta_csv_file, network=network
-            )
+            self.root, meta_csv_file, network=network
+        )
 
         metadata = self.__file_collection.metadata_df
 
