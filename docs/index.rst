@@ -3,6 +3,7 @@
    :hidden:
    :glob:
 
+   README <readme>
    Examples <examples/index>
    License <license>
    Authors <authors>
