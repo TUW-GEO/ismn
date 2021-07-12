@@ -1,0 +1,11 @@
+# Add here requirements needed by readthedocs (see .readthedocs.yml) to
+# build the sphinx docs, such as nbsphinx to render ipynb files.
+name: ismn_docs
+channels:
+  - defaults
+dependencies:
+  - ipykernel
+  - pip
+  - pip:
+      - nbsphinx
+      - sphinx_rtd_theme

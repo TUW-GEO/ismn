@@ -10,7 +10,7 @@ submodules:
   include: all
 
 conda:
-  environment: environment.yml
+  environment: docs/docs_environment.yml
 
 python:
   version: 3.7
