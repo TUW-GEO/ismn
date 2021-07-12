@@ -625,7 +625,7 @@ class Network(IsmnComponent):
                 if sensor.eval(**filter_kwargs):
                     yield station, sensor
 
-    def get_references(self):
+    def get_citations(self):
         """
         Return reference(s) for this network. Users of ISMN should cite the
         networks they are using in a publication. This information can also
@@ -776,7 +776,7 @@ class NetworkCollection(IsmnComponent):
 
         return station, dist
 
-    def export_references(self, out_file=None):
+    def export_citations(self, out_file=None):
         """
         Returns the references for all networks in the collection.
         Optionally, they are also written to file.
@@ -794,7 +794,7 @@ class NetworkCollection(IsmnComponent):
         references: OrderedDict
             Network names as keys and network references as values
         """
-        refs = OrderedDict([(net.name, net.get_references())
+        refs = OrderedDict([(net.name, net.get_citations())
                             for net in self.iter_networks()])
 
         if out_file is not None:

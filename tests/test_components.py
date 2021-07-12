@@ -71,7 +71,7 @@ class NetCollTest(unittest.TestCase):
         assert self.netcol.get_nearest_station(1, 1)[0].name == "station_2_1"
 
     def test_references(self):
-        refs = self.netcol.export_references(out_file=None)
+        refs = self.netcol.export_citations(out_file=None)
         assert len(refs.keys()) == 2
 
 class NetworkTest(unittest.TestCase):
@@ -135,7 +135,7 @@ class NetworkTest(unittest.TestCase):
             )  # this should never be reached
 
     def test_get_citation(self):
-        refs = self.network.get_references()
+        refs = self.network.get_citations()
         assert isinstance(refs, list) and len(refs[0]) > 1
 
 
