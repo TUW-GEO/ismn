@@ -3,6 +3,8 @@ import unittest
 import os
 from tempfile import TemporaryDirectory
 from datetime import datetime
+
+import numpy as np
 import pytest
 import logging
 from collections import OrderedDict
@@ -13,6 +15,19 @@ from ismn.meta import Depth
 
 testdata_root = os.path.join(os.path.dirname(__file__), "test_data")
 
+def test_metadata_dataframe():
+    # make sure that metadata.index represents same values as get_dataset_ids
+    testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
+    metadata_path = os.path.join(testdata, "python_metadata")
+    cleanup(metadata_path)
+    ds_one = ISMN_Interface(testdata, meta_path=metadata_path, network='FR_Aqui')
+
+    assert np.all(ds_one.metadata.index.values == ds_one.get_dataset_ids(None, -np.inf, np.inf))
+    ids = ds_one.get_dataset_ids('soil_moisture')
+    assert ids == ds_one.metadata.index.values
+    assert ds_one.metadata.loc[ids[0], 'variable']['val'] == 'soil_moisture'
+    assert ds_one.metadata.loc[ids[0], 'network']['val'] == 'FR_Aqui'
+    ds_one.close_files()
 
 class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
     @classmethod
@@ -61,7 +76,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert ids == [0]
 
         ids = self.ds.get_dataset_ids(
-            "soil_moisture",
+            ["soil_moisture"],
             max_depth=99,
             filter_meta_dict={
                 "lc_2010": 210,
@@ -74,7 +89,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         ids = self.ds.get_dataset_ids("novar")
         assert len(ids) == 0
 
-        ids = self.ds.get_dataset_ids("soil_moisture", 0.0, 0.19)  # should get 1
+        ids = self.ds.get_dataset_ids(["soil_moisture", "shouldhavenoeffect"], 0.0, 0.19)  # should get 1
         assert len(ids) == 1
 
         ids = self.ds.get_dataset_ids("soil_moisture", 0.0, 1.0)  # should get 2
@@ -117,7 +132,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         with TemporaryDirectory() as out_dir:
             outpath = os.path.join(out_dir, "plot.png")
             self.ds.plot_station_locations(
-                "soil_moisture", markersize=5, filename=outpath
+                ["soil_moisture", 'precipitation'], markersize=5, filename=outpath
             )
             assert len(os.listdir(out_dir)) == 1
 
@@ -210,6 +225,15 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         )
         assert station == dist == None
 
+    def test_citation(self):
+        with TemporaryDirectory() as out_dir:
+            out_file = os.path.join(out_dir, 'citation.txt')
+            refs = self.ds.collection.export_citations(out_file=out_file)
+            assert all([net in refs.keys() for net in list(self.ds.collection.networks.keys())])
+            assert os.path.exists(out_file)
+            with open(out_file, mode='r') as f:
+                lines = f.readlines()
+                assert len(lines) > 0
 
 class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
     @classmethod

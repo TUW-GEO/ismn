@@ -70,6 +70,9 @@ class NetCollTest(unittest.TestCase):
         assert self.netcol.get_nearest_station(0.1, 0.1)[0].name == "station_1_1"
         assert self.netcol.get_nearest_station(1, 1)[0].name == "station_2_1"
 
+    def test_references(self):
+        refs = self.netcol.export_citations(out_file=None)
+        assert len(refs.keys()) == 2
 
 class NetworkTest(unittest.TestCase):
     def setUp(self):
@@ -130,6 +133,10 @@ class NetworkTest(unittest.TestCase):
             raise ValueError(
                 "Found station but shouldn't ..."
             )  # this should never be reached
+
+    def test_get_citation(self):
+        refs = self.network.get_citations()
+        assert isinstance(refs, list) and len(refs[0]) > 1
 
 
 class StationTest(unittest.TestCase):

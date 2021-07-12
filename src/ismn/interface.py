@@ -90,16 +90,16 @@ class ISMN_Interface:
 
     Attributes
     ----------
-    climate : OrderedDict
+    climate : collections.OrderedDict
         All Climate classes and their descriptions.
     collection : NetworkCollection
         Contains all loaded networks with stations and sensors.
     keep_loaded_data : bool
         Switch to keep data in memory after loading (not recommended).
-    metadata : pd.DataFrame
+    metadata : pandas.DataFrame
         Metadata for active networks, with idx that could also be passed
         to :func:`ismn.interface.read_metadata`
-    landcover : OrderedDict
+    landcover : collections.OrderedDict
         All Landcover classes and their descriptions.
     parallel : bool
         Switch to activate parallel processing where possible.
@@ -156,12 +156,7 @@ class ISMN_Interface:
         if network is not None:
             network = np.atleast_1d(network)
 
-        if os.path.isfile(meta_csv_file):
-            self.__file_collection = IsmnFileCollection.from_metadata_csv(
-                self.root, meta_csv_file, network=network
-            )
-            metadata = self.__file_collection.metadata_df
-        else:
+        if not os.path.isfile(meta_csv_file):
             self.__file_collection = IsmnFileCollection.build_from_scratch(
                 self.root,
                 parallel=self.parallel,
@@ -169,12 +164,15 @@ class ISMN_Interface:
                 temp_root=temp_root,
             )
             self.__file_collection.to_metadata_csv(meta_csv_file)
-            metadata = _load_metadata_df(meta_csv_file)
-            if network is not None:
-                flags = np.isin(metadata["network"]["val"].values, network)
-                metadata = metadata.loc[flags]
 
-        self.metadata = metadata.dropna(axis=1, how="all")
+        self.__file_collection = IsmnFileCollection.from_metadata_csv(
+                self.root, meta_csv_file, network=network
+            )
+
+        metadata = self.__file_collection.metadata_df
+
+        metadata.index = range(len(metadata.index))
+        self.metadata = metadata
 
         networks = self.__collect_networks(network)
         self.collection = NetworkCollection(networks)
@@ -237,12 +235,12 @@ class ISMN_Interface:
         return self.collection.grid
 
     @deprecated
-    def list_networks(self) -> np.array:
+    def list_networks(self) -> np.ndarray:
         # get network names from list of active files
         return np.array(list(self.networks.keys()))
 
     @deprecated
-    def list_stations(self, network: str = None) -> np.array:
+    def list_stations(self, network: str = None) -> np.ndarray:
         # get station names for one of the active networks
         if network is not None:
             if network not in self.networks:
@@ -257,7 +255,7 @@ class ISMN_Interface:
             return np.array(stations)
 
     @deprecated
-    def list_sensors(self, network: str = None, station: str = None) -> np.array:
+    def list_sensors(self, network: str = None, station: str = None) -> np.ndarray:
         # List sensors names for a specific sensor in an active network
         sensors = np.array([])
         for net in self.networks.values():
@@ -324,24 +322,24 @@ class ISMN_Interface:
         ----------
         variable : str
             variable name, one of:
-                * 'soil_moisture',
-                * 'soil_temperature',
-                * 'soil_suction',
-                * 'precipitation',
-                * 'air_temperature',
-                * 'field_capacity',
-                * 'permanent_wilting_point',
-                * 'plant_available_water',
-                * 'potential_plant_available_water',
-                * 'saturation',
-                * 'silt_fraction',
-                * 'snow_depth',
-                * 'sand_fraction',
-                * 'clay_fraction',
-                * 'organic_carbon',
-                * 'snow_water_equivalent',
-                * 'surface_temperature',
-                * 'surface_temperature_quality_flag_original'
+                * soil_moisture
+                * soil_temperature
+                * soil_suction
+                * precipitation
+                * air_temperature
+                * field_capacity
+                * permanent_wilting_point
+                * plant_available_water
+                * potential_plant_available_water
+                * saturation
+                * silt_fraction
+                * snow_depth
+                * sand_fraction
+                * clay_fraction
+                * organic_carbon
+                * snow_water_equivalent
+                * surface_temperature
+                * surface_temperature_quality_flag_original
         filter_kwargs :
             Parameters are used to check all sensors at all stations, only stations
             that have at least one matching sensor are returned.
@@ -372,8 +370,8 @@ class ISMN_Interface:
 
         Parameters
         ----------
-        variable : str or None
-            Variable to filer out, None to allow all variables.
+        variable : str or list[str] or None
+            Variable(s) to filer out, None to allow all variables.
         min_depth : float, optional (default: 0)
             Min depth of sensors to search
         max_depth : float, optional (default: 0.1)
@@ -509,7 +507,7 @@ class ISMN_Interface:
             Longitude of point
         lat : float
             Latitude of point
-        return_distance : boolean, optional (default: False)
+        return_distance : bool, optional (default: False)
             if True also distance is returned
         max_dist : float, optional (default: np.inf)
             Maximum distance allowed. If no station is within this distance
@@ -553,8 +551,8 @@ class ISMN_Interface:
 
         Parameters
         ----------
-        variable : str, optional (default: None)
-            Show only stations that measure this variable, e.g. soil_moisture
+        variable : str or list[str], optional (default: None)
+            Show only stations that measure this/these variable(s), e.g. soil_moisture
             If None is passed, no filtering for variable is performed.
         min_depth : float, optional (default: -np.inf)
             Minimum depth, only stations that have a valid sensor measuring the
@@ -744,10 +742,10 @@ class ISMN_Interface:
 
         Returns
         -------
-        start_date: datetime
+        start_date: datetime.datetime
             Earliest time stamp found in all sensors that fulfill the passed
             requirements.
-        end_date: datetime
+        end_date: datetime.datetime
             Latest time stamp found in all sensors that fulfill the passed
             requirements.
         """
@@ -863,7 +861,7 @@ class ISMN_Interface:
         """
         return self.get_static_var_vals(variable, min_depth, max_depth, climate)
 
-    def get_variables(self) -> np.array:
+    def get_variables(self) -> np.ndarray:
         """
         get a list of variables available in the data
         """

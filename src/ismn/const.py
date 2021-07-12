@@ -24,6 +24,8 @@ import numpy as np
 from collections import OrderedDict
 import functools
 import warnings
+import os
+import pandas as pd
 
 
 def deprecated(func):
@@ -57,6 +59,15 @@ class IsmnFileError(IOError):
 class DepthError(ValueError):
     pass
 
+
+# Note: At the moment citations are stored in this package, keep them updated.
+#  Once the full list of citations is provided together with the downloaded
+#  ISMN data (in the README file), citations here can be deleted (keep in mind
+#  that people might still use old data, but a new version of the package).
+CITATIONS: dict = \
+    pd.read_csv(os.path.join(os.path.dirname(__file__), 'citations.txt'),
+                             index_col=0, delimiter=';') \
+      .groupby('Network')['Citation'].apply(list).to_dict()
 
 # ==============================================================================
 # Variable short names
@@ -227,5 +238,5 @@ KOEPPENGEIGER = OrderedDict(
         ("W", "Water"),
     ]
 )
-
 # ==============================================================================
+

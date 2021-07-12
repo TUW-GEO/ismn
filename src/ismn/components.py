@@ -26,11 +26,10 @@ from typing import Union
 import numpy as np
 import warnings
 import logging
-import pandas as pd
 from collections import OrderedDict
 
 from ismn.meta import MetaData, Depth
-from ismn.const import deprecated
+from ismn.const import deprecated, CITATIONS
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ class Sensor(IsmnComponent):
         File handler object to read data.
     keep_loaded_data : bool
         Keep data in memory after loading.
-    data : pd.DataFrame
+    data : pandas.DataFrame
         Container for data in memory (if it is being kept)
     """
 
@@ -123,7 +122,7 @@ class Sensor(IsmnComponent):
 
         Returns
         -------
-        data : pd.DataFrame
+        data : pandas.DataFrame
             Insitu time series for this sensor, loaded from file or memory
             (if it was loaded and kept before).
         """
@@ -153,9 +152,9 @@ class Sensor(IsmnComponent):
 
         Parameters
         ----------
-        variable : str, optional (default: None)
+        variable : str or list[str], optional (default: None)
             Check if the variable name matches, e.g. soil_moisture.
-            One of :const:`ismn.const.VARIABLE_LUT`
+            One or multiple of :const:`ismn.const.VARIABLE_LUT`
         depth : Depth or list or tuple, optional (default: None)
             Check if the passed depth encloses the sensor depth.
             A list/tuple must contain 2 values where the first is the depth start
@@ -189,8 +188,16 @@ class Sensor(IsmnComponent):
         else:
             d = self.depth
 
-        if (variable in [None, self.variable]) and depth.encloses(d):
+        if variable is not None:
+            variable = np.atleast_1d(variable)
+
+            if any([v in [None, self.variable] for v in variable]):
+                flag = True
+        else:
             flag = True
+
+        if not depth.encloses(d):
+            flag = False
 
         if flag and filter_meta_dict:
             if self.filehandler is None:
@@ -222,7 +229,7 @@ class Station(IsmnComponent):
         Latitude coordinate of station and all sensors at station.
     elev : float
         Elevation information of station.
-    sensors : OrderedDict
+    sensors : collections.OrderedDict
         Collection of Sensors and their names.
     """
 
@@ -328,10 +335,10 @@ class Station(IsmnComponent):
 
         Returns
         -------
-        start_date: datetime
+        start_date: datetime.datetime
             Earliest date observed by any sensor at the station after filtering
             for the passed requirements.
-        end_date: datetime
+        end_date: datetime.datetime
             Latest date observed by any sensor at the station after filtering
             for the passed requirements.
         """
@@ -445,7 +452,7 @@ class Station(IsmnComponent):
 
         Parameters
         ----------
-        variable : string
+        variable : str
             variable abbreviation
         depth_from : float
             shallower depth of layer the variable was measured at
@@ -453,7 +460,7 @@ class Station(IsmnComponent):
             deeper depth of layer the variable was measured at
         Returns
         -------
-        sensors : numpy.array
+        sensors : numpy.ndarray
             array of sensors found for the given combination of variable and depths
         """
         return np.array(
@@ -617,6 +624,23 @@ class Network(IsmnComponent):
                 if sensor.eval(**filter_kwargs):
                     yield station, sensor
 
+    def get_citations(self):
+        """
+        Return reference(s) for this network. Users of ISMN should cite the
+        networks they are using in a publication. This information can also
+        be found on the ISMN website.
+
+        Returns
+        -------
+        references : list
+            A list of references / citations / acknowledgements for this Network.
+        """
+        try:
+            refs = CITATIONS[self.name]
+        except KeyError:
+            refs = [f'No reference(s) for network {self.name} available.']
+
+        return refs
 
 class NetworkCollection(IsmnComponent):
     """
@@ -700,7 +724,7 @@ class NetworkCollection(IsmnComponent):
 
         Parameters
         ----------
-        gpi : int or List[int]
+        gpi : int or list[int]
             Point index or multiple indices in self.grid.
 
         Returns
@@ -731,18 +755,18 @@ class NetworkCollection(IsmnComponent):
 
         Parameters
         ----------
-        lon : float or List[float]
+        lon : float or list[float]
             Longitude coordinate(s).
-        lat : float or List[float]
+        lat : float or list[float]
             Latitude coordinate(s).
         max_dist : float, optional (default: np.Inf)
             Maximum search distance.
 
         Returns
         -------
-        station : Station or List[Station]
+        station : Station or list[Station]
             The nearest Station(s) to the passed coordinates.
-        dist : float or List[float]
+        dist : float or list[float]
             Distance in meter between the passed coordinates and the
             actual location of the station.
         """
@@ -750,3 +774,36 @@ class NetworkCollection(IsmnComponent):
         station = self.station4gpi(gpi)
 
         return station, dist
+
+    def export_citations(self, out_file=None):
+        """
+        Returns the references for all networks in the collection.
+        Optionally, they are also written to file.
+        Information on how to correctly cite ISMN networks can be found
+        on the ISMN website.
+
+        Parameters
+        ----------
+        out_file : str, optional (default: None)
+            If a path is passed here, a new file will be generated with all
+            references for the  current collection.
+
+        Returns
+        -------
+        references: OrderedDict
+            Network names as keys and network references as values
+        """
+        refs = OrderedDict([(net.name, net.get_citations())
+                            for net in self.iter_networks()])
+
+        if out_file is not None:
+            with open(out_file, mode='w') as out_file:
+                for name, reflist in refs.items():
+                    out_file.write(f'References for Network {name}:\n')
+                    out_file.write("-----------------------------------------\n")
+                    for ref in reflist:
+                        out_file.write(f"{ref}\n")
+                        out_file.write('\n')
+                    out_file.write('\n')
+
+        return refs

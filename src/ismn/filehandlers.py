@@ -95,8 +95,8 @@ class IsmnFile(object):
 
         Parameters
         ----------
-        variable : str, optional (default: None)
-            Name of the required variable measured, e.g. soil_moisture
+        variable : str or list[str], optional (default: None)
+            Name of the required variable(s) measured, e.g. soil_moisture
         allowed_depth : Depth, optional (default: None)
             Depth range that is allowed, depth in metadata must be within this
             range.
@@ -113,8 +113,9 @@ class IsmnFile(object):
             Whether the metadata complies with the passed conditions or not.
         """
 
-        if variable:
-            if not (self.metadata["variable"].val == variable):
+        if variable is not None:
+            variable = np.atleast_1d(variable)
+            if not (self.metadata["variable"].val in variable):
                 return False
 
         if allowed_depth is not None:
