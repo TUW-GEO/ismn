@@ -638,9 +638,10 @@ class Network(IsmnComponent):
         try:
             refs = CITATIONS[self.name]
         except KeyError:
-            refs = [f'No reference(s) for network {self.name} available.']
+            refs = [f"No reference(s) for network {self.name} available."]
 
         return refs
+
 
 class NetworkCollection(IsmnComponent):
     """
@@ -793,17 +794,18 @@ class NetworkCollection(IsmnComponent):
         references: OrderedDict
             Network names as keys and network references as values
         """
-        refs = OrderedDict([(net.name, net.get_citations())
-                            for net in self.iter_networks()])
+        refs = OrderedDict(
+            [(net.name, net.get_citations()) for net in self.iter_networks()]
+        )
 
         if out_file is not None:
-            with open(out_file, mode='w') as out_file:
+            with open(out_file, mode="w") as out_file:
                 for name, reflist in refs.items():
-                    out_file.write(f'References for Network {name}:\n')
+                    out_file.write(f"References for Network {name}:\n")
                     out_file.write("-----------------------------------------\n")
                     for ref in reflist:
                         out_file.write(f"{ref}\n")
-                        out_file.write('\n')
-                    out_file.write('\n')
+                        out_file.write("\n")
+                    out_file.write("\n")
 
         return refs
