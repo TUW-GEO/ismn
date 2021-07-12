@@ -357,7 +357,7 @@ class MetaData:
         """
         Parameters
         ----------
-        vars : List[MetaVar]
+        vars : list[MetaVar]
             List of MetaVars that build the MetaData
         """
         if vars is None:
@@ -504,7 +504,7 @@ class MetaData:
 
         Parameters
         ----------
-        other: MetaData or List[MetaData]
+        other: MetaData or list[MetaData]
             Other MetaData Collection or a list of MetaData, e.g. from multiple
             sensors.
         inplace: bool, optional (default: False)

@@ -20,10 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os
 import logging
 
-import pandas as pd
 from tempfile import gettempdir
 from pathlib import Path, PurePosixPath
 from tqdm import tqdm
@@ -154,7 +152,7 @@ class IsmnFileCollection(object):
     ----------
     root : IsmnRoot
         Root object where data is stored.
-    filelist : OrderedDict
+    filelist : collections.OrderedDict
         A collection of filehandlers and network names
     temp_root : Path
         Temporary root dir.
@@ -166,7 +164,7 @@ class IsmnFileCollection(object):
         ----------
         root : IsmnRoot
             Root object where data is stored.
-        filelist : OrderedDict
+        filelist : collections.OrderedDict
             A collection of filehandler stored in lists with network name as key.
         temp_root : Path or str, optional (default : gettempdir())
             Root directory where a separate subdir for temporary files

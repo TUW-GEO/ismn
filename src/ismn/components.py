@@ -26,7 +26,6 @@ from typing import Union
 import numpy as np
 import warnings
 import logging
-import pandas as pd
 from collections import OrderedDict
 
 from ismn.meta import MetaData, Depth
@@ -63,7 +62,7 @@ class Sensor(IsmnComponent):
         File handler object to read data.
     keep_loaded_data : bool
         Keep data in memory after loading.
-    data : pd.DataFrame
+    data : pandas.DataFrame
         Container for data in memory (if it is being kept)
     """
 
@@ -123,7 +122,7 @@ class Sensor(IsmnComponent):
 
         Returns
         -------
-        data : pd.DataFrame
+        data : pandas.DataFrame
             Insitu time series for this sensor, loaded from file or memory
             (if it was loaded and kept before).
         """
@@ -230,7 +229,7 @@ class Station(IsmnComponent):
         Latitude coordinate of station and all sensors at station.
     elev : float
         Elevation information of station.
-    sensors : OrderedDict
+    sensors : collections.OrderedDict
         Collection of Sensors and their names.
     """
 
@@ -336,10 +335,10 @@ class Station(IsmnComponent):
 
         Returns
         -------
-        start_date: datetime
+        start_date: datetime.datetime
             Earliest date observed by any sensor at the station after filtering
             for the passed requirements.
-        end_date: datetime
+        end_date: datetime.datetime
             Latest date observed by any sensor at the station after filtering
             for the passed requirements.
         """
@@ -453,7 +452,7 @@ class Station(IsmnComponent):
 
         Parameters
         ----------
-        variable : string
+        variable : str
             variable abbreviation
         depth_from : float
             shallower depth of layer the variable was measured at
@@ -461,7 +460,7 @@ class Station(IsmnComponent):
             deeper depth of layer the variable was measured at
         Returns
         -------
-        sensors : numpy.array
+        sensors : numpy.ndarray
             array of sensors found for the given combination of variable and depths
         """
         return np.array(
@@ -725,7 +724,7 @@ class NetworkCollection(IsmnComponent):
 
         Parameters
         ----------
-        gpi : int or List[int]
+        gpi : int or list[int]
             Point index or multiple indices in self.grid.
 
         Returns
@@ -756,18 +755,18 @@ class NetworkCollection(IsmnComponent):
 
         Parameters
         ----------
-        lon : float or List[float]
+        lon : float or list[float]
             Longitude coordinate(s).
-        lat : float or List[float]
+        lat : float or list[float]
             Latitude coordinate(s).
         max_dist : float, optional (default: np.Inf)
             Maximum search distance.
 
         Returns
         -------
-        station : Station or List[Station]
+        station : Station or list[Station]
             The nearest Station(s) to the passed coordinates.
-        dist : float or List[float]
+        dist : float or list[float]
             Distance in meter between the passed coordinates and the
             actual location of the station.
         """

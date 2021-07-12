@@ -260,12 +260,12 @@ class IsmnRoot:
         subpath: str, optional (default: None)
             Use linux slashes '/' (and no leading '/') to define a subpath
             in the zip file. If None is selected, the whole archive is searched.
-        fn_templ : str, optional (default: '*.csv')
+        fn_templ: str, optional (default: '*.csv')
             Filename template for files that are searched in the passed dir.
 
         Returns
         -------
-        files : List[str]
+        files : list[str]
             Found files that match the passed template.
         """
 
