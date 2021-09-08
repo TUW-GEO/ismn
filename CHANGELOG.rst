@@ -6,14 +6,7 @@ Unreleased
 ==========
 
 - Added citation for `SMN-SDR` network (`Issue #44 <https://github.com/TUW-GEO/ismn/issues/44>`_)
-
-Version 1.1.0
-=============
-
-- Fixed bug in the metadata dataframe when not using all available networks.
-- Citation export functions added to `Collection` and `Network` components.
-- Citations for all networks are now stored in this package until they are reliably provided together with the data
-- It is now possible to pass multiple allowed variables when filtering sensors.
+- Update station plots with keyword argument for font size.
 
 Version 1.1.0
 =============
