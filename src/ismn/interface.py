@@ -543,6 +543,8 @@ class ISMN_Interface:
         stats_text=True,
         check_only_sensor_depth_from=False,
         markersize=1,
+        text_scalefactor=1,
+        dpi=300,
         filename=None,
         ax=None,
     ):
@@ -567,6 +569,11 @@ class ISMN_Interface:
             the sensor is in the passed depth_range (e.g. for cosmic ray probes).
         markersize : int, optional (default: 1)
             Size of the marker, might depend on the amount of stations you plot.
+        text_scalefactor : float, optional (default: 1)
+            Scale factor that is applied to header and legend.
+        dpi: float, optional (default: 300)
+            Only applies when figure is saved to file.
+            Resolution of the output figure.
         filename : str or Path, optional (default: None)
             Filename where image is stored. If None is passed, no file is created.
         ax : plt.axes
@@ -599,6 +606,7 @@ class ISMN_Interface:
 
         if ax is None:
             fig, ax = plt.subplots(1, 1)
+            ax.set_axis_off()
             ax = plt.axes(projection=ccrs.Robinson())
         else:
             fig = None
@@ -664,7 +672,7 @@ class ISMN_Interface:
             loc="upper center",
             ncol=ncols,
             bbox_to_anchor=(0.5, -0.05),
-            fontsize=4,
+            fontsize=4*text_scalefactor,
         )
 
         postfix_depth = (
@@ -686,20 +694,21 @@ class ISMN_Interface:
                 1.05,
                 feedback,
                 transform=ax.transAxes,
-                fontsize="xx-small",
+                fontsize=5*text_scalefactor, #"xx-small",
                 horizontalalignment="center",
             )
         else:
             text = None
 
         if fig:
-            fig.set_size_inches([6, 3.5 + 0.25 * nrows])
+            fig.set_size_inches([6, 3.5 + (0.25* text_scalefactor) * nrows ])
 
         if filename is not None:
             fig.savefig(
                 filename,
                 bbox_extra_artists=(lgd, text) if stats_text else (lgd),
-                dpi=300,
+                bbox_inches='tight',
+                dpi=dpi,
             )
         else:
             counts = (len(act_networks), len(act_stations), n_sens)

@@ -6,6 +6,7 @@ Unreleased
 ==========
 
 - Added citation for `SMN-SDR` network (`Issue #44 <https://github.com/TUW-GEO/ismn/issues/44>`_)
+- Update station plots with keyword argument for font size.
 
 Version 1.1.0
 =============
