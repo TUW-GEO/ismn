@@ -5,8 +5,15 @@ Changelog
 Unreleased
 ==========
 
+-
+
+Version 1.2.0
+=============
+
+- Citation for `COSMOS-UK` network added
+- Metadata for empty variables now also generated
 - Added citation for `SMN-SDR` network (`Issue #44 <https://github.com/TUW-GEO/ismn/issues/44>`_)
-- Update station plots with keyword argument for font size.
+- Update station plots with keyword argument for font size
 
 Version 1.1.0
 =============
