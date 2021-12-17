@@ -23,6 +23,9 @@ The full documentation is available at https://ismn.readthedocs.io and includes
 a tutorial on reading ISMN data in python after downloading it from
 https://ismn.earth
 
+The following tutorials are available in ``docs/examples``:
+ `1) ISMN reader basic functionality <https://ismn.readthedocs.io/en/latest/examples/interface.html>`_
+
 Citation
 ========
 
