@@ -85,7 +85,7 @@ def _read_station_dir(
             infos.append(f"Error loading ismn file: {e}")
             continue
 
-        f.metadata.merge(station_meta, inplace=True)
+        f.metadata.merge(station_meta, inplace=True, exclude_empty=False)
 
         f.metadata = f.metadata.best_meta_for_depth(
             Depth(

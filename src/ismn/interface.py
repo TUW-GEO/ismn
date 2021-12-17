@@ -440,7 +440,7 @@ class ISMN_Interface:
         if len(idx) == 1:
             filehandler = self.__file_collection.get_filehandler(idx[0])
             if format.lower() == "pandas":
-                return filehandler.metadata.to_pd()
+                return filehandler.metadata.to_pd(dropna=True)
             elif format.lower() == "dict":
                 return filehandler.metadata.to_dict()
             elif format.lower() == "obj":
