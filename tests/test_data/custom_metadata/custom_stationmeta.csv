@@ -1,0 +1,3 @@
+loc;myvar1;myvar2;myvar2_depth_from;myvar2_depth_to;myvar3;myvar3_depth_to;network;station
+1;lorem;1.3;0;1;2022-01-03;1;FR_Aqui;fraye
+2;duplicate;1.1;2;2;2022-01-01;1;FR_Aqui;fraye

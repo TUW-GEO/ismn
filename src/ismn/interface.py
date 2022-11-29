@@ -82,6 +82,10 @@ class ISMN_Interface:
         Keep data for a file in memory once it is loaded. This makes subsequent
         calls of data faster (if e.g. a station is accessed multiple times)
         but can fill up memory if multiple networks are loaded.
+    custom_meta_reader: tuple, optional (default: None)
+        Additional readers to collect station/sensor metadata
+        from external sources e.g. csv files.
+        See :class:`ismn.custom.CustomMetaReader`.
 
     Raises
     ------
@@ -123,6 +127,7 @@ class ISMN_Interface:
         parallel=False,
         keep_loaded_data=False,
         temp_root=gettempdir(),
+        custom_meta_reader=None,
     ):
 
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
@@ -132,7 +137,9 @@ class ISMN_Interface:
 
         self.keep_loaded_data = keep_loaded_data
 
-        self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
+        self.custom_meta_reader = custom_meta_reader
+        self.activate_network(network=network, meta_path=meta_path,
+                              temp_root=temp_root)
 
     def activate_network(
         self,
@@ -162,6 +169,7 @@ class ISMN_Interface:
                 parallel=self.parallel,
                 log_path=meta_path,
                 temp_root=temp_root,
+                custom_meta_readers=self.custom_meta_reader
             )
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
@@ -203,7 +211,7 @@ class ISMN_Interface:
                     f.metadata["elevation"].val,
                 )
 
-            # the senor name is the index in the list
+            # the sensor name is the index in the list
             networks[nw_name].stations[st_name].add_sensor(
                 instrument,
                 f.metadata["variable"].val,
