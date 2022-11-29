@@ -16,7 +16,7 @@ def test_build_custom_metadata_station():
     with tempfile.TemporaryDirectory() as tmpdir:
         testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
         metadata_path = os.path.join(tmpdir, "python_metadata")
-        csv_path = os.path.join("test_data", "custom_metadata",
+        csv_path = os.path.join(testdata_root, "custom_metadata",
                                 "custom_stationmeta.csv")
         custom_meta_reader = [CustomStationMetadataCsv(csv_path)]
 
@@ -43,7 +43,7 @@ def test_build_custom_metadata_sensor():
     with tempfile.TemporaryDirectory() as tmpdir:
         testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
         metadata_path = os.path.join(tmpdir, "python_metadata")
-        csv_path = os.path.join("test_data", "custom_metadata",
+        csv_path = os.path.join(testdata_root, "custom_metadata",
                                 "custom_sensormeta.csv")
         custom_meta_reader = [CustomSensorMetadataCsv(csv_path)]
 
