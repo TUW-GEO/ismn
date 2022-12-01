@@ -103,7 +103,8 @@ def _read_station_dir(
                 cmeta = cmr.read_metadata(f.metadata)
                 if isinstance(cmeta, dict):
                     cmeta = MetaData([MetaVar(k, v) for k, v in cmeta.items()])
-                f.metadata.merge(cmeta, inplace=True)
+                if cmeta is not None:
+                    f.metadata.merge(cmeta, inplace=True)
 
 
         network = f.metadata["network"].val

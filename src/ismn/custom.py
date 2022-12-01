@@ -153,7 +153,10 @@ class CustomStationMetadataCsv(CustomMetaReader):
         cond = (self.df['network'] == meta['network'].val) & \
                (self.df['station'] == meta['station'].val)
 
-        df = self.df[cond].set_index(['network', 'station']).drop(columns='loc')
+        if not np.any(cond):
+            return
+
+        df = self.df[cond].set_index(['network', 'station'])
 
         # drop potential duplicates, keep first
         df = df[~df.index.duplicated(keep='first')]
@@ -205,7 +208,6 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
         df = self.df[cond].set_index(
             ['network', 'station', 'instrument', 'depth_from', 'depth_to']
         )
-        df = df.drop(columns='loc')
 
         # drop potential duplicates, keep first
         df = df[~df.index.duplicated(keep='first')]
