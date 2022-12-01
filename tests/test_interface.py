@@ -103,8 +103,15 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         ids = self.ds.get_dataset_ids("nonexisting")  # should get 0
         assert len(ids) == 0
 
+    def test_read_multiple_ids(self):
+        ts, meta = self.ds.read([0, 1], return_meta=True)
+        assert not ts.empty
+        assert not meta.empty
+
     def test_read_ts(self):
         data1 = self.ds.read(0)
+        data2 = self.ds.read([0])
+        assert np.all(data2[0] == data1)
         assert not data1.empty
 
         data2, meta = self.ds.read_ts(1, return_meta=True)
@@ -113,6 +120,10 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
     def test_read_metadata(self):
         data2, meta = self.ds.read_ts(1, return_meta=True)
         assert all(meta == self.ds.read_metadata(1, format="pandas"))
+        d2, m2 = self.ds.read([0, 1], return_meta=True)
+        assert np.all(d2[1]['soil_moisture'].dropna() ==
+                      data2['soil_moisture'].dropna())
+        assert np.all(m2[1].dropna() == meta.dropna())
         assert self.ds.read_metadata(1, format="dict") is not None
         assert self.ds.read_metadata([1], format="obj") is not None
 
@@ -197,6 +208,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         ):
             data = sens.read_data()
             assert not data.empty
+            assert np.all(data == sens.data)
             i += 1
         assert i == 2
 
