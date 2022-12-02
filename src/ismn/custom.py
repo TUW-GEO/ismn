@@ -11,12 +11,9 @@ python_metadata during metadata collection.
 
 from abc import abstractmethod
 from typing import Union
-
 import numpy as np
-
 from ismn.meta import MetaData, MetaVar, Depth
 import pandas as pd
-
 
 class CustomMetaReader:
     """
@@ -180,7 +177,7 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
 
     where <var1> etc. are the names of the custom metadata variables that are
     transferred into the python metadata
-    where <var1>_depth_from etc are the
+    where <var1>_depth_from etc. are the
     """
 
     def read_metadata(self, meta: MetaData):
