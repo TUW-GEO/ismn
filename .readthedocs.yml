@@ -10,9 +10,3 @@ sphinx:
 
 conda:
   environment: docs/docs_environment.yml
-
-python:
-  version: 3.8
-  install:
-    - method: pip
-      path: .
