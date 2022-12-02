@@ -14,7 +14,7 @@ dependencies:
      - configparser
      - tqdm
      - more_itertools
-     - sphinx==4.0.3  # there seems to be an issue with 4.1.0 and nbsphinx, when this is resolved this line can be deleted to use the latest version.
+     - sphinx
      - nbsphinx
      - sphinx_rtd_theme
      - pytest
