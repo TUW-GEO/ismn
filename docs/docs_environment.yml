@@ -1,0 +1,15 @@
+name: ismn_docs
+channels:
+- conda-forge
+- defaults
+dependencies:
+- ipykernel
+- mock
+- pillow
+- sphinx
+- sphinx_rtd_theme
+- nbsphinx
+- pip
+- pip:
+    - readthedocs-sphinx-ext
+    - recommonmark

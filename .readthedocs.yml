@@ -7,7 +7,7 @@ submodules:
   include: all
 
 conda:
-  environment: environment.yml
+  environment: ismn/docs_environment.yml
 
 python:
   version: 3.8
