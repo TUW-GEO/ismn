@@ -4,6 +4,7 @@ channels:
 - defaults
 dependencies:
 # Note: RTD will add packages it needs here as well
+- python=3.8
 - ipykernel
 - nbsphinx
 
