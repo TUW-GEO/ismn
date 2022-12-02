@@ -3,13 +3,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
+# Note: RTD will add packages it needs here as well
 - ipykernel
-- mock
-- pillow
-- sphinx
-- sphinx_rtd_theme
 - nbsphinx
-- pip
-- pip:
-    - readthedocs-sphinx-ext
-    - recommonmark
+
