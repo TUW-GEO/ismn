@@ -7,6 +7,14 @@ Unreleased
 
 -
 
+Version 1.3.0
+=============
+
+- Add module to assign custom metadata readers to ISMN_Interface
+- Notebook added that describes using a custom metadata reader
+- RTD build uses a separate, smaller environment.yml now (and mamba)
+
+
 Version 1.2.0
 =============
 
