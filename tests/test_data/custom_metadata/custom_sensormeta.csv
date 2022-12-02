@@ -1,0 +1,5 @@
+myvar1;myvar1_depth_from;myvar1_depth_to;myvar2;myvar3;myvar3_depth_to;network;station;instrument;depth_from;depth_to
+lorem;0;1;1.1;2022-01-01;1;FR_Aqui;fraye;ThetaProbe-ML2X;0.05;0.05
+NOT_USED;0.1;0.2;1.2;2022-01-02;2;FR_Aqui;fraye;ThetaProbe-ML2X;0.1;0.1
+NOT_USED;0.1;1.1;1.3;2022-01-03;3;FR_Aqui;fraye;ThetaProbe-ML2X;99;9999
+NOT_USED;0.1;1.1;1.4;2022-01-04;4;FR_Aqui;grandcal;ThetaProbe-ML2X;0.05;0.05

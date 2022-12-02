@@ -82,6 +82,10 @@ class ISMN_Interface:
         Keep data for a file in memory once it is loaded. This makes subsequent
         calls of data faster (if e.g. a station is accessed multiple times)
         but can fill up memory if multiple networks are loaded.
+    custom_meta_reader: tuple, optional (default: None)
+        Additional readers to collect station/sensor metadata
+        from external sources e.g. csv files.
+        See :class:`ismn.custom.CustomMetaReader`.
 
     Raises
     ------
@@ -123,6 +127,7 @@ class ISMN_Interface:
         parallel=False,
         keep_loaded_data=False,
         temp_root=gettempdir(),
+        custom_meta_reader=None,
     ):
 
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
@@ -132,7 +137,9 @@ class ISMN_Interface:
 
         self.keep_loaded_data = keep_loaded_data
 
-        self.activate_network(network=network, meta_path=meta_path, temp_root=temp_root)
+        self.custom_meta_reader = custom_meta_reader
+        self.activate_network(network=network, meta_path=meta_path,
+                              temp_root=temp_root)
 
     def activate_network(
         self,
@@ -162,6 +169,7 @@ class ISMN_Interface:
                 parallel=self.parallel,
                 log_path=meta_path,
                 temp_root=temp_root,
+                custom_meta_readers=self.custom_meta_reader
             )
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
@@ -203,7 +211,7 @@ class ISMN_Interface:
                     f.metadata["elevation"].val,
                 )
 
-            # the senor name is the index in the list
+            # the sensor name is the index in the list
             networks[nw_name].stations[st_name].add_sensor(
                 instrument,
                 f.metadata["variable"].val,
@@ -471,8 +479,8 @@ class ISMN_Interface:
 
         Parameters
         ----------
-        idx : int
-            id of filehandler to read, best one of those returned
+        idx : int or list
+            id(s) of filehandler to read, best one of those returned
             by :func:`ismn.interface.ISMN_Interface.get_dataset_ids`
         return_meta : bool, optional (default: False)
             Also return the metadata for this sensor (as a second return value)
@@ -480,17 +488,42 @@ class ISMN_Interface:
         Returns
         -------
         timeseries : pd.DataFrame
-            Observation time series
-        metadata : pd.DataFrame, optional
+            Observation time series, if multiple indices were passed, this
+            contains a multiindex as columns with the idx in the first level
+            and the variables for the idx in the second level.
+        metadata : pd.Series or pd.DataFrame, optional
             All available metadata for that sensor. Only returned when
-            `return_meta=False`
+            `return_meta=False`. If multiple indices were passed, this is a
+            DataFrame with the index as columns, otherwise a Series.
         """
 
-        filehandler = self.__file_collection.get_filehandler(idx)
-        if return_meta:
-            return filehandler.read_data(), filehandler.metadata.to_pd()
+        if isinstance(idx, int):
+            filehandler = self.__file_collection.get_filehandler(idx)
+            if return_meta:
+                return filehandler.read_data(), filehandler.metadata.to_pd()
+            else:
+                return filehandler.read_data()
         else:
-            return filehandler.read_data()
+            data = []
+            metadata = []
+            for i in idx:
+                filehandler = self.__file_collection.get_filehandler(i)
+                d = filehandler.read_data()
+                d.columns = pd.MultiIndex.from_product([[i], list(d.columns)],
+                                                       names=['idx', 'variable'])
+                data.append(d)
+                if return_meta:
+                    m = filehandler.metadata.to_pd()
+                    m = pd.DataFrame(data={i: m})
+                    metadata.append(m)
+
+            data = pd.concat(data, axis=1)
+
+            if return_meta:
+                meta = pd.concat(metadata, axis=1)
+                return data, meta
+            else:
+                return data
 
     def read(self, *args, **kwargs):
         # alias of :func:`ismn.interface.ISMN_Interface.read_ts`

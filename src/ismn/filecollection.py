@@ -24,6 +24,8 @@ import logging
 
 from tempfile import gettempdir
 from pathlib import Path, PurePosixPath
+
+import numpy as np
 from tqdm import tqdm
 from typing import Union
 from multiprocessing import Pool, cpu_count
@@ -40,6 +42,7 @@ def _read_station_dir(
     root: Union[IsmnRoot, Path, str],
     stat_dir: Union[Path, str],
     temp_root: Path,
+    custom_meta_reader: list,
 ) -> (dict, list):
     """
     Parallelizable function to read metadata for files in station dir
@@ -93,6 +96,16 @@ def _read_station_dir(
                 f.metadata["instrument"].depth.end,
             )
         )
+
+        # If custom metadata readers are available
+        if custom_meta_reader is not None:
+            for cmr in np.atleast_1d(custom_meta_reader):
+                cmeta = cmr.read_metadata(f.metadata)
+                if isinstance(cmeta, dict):
+                    cmeta = MetaData([MetaVar(k, v) for k, v in cmeta.items()])
+                if cmeta is not None:
+                    f.metadata.merge(cmeta, inplace=True)
+
 
         network = f.metadata["network"].val
         station = f.metadata["station"].val
@@ -181,7 +194,8 @@ class IsmnFileCollection(object):
 
     @classmethod
     def build_from_scratch(
-        cls, data_root, parallel=True, log_path=None, temp_root=gettempdir()
+        cls, data_root, parallel=True, log_path=None, temp_root=gettempdir(),
+        custom_meta_readers=None,
     ):
         """
         Parameters
@@ -198,6 +212,8 @@ class IsmnFileCollection(object):
         temp_root : str or Path, (default: gettempdir())
             Temporary folder where extracted data is copied during reading from
             zip archive.
+        custom_meta_readers: tuple, optional (default: None)
+            Custom metadata readers
         """
         t0 = time.time()
         if isinstance(data_root, IsmnRoot):
@@ -236,7 +252,8 @@ class IsmnFileCollection(object):
             process_stat_dirs += list(stat_dirs)
 
         args = [
-            (root.path if root.zip else root, d, temp_root) for d in process_stat_dirs
+            (root.path if root.zip else root, d, temp_root, custom_meta_readers)
+            for d in process_stat_dirs
         ]
 
         pbar = tqdm(total=len(args), desc="Files Processed")

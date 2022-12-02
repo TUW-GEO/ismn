@@ -219,7 +219,7 @@ class StaticMetaFile(IsmnFile):
         try:
             data = pd.read_csv(csvfile, delimiter=";")
             data.set_index("quantity_name", inplace=True)
-        except:
+        except Exception:
             # set columns manually
             logging.info("no header: {}".format(csvfile))
             data = pd.read_csv(csvfile, delimiter=";", header=None)

@@ -102,7 +102,7 @@ class Sensor(IsmnComponent):
         self.depth = depth
         self.filehandler = filehandler
         self.keep_loaded_data = keep_loaded_data
-        self.data = None
+        self._data = None
         self.name = name if name is not None else self.__repr__()
 
     def __repr__(self):
@@ -114,6 +114,10 @@ class Sensor(IsmnComponent):
     @property
     def metadata(self) -> MetaData:
         return MetaData() if self.filehandler is None else self.filehandler.metadata
+    
+    @property
+    def data(self):
+        return self.read_data()
 
     def read_data(self):
         """
@@ -129,15 +133,15 @@ class Sensor(IsmnComponent):
         if self.filehandler is None:
             logging.warning(f"No filehandler found for sensor {self.name}")
         else:
-            if self.data is None:
+            if self._data is None:
                 data = self.filehandler.read_data()
 
                 if self.keep_loaded_data:
-                    self.data = data
+                    self._data = data
 
                 return data
             else:
-                return self.data
+                return self._data
 
     def eval(
         self,
