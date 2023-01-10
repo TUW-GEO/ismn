@@ -247,6 +247,25 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
                 lines = f.readlines()
                 assert len(lines) > 0
 
+    def test_subset_from_ids(self):
+        subset = self.ds.subset_from_ids([0])
+        assert len(subset.metadata.index) == 1
+        assert np.all(subset.read_metadata(0) == self.ds.read_metadata(0))
+        assert np.all(subset.read_ts(0) == self.ds.read_ts(0))
+
+        subset = self.ds.subset_from_ids([1])
+        assert len(subset.metadata.index) == 1
+        assert np.all(subset.read_ts(0) == self.ds.read_ts(1))
+        assert np.all(subset.read_metadata(0) == self.ds.read_metadata(1))
+
+        assert len(self.ds.metadata.index) == 2
+
+        subset = self.ds.subset_from_ids([0, 1])
+        assert len(subset.metadata.index) == 2
+        assert np.all(subset.read_metadata(1) == self.ds.read_metadata(1))
+        assert np.all(subset.read_ts(1) == self.ds.read_ts(1))
+
+
 class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped):
     @classmethod
     def setUpClass(cls):

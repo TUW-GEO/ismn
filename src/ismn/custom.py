@@ -15,6 +15,7 @@ import numpy as np
 from ismn.meta import MetaData, MetaVar, Depth
 import pandas as pd
 
+
 class CustomMetaReader:
     """
     Template class for a reader to assign additional metadata to ismn sensors.
@@ -87,6 +88,7 @@ class CustomStationMetadataCsv(CustomMetaReader):
             Path to the csv file with the above described content
         kwargs:
             Additional kwargs as passed to :func:`pandas.read_csv`
+            To use a different separator than the default semicolon, use `sep`
         """
         if 'sep' in kwargs:
             sep = kwargs.pop('sep')
@@ -203,8 +205,7 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
                (self.df['depth_to'] == meta['instrument'].depth[1])
 
         df = self.df[cond].set_index(
-            ['network', 'station', 'instrument', 'depth_from', 'depth_to']
-        )
+            ['network', 'station', 'instrument', 'depth_from', 'depth_to'])
 
         # drop potential duplicates, keep first
         df = df[~df.index.duplicated(keep='first')]

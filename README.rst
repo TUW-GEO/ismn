@@ -238,6 +238,14 @@ If you want to contribute please follow these steps:
   We use pytest so a simple function called test_my_feature is enough
 - submit a pull request to our master branch
 
+Code Formatting
+---------------
+To apply pep8 conform styling to any changed files [we use `yapf`](https://github.com/google/yapf). The correct
+settings are already set in `setup.cfg`. Therefore the following command
+should be enough:
+
+    yapf file.py --in-place
+
 Release new version
 -------------------
 

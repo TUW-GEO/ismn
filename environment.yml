@@ -17,5 +17,6 @@ dependencies:
      - sphinx
      - nbsphinx
      - sphinx_rtd_theme
+     - yapf
      - pytest
      - pytest-cov
