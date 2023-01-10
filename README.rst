@@ -26,9 +26,9 @@ https://ismn.earth
 
 The following tutorials are available in ``docs/examples``:
 
- `1) ISMN reader basic functionality <examples/interface.html>`_
+ `1) ISMN reader basic functionality <https://ismn.readthedocs.io/en/latest/examples/interface.html>`_
 
- `2) Adding custom metadata readers <examples/custom_meta.html>`_
+ `2) Adding custom metadata readers <https://ismn.readthedocs.io/en/latest/examples/custom_meta.html>`_
 
 Citation
 ========
