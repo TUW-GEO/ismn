@@ -987,9 +987,3 @@ class ISMN_Interface:
         # close all open filehandlers
         self.__file_collection.close()
 
-
-if __name__ == '__main__':
-    ds = ISMN_Interface(
-        "/tmp/Data_separate_files_header_20090101_20201231_9289_Cwpc_20221201.zip",
-        network=None)
-    sub = ds.subset_from_ids([285, 570, 6, 343, 598])

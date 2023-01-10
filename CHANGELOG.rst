@@ -13,6 +13,7 @@ Version 1.3.0
 - Add module to assign custom metadata readers to ISMN_Interface
 - Notebook added that describes using a custom metadata reader
 - RTD build uses a separate, smaller environment.yml now (and mamba)
+- ISMN_Interface now has a method to create an instance of itself for a selection of  (`ISMN_Interface.subset_from_ids`)
 
 
 Version 1.2.0
