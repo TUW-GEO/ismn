@@ -26,9 +26,9 @@ https://ismn.earth
 
 The following tutorials are available in ``docs/examples``:
 
- `1) ISMN reader basic functionality <docs/examples/interface.ipynb>`_
+ `1) ISMN reader basic functionality <https://ismn.readthedocs.io/en/latest/examples/interface.html>`_
 
- `2) Adding custom metadata readers <docs/examples/custom_meta.ipynb>`_
+ `2) Adding custom metadata readers <https://ismn.readthedocs.io/en/latest/examples/custom_meta.html>`_
 
 Citation
 ========
@@ -237,6 +237,14 @@ If you want to contribute please follow these steps:
 - Please include tests for your contributions in one of the test directories.
   We use pytest so a simple function called test_my_feature is enough
 - submit a pull request to our master branch
+
+Code Formatting
+---------------
+To apply pep8 conform styling to any changed files [we use `yapf`](https://github.com/google/yapf). The correct
+settings are already set in `setup.cfg`. Therefore the following command
+should be enough:
+
+    yapf file.py --in-place
 
 Release new version
 -------------------

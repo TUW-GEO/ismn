@@ -167,7 +167,11 @@ class StaticMetaFile(IsmnFile):
     See Parent Class (IsmnFile)
     """
 
-    def __init__(self, root, file_path, load_metadata=True, temp_root=gettempdir()):
+    def __init__(self,
+                 root,
+                 file_path,
+                 load_metadata=True,
+                 temp_root=gettempdir()):
         """
         Parameters
         ----------
@@ -190,7 +194,9 @@ class StaticMetaFile(IsmnFile):
             self.metadata = self.read_metadata()
 
     @staticmethod
-    def __read_field(data: pd.DataFrame, fieldname: str, new_name=None) -> np.array:
+    def __read_field(data: pd.DataFrame,
+                     fieldname: str,
+                     new_name=None) -> np.array:
         """
         Extract a field from the loaded csv metadata
         """
@@ -224,7 +230,7 @@ class StaticMetaFile(IsmnFile):
             logging.info("no header: {}".format(csvfile))
             data = pd.read_csv(csvfile, delimiter=";", header=None)
             cols = list(data.columns)
-            cols[: len(const.CSV_COLS)] = const.CSV_COLS  # todo: not safe
+            cols[:len(const.CSV_COLS)] = const.CSV_COLS  # todo: not safe
             data.columns = cols
             data.set_index("quantity_name", inplace=True)
 
@@ -242,14 +248,16 @@ class StaticMetaFile(IsmnFile):
         if self.root.zip:
             if not self.root.isopen:
                 self.root.open()
-            with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
+            with TemporaryDirectory(
+                    prefix="ismn", dir=self.temp_root) as tempdir:
                 extracted = self.root.extract_file(self.file_path, tempdir)
                 data = self.__read_csv(extracted)
         else:
             data = self.__read_csv(self.root.path / self.file_path)
 
         # read landcover classifications
-        lc = data.loc[["land cover classification"]][["value", "quantity_source_name"]]
+        lc = data.loc[["land cover classification"
+                      ]][["value", "quantity_source_name"]]
 
         lc_dict = {
             "CCI_landcover_2000": const.CSV_META_TEMPLATE["lc_2000"],
@@ -266,25 +274,23 @@ class StaticMetaFile(IsmnFile):
         for key in lc_dict.keys():
             if key in lc["quantity_source_name"].values:
                 if key != "insitu":
-                    lc_dict[key] = np.int(
-                        lc.loc[lc["quantity_source_name"] == key]["value"].values[0]
-                    )
+                    lc_dict[key] = np.int32(lc.loc[lc["quantity_source_name"] ==
+                                                 key]["value"].values[0])
                 else:
-                    lc_dict[key] = lc.loc[lc["quantity_source_name"] == key][
-                        "value"
-                    ].values[0]
+                    lc_dict[key] = lc.loc[lc["quantity_source_name"] ==
+                                          key]["value"].values[0]
                     logging.info(
                         f"insitu land cover classification available: {self.file_path}"
                     )
 
         # read climate classifications
         try:
-            cl = data.loc[["climate classification"]][["value", "quantity_source_name"]]
+            cl = data.loc[["climate classification"
+                          ]][["value", "quantity_source_name"]]
             for key in cl_dict.keys():
                 if key in cl["quantity_source_name"].values:
-                    cl_dict[key] = cl.loc[cl["quantity_source_name"] == key][
-                        "value"
-                    ].values[0]
+                    cl_dict[key] = cl.loc[cl["quantity_source_name"] ==
+                                          key]["value"].values[0]
                     if key == "insitu":
                         logging.info(
                             f"insitu climate classification available: {self.file_path}"
@@ -302,19 +308,20 @@ class StaticMetaFile(IsmnFile):
         ]
 
         static_meta = {
-            "saturation": self.__read_field(data, "saturation"),
-            "clay_fraction": self.__read_field(
-                data, "clay fraction", const.VARIABLE_LUT["cl_h"]
-            ),
-            "sand_fraction": self.__read_field(
-                data, "sand fraction", const.VARIABLE_LUT["sa_h"]
-            ),
-            "silt_fraction": self.__read_field(
-                data, "silt fraction", const.VARIABLE_LUT["si_h"]
-            ),
-            "organic_carbon": self.__read_field(
-                data, "organic carbon", const.VARIABLE_LUT["oc_h"]
-            ),
+            "saturation":
+                self.__read_field(data, "saturation"),
+            "clay_fraction":
+                self.__read_field(data, "clay fraction",
+                                  const.VARIABLE_LUT["cl_h"]),
+            "sand_fraction":
+                self.__read_field(data, "sand fraction",
+                                  const.VARIABLE_LUT["sa_h"]),
+            "silt_fraction":
+                self.__read_field(data, "silt fraction",
+                                  const.VARIABLE_LUT["si_h"]),
+            "organic_carbon":
+                self.__read_field(data, "organic carbon",
+                                  const.VARIABLE_LUT["oc_h"]),
         }
 
         for name, v in static_meta.items():
@@ -340,7 +347,11 @@ class DataFile(IsmnFile):
         File type information (e.g. ceop).
     """
 
-    def __init__(self, root, file_path, load_metadata=True, temp_root=gettempdir()):
+    def __init__(self,
+                 root,
+                 file_path,
+                 load_metadata=True,
+                 temp_root=gettempdir()):
         """
         Parameters
         ----------
@@ -424,7 +435,7 @@ class DataFile(IsmnFile):
             headr, _, last, fname = self.get_elements_from_file()
 
         if len(fname) > 9:
-            instr = "_".join(fname[6 : len(fname) - 2])
+            instr = "_".join(fname[6:len(fname) - 2])
         else:
             instr = fname[6]
 
@@ -438,19 +449,17 @@ class DataFile(IsmnFile):
 
         depth = Depth(float(fname[4]), float(fname[5]))
 
-        metadata = MetaData(
-            [
-                MetaVar("network", fname[1]),
-                MetaVar("station", fname[2]),
-                MetaVar("variable", variable, depth),
-                MetaVar("instrument", instr, depth),
-                MetaVar("timerange_from", timerange_from),
-                MetaVar("timerange_to", timerange_to),
-                MetaVar("latitude", float(headr[7])),
-                MetaVar("longitude", float(headr[8])),
-                MetaVar("elevation", float(headr[9])),
-            ]
-        )
+        metadata = MetaData([
+            MetaVar("network", fname[1]),
+            MetaVar("station", fname[2]),
+            MetaVar("variable", variable, depth),
+            MetaVar("instrument", instr, depth),
+            MetaVar("timerange_from", timerange_from),
+            MetaVar("timerange_to", timerange_to),
+            MetaVar("latitude", float(headr[7])),
+            MetaVar("longitude", float(headr[8])),
+            MetaVar("elevation", float(headr[9])),
+        ])
 
         return metadata, depth
 
@@ -480,7 +489,7 @@ class DataFile(IsmnFile):
             headr, scnd, last, fname = self.get_elements_from_file()
 
         if len(fname) > 9:
-            instrument = "_".join(fname[6 : len(fname) - 2])
+            instrument = "_".join(fname[6:len(fname) - 2])
         else:
             instrument = fname[6]
 
@@ -494,19 +503,17 @@ class DataFile(IsmnFile):
 
         depth = Depth(float(headr[6]), float(headr[7]))
 
-        metadata = MetaData(
-            [
-                MetaVar("network", headr[1]),
-                MetaVar("station", headr[2]),
-                MetaVar("variable", variable, depth),
-                MetaVar("instrument", instrument, depth),
-                MetaVar("timerange_from", timerange_from),
-                MetaVar("timerange_to", timerange_to),
-                MetaVar("latitude", float(headr[3])),
-                MetaVar("longitude", float(headr[4])),
-                MetaVar("elevation", float(headr[5])),
-            ]
-        )
+        metadata = MetaData([
+            MetaVar("network", headr[1]),
+            MetaVar("station", headr[2]),
+            MetaVar("variable", variable, depth),
+            MetaVar("instrument", instrument, depth),
+            MetaVar("timerange_from", timerange_from),
+            MetaVar("timerange_to", timerange_to),
+            MetaVar("latitude", float(headr[3])),
+            MetaVar("longitude", float(headr[4])),
+            MetaVar("elevation", float(headr[5])),
+        ])
 
         return metadata, depth
 
@@ -543,7 +550,8 @@ class DataFile(IsmnFile):
                 if not self.root.isopen:
                     self.root.open()
 
-                with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
+                with TemporaryDirectory(
+                        prefix="ismn", dir=self.temp_root) as tempdir:
                     filename = self.root.extract_file(self.file_path, tempdir)
                     headr, secnd, last = self.__read_lines(filename)
 
@@ -618,7 +626,8 @@ class DataFile(IsmnFile):
         )
         if self.root.zip:
 
-            with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
+            with TemporaryDirectory(
+                    prefix="ismn", dir=self.temp_root) as tempdir:
                 filename = self.root.extract_file(self.file_path, tempdir)
                 data = readf(filename)
 
@@ -645,7 +654,8 @@ class DataFile(IsmnFile):
         if self.file_type == "ceop":
             # todo: what is this format, should we support it?
             # self._read_format_ceop()
-            raise NotImplementedError("Ceop (old) format is no longer supported")
+            raise NotImplementedError(
+                "Ceop (old) format is no longer supported")
         elif self.file_type == "ceop_sep":
             return self.__read_format_ceop_sep()
         elif self.file_type == "header_values":
@@ -688,6 +698,7 @@ class DataFile(IsmnFile):
             metadata = metadata.best_meta_for_depth(depth)
 
         self.metadata = metadata
-        self.metadata.replace("network", self.__get_parent_path(self.posix_path))
+        self.metadata.replace("network",
+                              self.__get_parent_path(self.posix_path))
 
         return self.metadata

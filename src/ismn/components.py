@@ -106,15 +106,14 @@ class Sensor(IsmnComponent):
         self.name = name if name is not None else self.__repr__()
 
     def __repr__(self):
-        return (
-            f"{self.instrument}_{self.variable}_"
-            f"{self.depth.start:1.6f}_{self.depth.end:1.6f}"
-        )
+        return (f"{self.instrument}_{self.variable}_"
+                f"{self.depth.start:1.6f}_{self.depth.end:1.6f}")
 
     @property
     def metadata(self) -> MetaData:
-        return MetaData() if self.filehandler is None else self.filehandler.metadata
-    
+        return MetaData(
+        ) if self.filehandler is None else self.filehandler.metadata
+
     @property
     def data(self):
         return self.read_data()
@@ -261,7 +260,7 @@ class Station(IsmnComponent):
 
     def __repr__(self):
         # Provide basic station information.
-        return f"Sensors at '{self.name}': {[s.name for s in self.sensors.values()]}"
+        return f"Station '{self.name}' with Sensors: {[s.name for s in self.sensors.values()]}"
 
     @property
     def metadata(self) -> MetaData:
@@ -317,9 +316,10 @@ class Station(IsmnComponent):
 
         return depths
 
-    def get_min_max_obs_timestamp(
-        self, variable="soil moisture", min_depth=None, max_depth=None
-    ):
+    def get_min_max_obs_timestamp(self,
+                                  variable="soil moisture",
+                                  min_depth=None,
+                                  max_depth=None):
         """
         Goes through the sensors associated with this station
         and checks the metadata to get and approximate time coverage of the station.
@@ -467,14 +467,10 @@ class Station(IsmnComponent):
         sensors : numpy.ndarray
             array of sensors found for the given combination of variable and depths
         """
-        return np.array(
-            [
-                s
-                for s in self.iter_sensors(
-                    variable=variable, depth=Depth(depth_from, depth_to)
-                )
-            ]
-        )
+        return np.array([
+            s for s in self.iter_sensors(
+                variable=variable, depth=Depth(depth_from, depth_to))
+        ])
 
 
 class Network(IsmnComponent):
@@ -513,7 +509,7 @@ class Network(IsmnComponent):
 
     def __repr__(self):
         # Provide basic Network information.
-        return f"Stations in '{self.name}': {list(self.stations.keys())}"
+        return f"Network '{self.name}' with Stations: {list(self.stations.keys())}"
 
     def __getitem__(self, item: Union[int, str]):
         # shortcut to access networks directly
@@ -662,7 +658,6 @@ class NetworkCollection(IsmnComponent):
     """
 
     def __init__(self, networks):
-
         """
         Create network collection from previously created Networks.
 
@@ -682,21 +677,30 @@ class NetworkCollection(IsmnComponent):
             lons += net_lons
             lats += net_lats
 
-        self.grid = BasicGrid(lons, lats) if (len(lons) > 0 and len(lats) > 0) else None
+        self.grid = BasicGrid(lons, lats) if (len(lons) > 0 and
+                                              len(lats) > 0) else None
 
     def __repr__(self, indent: str = ""):
-        return ",\n".join(
-            [
-                f"{indent}{net.name}: {list(net.stations.keys())}"
-                for net in self.networks.values()
-            ]
-        )
+        return ",\n".join([
+            f"{indent}{net.name}: {list(net.stations.keys())}"
+            for net in self.networks.values()
+        ])
 
-    def __getitem__(self, item: Union[int, str]):
+    def __getitem__(self, item: Union[int, str, list]) -> \
+            Union["NetworkCollection", Network]:
         # shortcut to access networks directly
-        if isinstance(item, int):
-            item = list(self.networks.keys())[item]
-        return self.networks[item]
+        if isinstance(item, (int, str)):
+            if isinstance(item, int):
+                item = list(self.networks.keys())[item]
+            net: Network = self.networks[item]
+            return net
+        else:
+            keys = list(self.networks.keys())
+            sub: NetworkCollection = NetworkCollection(networks=[
+                self.networks[n] if isinstance(n, str) else self
+                .networks[keys[n]] for n in item
+            ])
+            return sub
 
     def iter_networks(self) -> Network:
         """
@@ -741,7 +745,8 @@ class NetworkCollection(IsmnComponent):
         in_grid = np.isin(idxs, self.grid.activegpis)
 
         if not all(in_grid):
-            raise ValueError(f"Index not found in loaded grid: {idxs[~in_grid]}")
+            raise ValueError(
+                f"Index not found in loaded grid: {idxs[~in_grid]}")
 
         lon, lat = self.grid.gpi2lonlat(idxs)
 
@@ -798,15 +803,16 @@ class NetworkCollection(IsmnComponent):
         references: OrderedDict
             Network names as keys and network references as values
         """
-        refs = OrderedDict(
-            [(net.name, net.get_citations()) for net in self.iter_networks()]
-        )
+        refs = OrderedDict([
+            (net.name, net.get_citations()) for net in self.iter_networks()
+        ])
 
         if out_file is not None:
             with open(out_file, mode="w") as out_file:
                 for name, reflist in refs.items():
                     out_file.write(f"References for Network {name}:\n")
-                    out_file.write("-----------------------------------------\n")
+                    out_file.write(
+                        "-----------------------------------------\n")
                     for ref in reflist:
                         out_file.write(f"{ref}\n")
                         out_file.write("\n")
