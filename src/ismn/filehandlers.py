@@ -274,7 +274,7 @@ class StaticMetaFile(IsmnFile):
         for key in lc_dict.keys():
             if key in lc["quantity_source_name"].values:
                 if key != "insitu":
-                    lc_dict[key] = np.int(lc.loc[lc["quantity_source_name"] ==
+                    lc_dict[key] = np.int32(lc.loc[lc["quantity_source_name"] ==
                                                  key]["value"].values[0])
                 else:
                     lc_dict[key] = lc.loc[lc["quantity_source_name"] ==
