@@ -7,6 +7,12 @@ Unreleased
 
 -
 
+Version 1.3.1
+=============
+
+- Added functionality to provide fill values with predefined custom metadata readers.
+- Documentation and constants updated.
+
 Version 1.3.0
 =============
 
