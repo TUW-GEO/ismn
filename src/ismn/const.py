@@ -108,14 +108,16 @@ CSV_COLS = [
     "quantity_source_name",
 ]
 
-CSV_META_TEMPLATE_SURF_VAR = OrderedDict([
-    ("lc_2000", np.nan),
-    ("lc_2005", np.nan),
-    ("lc_2010", np.nan),
-    ("lc_insitu", "unknown"),
-    ("climate_KG", "unknown"),
-    ("climate_insitu", "unknown"),
-])
+lc_num_vars = ['lc_2000', 'lc_2005', 'lc_2010']
+lc_str_vars = ['lc_insitu']
+LC_VARS = [*lc_num_vars, *lc_str_vars]
+CLIM_VARS = ['climate_KG', 'climate_insitu']
+
+CSV_META_TEMPLATE_SURF_VAR = OrderedDict(
+    [(c, np.nan) for c in lc_num_vars] +
+    [(c, 'unknown') for c in lc_str_vars] +
+    [(c, 'unknown') for c in CLIM_VARS]
+)
 CSV_META_TEMPLATE_GROUND_VAR = OrderedDict([
     ("saturation", np.nan),
     ("clay_fraction", np.nan),
@@ -124,8 +126,10 @@ CSV_META_TEMPLATE_GROUND_VAR = OrderedDict([
     ("organic_carbon", np.nan),
 ])
 
-CSV_META_TEMPLATE = OrderedDict(**CSV_META_TEMPLATE_SURF_VAR,
-                                **CSV_META_TEMPLATE_GROUND_VAR)
+CSV_META_TEMPLATE = OrderedDict(
+    **CSV_META_TEMPLATE_SURF_VAR,
+    **CSV_META_TEMPLATE_GROUND_VAR,
+)
 # ==============================================================================
 # ESA CCI landcover classification:
 # This landcover information is available for the years 2000, 2005 and 2010.

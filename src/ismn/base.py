@@ -126,9 +126,11 @@ class IsmnRoot:
         if self.zip:
             subpath = PurePosixPath(subpath)
         else:
-            assert (
-                self.path /
-                Path(subpath)).exists(), "Subpath does not exist in archive"
+            if not (self.path / Path(subpath)).exists():
+                raise ValueError(
+                    f"Subpath {subpath} does not exist"
+                    f" in archive {self.path}"
+                )
 
         return subpath
 

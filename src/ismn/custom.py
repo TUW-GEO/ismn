@@ -80,12 +80,15 @@ class CustomStationMetadataCsv(CustomMetaReader):
     are assigned to the metadata (if columns exist)
     """
 
-    def __init__(self, station_meta_csv, **kwargs):
+    def __init__(self, station_meta_csv, fill_values=None, **kwargs):
         """
         Parameters
         ----------
         station_meta_csv: str
             Path to the csv file with the above described content
+       fill_values: dict, optional (default: None)
+            Values to use for a certain custom metadata variable, if no
+            match is found.
         kwargs:
             Additional kwargs as passed to :func:`pandas.read_csv`
             To use a different separator than the default semicolon, use `sep`
@@ -95,7 +98,21 @@ class CustomStationMetadataCsv(CustomMetaReader):
         else:
             sep = ';'
 
+        self.fill_values = dict() if fill_values is None else fill_values
         self.df = pd.read_csv(station_meta_csv, sep=sep, **kwargs)
+
+    def _empty_var(self, varnames) -> list:
+        """
+        For all passed variable names, create an empty MetaVar if a fill value
+        for the name is set in `self.fill_value`.
+        """
+        vars = []
+        for var in varnames:
+            if var in self.fill_values.keys() and \
+                not (var.endswith('_depth_from') or
+                     var.endswith('_depth_to')):
+                vars.append(MetaVar(var, self.fill_values[var]))
+        return vars
 
     @staticmethod
     def _row2var(row: dict) -> list:
@@ -152,9 +169,6 @@ class CustomStationMetadataCsv(CustomMetaReader):
         cond = (self.df['network'] == meta['network'].val) & \
                (self.df['station'] == meta['station'].val)
 
-        if not np.any(cond):
-            return
-
         df = self.df[cond].set_index(['network', 'station'])
 
         # drop potential duplicates, keep first
@@ -162,8 +176,11 @@ class CustomStationMetadataCsv(CustomMetaReader):
 
         vars = []
 
-        for row in df.to_dict('records'):
-            vars += self._row2var(row)
+        if df.empty and (self.fill_values is not None):
+            vars += self._empty_var(df.columns.values)
+        else:
+            for row in df.to_dict('records'):
+                vars += self._row2var(row)
 
         return MetaData(vars)
 
@@ -212,7 +229,10 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
 
         vars = []
 
-        for row in df.to_dict('records'):
-            vars += self._row2var(row)
+        if df.empty and (self.fill_values is not None):
+            vars += self._empty_var(df.columns.values)
+        else:
+            for row in df.to_dict('records'):
+                vars += self._row2var(row)
 
         return MetaData(vars)
