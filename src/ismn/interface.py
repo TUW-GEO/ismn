@@ -24,14 +24,11 @@
 from pathlib import Path
 from tempfile import gettempdir
 import platform
-import os
 import sys
-from typing import Optional, Union
-
-import numpy as np
 import pandas as pd
 
-from ismn.filecollection import IsmnFileCollection, _load_metadata_df
+from ismn.filecollection import IsmnFileCollection
+from collections.abc import Iterable
 from ismn.components import *
 from ismn.const import *
 from ismn.base import IsmnRoot
@@ -542,8 +539,7 @@ class ISMN_Interface:
             `return_meta=False`. If multiple indices were passed, this is a
             DataFrame with the index as columns, otherwise a Series.
         """
-
-        if isinstance(idx, int):
+        if not isinstance(idx, Iterable):
             filehandler = self.__file_collection.get_filehandler(idx)
             if return_meta:
                 return filehandler.read_data(), filehandler.metadata.to_pd()
