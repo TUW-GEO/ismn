@@ -7,6 +7,11 @@ Unreleased
 
 -
 
+Version 1.3.2
+=============
+
+- ``ISMN_Interface.read_ts`` raised an error when np.int64 was passed.
+
 Version 1.3.1
 =============
 
