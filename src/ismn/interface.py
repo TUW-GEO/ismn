@@ -604,7 +604,7 @@ class ISMN_Interface:
         gpi, d = self.collection.grid.find_nearest_gpi(
             lon, lat, max_dist=max_dist)
 
-        if len(np.atleast_1d(gpi)) == 0:
+        if (len(np.atleast_1d(gpi)) == 0) or (d == np.inf):
             stat = None
             d = None
         else:
