@@ -12,6 +12,8 @@ Version 1.3.1
 
 - Added functionality to provide fill values with predefined custom metadata readers.
 - Documentation and constants updated.
+- ``ISMN_Interface.read_ts`` raised an error when np.int64 was passed.
+- Fixed for `pygeogrids>=0.4.2` where dist=np.inf can be returned if
 
 Version 1.3.0
 =============
@@ -20,7 +22,6 @@ Version 1.3.0
 - Notebook added that describes using a custom metadata reader
 - RTD build uses a separate, smaller environment.yml now (and mamba)
 - ISMN_Interface now has a method to create an instance of itself for a selection of  (`ISMN_Interface.subset_from_ids`)
-
 
 Version 1.2.0
 =============
