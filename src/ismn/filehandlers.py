@@ -504,8 +504,8 @@ class DataFile(IsmnFile):
         depth = Depth(float(headr[6]), float(headr[7]))
 
         metadata = MetaData([
-            MetaVar("network", headr[1]),
-            MetaVar("station", headr[2]),
+            MetaVar("network", fname[1]),
+            MetaVar("station", fname[2]),
             MetaVar("variable", variable, depth),
             MetaVar("instrument", instrument, depth),
             MetaVar("timerange_from", timerange_from),
