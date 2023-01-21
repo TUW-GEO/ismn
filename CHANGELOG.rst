@@ -2,10 +2,16 @@
 Changelog
 =========
 
-Unreleased
-==========
+Unreleased changes in master branch
+===================================
 
 -
+
+Version 1.3.2
+=============
+
+- Fix bug where station names in metadata can be different between Header and CEOP format.
+- Custom Sensor Metadata reader now also checks the measured variable.
 
 Version 1.3.1
 =============
