@@ -192,7 +192,7 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
     In this case that the metadata must be stored in a csv file with the
     following structure:
 
-        network;station;instrument;depth_from;depth_to;<var1>;<var1>_depth_from;<var1>_depth_to;<var2> ...
+        network;station;instrument;variable;depth_from;depth_to;<var1>;<var1>_depth_from;<var1>_depth_to;<var2> ...
 
     where <var1> etc. are the names of the custom metadata variables that are
     transferred into the python metadata
@@ -218,11 +218,12 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
         cond = (self.df['network'] == meta['network'].val) & \
                (self.df['station'] == meta['station'].val) & \
                (self.df['instrument'] == meta['instrument'].val) & \
+               (self.df['variable'] == meta['variable'].val) & \
                (self.df['depth_from'] == meta['instrument'].depth[0]) & \
                (self.df['depth_to'] == meta['instrument'].depth[1])
 
         df = self.df[cond].set_index(
-            ['network', 'station', 'instrument', 'depth_from', 'depth_to'])
+            ['network', 'station', 'instrument', 'variable', 'depth_from', 'depth_to'])
 
         # drop potential duplicates, keep first
         df = df[~df.index.duplicated(keep='first')]

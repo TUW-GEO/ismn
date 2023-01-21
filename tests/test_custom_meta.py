@@ -66,6 +66,7 @@ def test_build_custom_metadata_sensor():
         assert ds['COSMOS'][0][0].metadata['myvar3'].val == 'unknown'
 
         assert ds['FR_Aqui']['fraye'][0].metadata['myvar1'].val == 'lorem'
+        assert ds['FR_Aqui']['fraye'][0].metadata['variable'].val == 'soil_moisture'
         assert ds['FR_Aqui']['fraye'][0].metadata['myvar1'].depth == Depth(0, 1)
         assert ds['FR_Aqui']['fraye'][0].metadata['myvar2'].val == 1.1
         assert ds['FR_Aqui']['fraye'][0].metadata['myvar2'].depth is None
