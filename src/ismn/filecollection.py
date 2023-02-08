@@ -81,7 +81,7 @@ def _read_station_dir(
     for file_path in data_files:
         try:
             f = DataFile(root, file_path, temp_root=temp_root)
-        except IOError as e:
+        except Exception as e:
             infos.append(f"Error loading ismn file: {e}")
             continue
 
