@@ -5,6 +5,11 @@ Changelog
 Unreleased changes in master branch
 ===================================
 
+-
+
+Version 1.3.3
+=============
+
 - Continue metadata collection for station on any type of error (PR #64)
 
 Version 1.3.2
