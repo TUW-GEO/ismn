@@ -245,7 +245,9 @@ class StaticMetaFile(IsmnFile):
                 extracted = self.root.extract_file(self.file_path, tempdir)
                 data = self.__read_csv(extracted, delim_whitespace=True)
         else:
-            data = self.__read_csv(os.path.join(self.root.path, self.file_path), delim_whitespace=True)
+            data = self.__read_csv(
+                os.path.join(self.root.path, self.file_path), delim_whitespace=True
+            )
 
         # read landcover classifications
         lc = data.loc[["land cover classification"]][["value", "quantity_source_name"]]
@@ -586,7 +588,9 @@ class DataFile(IsmnFile):
             varname + "_orig_flag",
         ]
 
-        return self.__read_csv(names, skiprows=1, usecols=[0, 1, 2, 3, 4], sep=' ', low_memory=False)
+        return self.__read_csv(
+            names, skiprows=1, usecols=[0, 1, 2, 3, 4], sep=" ", low_memory=False
+        )
 
     def __read_csv(self, names=None, usecols=None, skiprows=0, **kwargs):
         """
@@ -614,9 +618,9 @@ class DataFile(IsmnFile):
             names,
             parse_dates=[[0, 1]],
             engine="c",
-            delim_whitespace=True,
+            delim_whitespace=None,
             sep=None,
-            low_memory=None
+            low_memory=None,
         ):
             return pd.read_csv(
                 filepath_or_buffer=f,
@@ -628,15 +632,6 @@ class DataFile(IsmnFile):
                 engine=engine,
             )
 
-        # readf = lambda f: pd.read_csv(
-        #     f,
-        #     skiprows=skiprows,
-        #     usecols=usecols,
-        #     names=names,
-        #     delim_whitespace=True,
-        #     parse_dates=[[0, 1]],
-        #     engine="c",
-        # )
         if self.root.zip:
             with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
                 filename = self.root.extract_file(self.file_path, tempdir)
