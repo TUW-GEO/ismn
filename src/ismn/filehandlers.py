@@ -377,7 +377,7 @@ class DataFile(IsmnFile):
             self.metadata = self.read_metadata(best_meta_for_sensor=True)
 
     @staticmethod
-    def __read_lines(filename: Path) -> (list, list, list):
+    def __read_lines(filename: Path) -> tuple[list, list, list]:
         """
         Read fist and last line from file as list, skips empty lines.
         """

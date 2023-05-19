@@ -59,20 +59,23 @@ def _read_station_dir(
 
     try:
         if len(csv) == 0:
-            raise IsmnFileError("Expected 1 csv file for station, found 0. "
-                                "Use empty static metadata.")
+            raise IsmnFileError(
+                "Expected 1 csv file for station, found 0. "
+                "Use empty static metadata."
+            )
         else:
             if len(csv) > 1:
                 infos.append(
                     f"Expected 1 csv file for station, found {len(csv)}. "
-                    f"Use first file in dir.")
+                    f"Use first file in dir."
+                )
             static_meta_file = StaticMetaFile(
-                root, csv[0], load_metadata=True, temp_root=temp_root)
+                root, csv[0], load_metadata=True, temp_root=temp_root
+            )
             station_meta = static_meta_file.metadata
     except IsmnFileError as e:
         infos.append(f"Error loading static meta for station: {e}")
-        station_meta = MetaData(
-            [MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()])
+        station_meta = MetaData([MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()])
 
     data_files = root.find_files(stat_dir, "*.stm")
 
@@ -91,7 +94,8 @@ def _read_station_dir(
             Depth(
                 f.metadata["instrument"].depth.start,
                 f.metadata["instrument"].depth.end,
-            ))
+            )
+        )
 
         # If custom metadata readers are available
         if custom_meta_reader is not None:
@@ -189,12 +193,12 @@ class IsmnFileCollection(object):
 
     @classmethod
     def build_from_scratch(
-            cls,
-            data_root,
-            parallel=True,
-            log_path=None,
-            temp_root=gettempdir(),
-            custom_meta_readers=None,
+        cls,
+        data_root,
+        parallel=True,
+        log_path=None,
+        temp_root=gettempdir(),
+        custom_meta_readers=None,
     ):
         """
         Parameters
@@ -250,8 +254,10 @@ class IsmnFileCollection(object):
         for net_dir, stat_dirs in root.cont.items():
             process_stat_dirs += list(stat_dirs)
 
-        args = [(root.path if root.zip else root, d, temp_root,
-                 custom_meta_readers) for d in process_stat_dirs]
+        args = [
+            (root.path if root.zip else root, d, temp_root, custom_meta_readers)
+            for d in process_stat_dirs
+        ]
 
         pbar = tqdm(total=len(args), desc="Files Processed")
 
@@ -333,15 +339,16 @@ class IsmnFileCollection(object):
         columns = np.array(list(metadata_df.columns))
 
         for i, row in enumerate(metadata_df.values):
-            #this_nw = row.loc['network', 'val']
+            # this_nw = row.loc['network', 'val']
             vars = np.unique(columns[:-2][:, 0])
             vals = row[:-2].reshape(-1, 3)
 
-            metadata = MetaData([
-                MetaVar.from_tuple(
-                    (vars[i], vals[i][2], vals[i][0], vals[i][1]))
-                for i in range(len(vars))
-            ])
+            metadata = MetaData(
+                [
+                    MetaVar.from_tuple((vars[i], vals[i][2], vals[i][0], vals[i][1]))
+                    for i in range(len(vars))
+                ]
+            )
 
             f = DataFile(
                 root=root,
@@ -365,11 +372,9 @@ class IsmnFileCollection(object):
         return cls(root, filelist=filelist)
 
     @classmethod
-    def from_metadata_csv(cls,
-                          data_root,
-                          meta_csv_file,
-                          network=None,
-                          temp_root=gettempdir()):
+    def from_metadata_csv(
+        cls, data_root, meta_csv_file, network=None, temp_root=gettempdir()
+    ):
         """
         Load a previously created and stored filelist from
         :func:`ismn.filecollection.IsmnFileCollection.to_metadata_csv`
@@ -394,13 +399,11 @@ class IsmnFileCollection(object):
         metadata_df = _load_metadata_df(meta_csv_file)
 
         if network is not None:
-            metadata_df = metadata_df[np.isin(metadata_df['network'].values,
-                                              network)]
+            metadata_df = metadata_df[np.isin(metadata_df["network"].values, network)]
 
         metadata_df.index = range(len(metadata_df.index))
 
-        return cls.from_metadata_df(
-            data_root, metadata_df, temp_root=temp_root)
+        return cls.from_metadata_df(data_root, metadata_df, temp_root=temp_root)
 
     def to_metadata_csv(self, meta_csv_file):
         """
@@ -419,8 +422,7 @@ class IsmnFileCollection(object):
 
         for i, filehandler in enumerate(self.iter_filehandlers()):
             df = filehandler.metadata.to_pd(True, dropna=False)
-            df[("file_path",
-                "val")] = str(PurePosixPath(filehandler.file_path))
+            df[("file_path", "val")] = str(PurePosixPath(filehandler.file_path))
             df[("file_type", "val")] = filehandler.file_type
 
             df.index = [i]
@@ -430,8 +432,10 @@ class IsmnFileCollection(object):
         dfs = pd.concat(dfs, axis=0, sort=True)
         cols_end = ["file_path", "file_type"]
 
-        dfs = dfs[[c for c in dfs.columns if c[0] not in cols_end] +
-                  [c for c in dfs.columns if c[0] in cols_end]]
+        dfs = dfs[
+            [c for c in dfs.columns if c[0] not in cols_end]
+            + [c for c in dfs.columns if c[0] in cols_end]
+        ]
         dfs = dfs.fillna(np.nan)
 
         os.makedirs(Path(os.path.dirname(meta_csv_file)), exist_ok=True)
