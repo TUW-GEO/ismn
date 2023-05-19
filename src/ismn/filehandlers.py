@@ -615,15 +615,18 @@ class DataFile(IsmnFile):
         data : pd.DataFrame
             Time series.
         """
-        readf = lambda f: pd.read_csv(
-            f,
-            skiprows=skiprows,
-            usecols=usecols,
-            names=names,
-            delim_whitespace=True,
-            parse_dates=[[0, 1]],
-            engine="c",
-        )
+        def readf(f, skiprows, usecols, names, delim_whitespace=True, parse_dates=[[0, 1]], engine='c'):
+            return pd.read_csv(filepath_or_buffer = f, skiprows=skiprows, usecols=usecols, names=names, delim_whitespace=delim_whitespace, parse_dates=parse_dates, engine=engine)
+            
+        # readf = lambda f: pd.read_csv(
+        #     f,
+        #     skiprows=skiprows,
+        #     usecols=usecols,
+        #     names=names,
+        #     delim_whitespace=True,
+        #     parse_dates=[[0, 1]],
+        #     engine="c",
+        # )
         if self.root.zip:
 
             with TemporaryDirectory(
