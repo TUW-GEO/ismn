@@ -243,9 +243,9 @@ class StaticMetaFile(IsmnFile):
                 self.root.open()
             with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
                 extracted = self.root.extract_file(self.file_path, tempdir)
-                data = self.__read_csv(extracted)
+                data = self.__read_csv(extracted, delim_whitespace=True)
         else:
-            data = self.__read_csv(self.root.path / self.file_path)
+            data = self.__read_csv(os.path.join(self.root.path, self.file_path), delim_whitespace=True)
 
         # read landcover classifications
         lc = data.loc[["land cover classification"]][["value", "quantity_source_name"]]
@@ -570,7 +570,7 @@ class DataFile(IsmnFile):
         ]
         usecols = [0, 1, 12, 13, 14]
 
-        return self.__read_csv(names, usecols)
+        return self.__read_csv(names, usecols, delim_whitespace=True)
 
     def __read_format_header_values(self) -> pd.DataFrame:
         """
@@ -586,9 +586,9 @@ class DataFile(IsmnFile):
             varname + "_orig_flag",
         ]
 
-        return self.__read_csv(names, skiprows=1)
+        return self.__read_csv(names, skiprows=1, usecols=[0, 1, 2, 3, 4], sep=' ', low_memory=False)
 
-    def __read_csv(self, names=None, usecols=None, skiprows=0):
+    def __read_csv(self, names=None, usecols=None, skiprows=0, **kwargs):
         """
         Read data from csv.
 
@@ -612,9 +612,11 @@ class DataFile(IsmnFile):
             skiprows,
             usecols,
             names,
-            delim_whitespace=True,
             parse_dates=[[0, 1]],
             engine="c",
+            delim_whitespace=True,
+            sep=None,
+            low_memory=None
         ):
             return pd.read_csv(
                 filepath_or_buffer=f,
@@ -638,10 +640,10 @@ class DataFile(IsmnFile):
         if self.root.zip:
             with TemporaryDirectory(prefix="ismn", dir=self.temp_root) as tempdir:
                 filename = self.root.extract_file(self.file_path, tempdir)
-                data = readf(filename)
+                data = readf(filename, **kwargs)
 
         else:
-            data = readf(self.root.path / self.file_path)
+            data = readf(os.path.join(self.root.path, self.file_path), **kwargs)
 
         data.set_index("date_time", inplace=True)
 
