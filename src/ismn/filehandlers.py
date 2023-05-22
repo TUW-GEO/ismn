@@ -22,6 +22,9 @@
 
 import os
 import pandas as pd
+import warnings
+
+warnings.simplefilter(action="ignore", category=UserWarning)
 from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn import const
@@ -641,7 +644,7 @@ class DataFile(IsmnFile):
                     usecols=usecols,
                     names=names,
                     delim_whitespace=True,
-                    parse_dates=[[0, 1]],
+                    parse_dates=parse_dates,
                     engine="c",
                 )
 
