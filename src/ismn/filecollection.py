@@ -43,7 +43,7 @@ def _read_station_dir(
     stat_dir: Union[Path, str],
     temp_root: Path,
     custom_meta_reader: list,
-) -> (dict, list):
+) -> tuple[dict, list]:
     """
     Parallelizable function to read metadata for files in station dir
     """
