@@ -1,11 +1,11 @@
-# General:
+#General:
 ---------
 There was a Problem with reading data from the RISMA network. 
 This data only contained soil moisture as variable and was of format  "header & files".
 Further, this data was dowloaded from the ISMN webpage May 22, 23 at 09:00.
 
 
-# Problem:
+#Problem:
 ----------
 To my understanding, all sensor files of the "header & files" format should contain four columns: date/time, data, new flag, old flag.
 For some RISMA sensor files the last column, old flag, contained strings such as:
@@ -17,7 +17,7 @@ The method ``__read_csv()`` of the ``DataFile`` class could not parse these sens
 This phenomenon only occured with some RISMA sensor files, other networks were fine.
 
 
-# Fix:
+#Fix:
 ------
 - Extended the ``__read_csv()`` method to take kezword arguments ``**kwargs`` as input
 - Replaced lambda function ``readf()`` calling the ``pandas.read_csv()`` with a method of same name, that takes input arguments
