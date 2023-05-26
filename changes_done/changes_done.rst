@@ -9,9 +9,9 @@ Problem:
 ----------
 To my understanding, all sensor files of the "header & files" format should contain four columns: date/time, data, new flag, old flag.
 For some RISMA sensor files the last column, old flag, contained strings such as:
-    - "Frozen soil,OK,OK,OK,OK,OK" (see :example:`RISMA_RISMA_MB11_sm_1.000000_1.000000_Hydraprobe-II-Sdi-12-A_19500101_20230521.stm`)
-    - "DLT >= 1.5,OK,OK,OK,OK,OK" (see :example:`RISMA_RISMA_MB11_sm_0.000000_0.050000_Hydraprobe-II-Sdi-12-C_19500101_20230521.stm`)
-    - "Out of WFV average range,NA,NA,OK,OK,OK" (see :example:`RISMA_RISMA_CEF_sm_0.000000_0.050000_Hydraprobe-II-Sdi-12-B_19500101_20230521.stm`) 
+    - "Frozen soil,OK,OK,OK,OK,OK" (see :example: `RISMA_RISMA_MB11_sm_1.000000_1.000000_Hydraprobe-II-Sdi-12-A_19500101_20230521.stm`)
+    - "DLT >= 1.5,OK,OK,OK,OK,OK" (see :example: `RISMA_RISMA_MB11_sm_0.000000_0.050000_Hydraprobe-II-Sdi-12-C_19500101_20230521.stm`)
+    - "Out of WFV average range,NA,NA,OK,OK,OK" (see :example: `RISMA_RISMA_CEF_sm_0.000000_0.050000_Hydraprobe-II-Sdi-12-B_19500101_20230521.stm`) 
 
 The method ``__read_csv()`` of the ``DataFile`` class could not parse these sensor files and threw following error: **pandas.errors.ParserError: Error tokenizing data. C error: Expected 5 fields in line 23, saw 9**.
 This phenomenon only occured with some RISMA sensor files, other networks were fine.
