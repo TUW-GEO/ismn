@@ -82,21 +82,21 @@ class CustomStationMetadataCsv(CustomMetaReader):
 
     def __init__(self, station_meta_csv, fill_values=None, **kwargs):
         """
-        Parameters
-        ----------
-        station_meta_csv: str
-            Path to the csv file with the above described content
-       fill_values: dict, optional (default: None)
-            Values to use for a certain custom metadata variable, if no
-            match is found.
-        kwargs:
-            Additional kwargs as passed to :func:`pandas.read_csv`
-            To use a different separator than the default semicolon, use `sep`
+         Parameters
+         ----------
+         station_meta_csv: str
+             Path to the csv file with the above described content
+        fill_values: dict, optional (default: None)
+             Values to use for a certain custom metadata variable, if no
+             match is found.
+         kwargs:
+             Additional kwargs as passed to :func:`pandas.read_csv`
+             To use a different separator than the default semicolon, use `sep`
         """
-        if 'sep' in kwargs:
-            sep = kwargs.pop('sep')
+        if "sep" in kwargs:
+            sep = kwargs.pop("sep")
         else:
-            sep = ';'
+            sep = ";"
 
         self.fill_values = dict() if fill_values is None else fill_values
         self.df = pd.read_csv(station_meta_csv, sep=sep, **kwargs)
@@ -108,9 +108,8 @@ class CustomStationMetadataCsv(CustomMetaReader):
         """
         vars = []
         for var in varnames:
-            if var in self.fill_values.keys() and \
-                not (var.endswith('_depth_from') or
-                     var.endswith('_depth_to')):
+            if var in self.fill_values.keys() and not (
+                    var.endswith("_depth_from") or var.endswith("_depth_to")):
                 vars.append(MetaVar(var, self.fill_values[var]))
         return vars
 
@@ -122,15 +121,15 @@ class CustomStationMetadataCsv(CustomMetaReader):
         vars = []
 
         for k, v in row.items():
-            if k.endswith('_depth_from') or k.endswith('_depth_to'):
+            if k.endswith("_depth_from") or k.endswith("_depth_to"):
                 continue
 
-            if f'{k}_depth_from' in row:
-                depth_from = row[f'{k}_depth_from']
+            if f"{k}_depth_from" in row:
+                depth_from = row[f"{k}_depth_from"]
             else:
                 depth_from = None
-            if f'{k}_depth_to' in row:
-                depth_to = row[f'{k}_depth_to']
+            if f"{k}_depth_to" in row:
+                depth_to = row[f"{k}_depth_to"]
             else:
                 depth_to = None
 
@@ -166,20 +165,20 @@ class CustomStationMetadataCsv(CustomMetaReader):
 
         """
 
-        cond = (self.df['network'] == meta['network'].val) & \
-               (self.df['station'] == meta['station'].val)
+        cond = (self.df["network"] == meta["network"].val) & (
+            self.df["station"] == meta["station"].val)
 
-        df = self.df[cond].set_index(['network', 'station'])
+        df = self.df[cond].set_index(["network", "station"])
 
         # drop potential duplicates, keep first
-        df = df[~df.index.duplicated(keep='first')]
+        df = df[~df.index.duplicated(keep="first")]
 
         vars = []
 
         if df.empty and (self.fill_values is not None):
             vars += self._empty_var(df.columns.values)
         else:
-            for row in df.to_dict('records'):
+            for row in df.to_dict("records"):
                 vars += self._row2var(row)
 
         return MetaData(vars)
@@ -215,25 +214,27 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
         meta: Metadata
             Additional depth-dependent metadata at the location
         """
-        cond = (self.df['network'] == meta['network'].val) & \
-               (self.df['station'] == meta['station'].val) & \
-               (self.df['instrument'] == meta['instrument'].val) & \
-               (self.df['variable'] == meta['variable'].val) & \
-               (self.df['depth_from'] == meta['instrument'].depth[0]) & \
-               (self.df['depth_to'] == meta['instrument'].depth[1])
+        cond = ((self.df["network"] == meta["network"].val)
+                & (self.df["station"] == meta["station"].val)
+                & (self.df["instrument"] == meta["instrument"].val)
+                & (self.df["variable"] == meta["variable"].val)
+                & (self.df["depth_from"] == meta["instrument"].depth[0])
+                & (self.df["depth_to"] == meta["instrument"].depth[1]))
 
-        df = self.df[cond].set_index(
-            ['network', 'station', 'instrument', 'variable', 'depth_from', 'depth_to'])
+        df = self.df[cond].set_index([
+            "network", "station", "instrument", "variable", "depth_from",
+            "depth_to"
+        ])
 
         # drop potential duplicates, keep first
-        df = df[~df.index.duplicated(keep='first')]
+        df = df[~df.index.duplicated(keep="first")]
 
         vars = []
 
         if df.empty and (self.fill_values is not None):
             vars += self._empty_var(df.columns.values)
         else:
-            for row in df.to_dict('records'):
+            for row in df.to_dict("records"):
                 vars += self._row2var(row)
 
         return MetaData(vars)

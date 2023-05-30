@@ -127,10 +127,8 @@ class IsmnRoot:
             subpath = PurePosixPath(subpath)
         else:
             if not (self.path / Path(subpath)).exists():
-                raise ValueError(
-                    f"Subpath {subpath} does not exist"
-                    f" in archive {self.path}"
-                )
+                raise ValueError(f"Subpath {subpath} does not exist"
+                                 f" in archive {self.path}")
 
         return subpath
 

@@ -131,7 +131,6 @@ class ISMN_Interface:
             temp_root=gettempdir(),
             custom_meta_reader=None,
     ):
-
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
         self.parallel = parallel
 
@@ -174,7 +173,8 @@ class ISMN_Interface:
                 parallel=self.parallel,
                 log_path=meta_path,
                 temp_root=temp_root,
-                custom_meta_readers=self.custom_meta_reader)
+                custom_meta_readers=self.custom_meta_reader,
+            )
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
         self.__file_collection = IsmnFileCollection.from_metadata_csv(
@@ -193,7 +193,6 @@ class ISMN_Interface:
         networks = OrderedDict([])
 
         for f in self.__file_collection.iter_filehandlers():  # network_names):
-
             nw_name, st_name, instrument = (
                 f.metadata["network"].val,
                 f.metadata["station"].val,
@@ -272,7 +271,8 @@ class ISMN_Interface:
         subset.__file_collection = IsmnFileCollection.from_metadata_df(
             self.root,
             metadata_df=self.metadata.loc[ids, :].copy(),
-            temp_root=self.temp_root)
+            temp_root=self.temp_root,
+        )
         subset.metadata = subset.__file_collection.metadata_df.copy()
         subset.metadata.index = range(len(subset.metadata.index))
         subset.collection = NetworkCollection(subset._collect())
@@ -552,7 +552,7 @@ class ISMN_Interface:
                 filehandler = self.__file_collection.get_filehandler(i)
                 d = filehandler.read_data()
                 d.columns = pd.MultiIndex.from_product(
-                    [[i], list(d.columns)], names=['idx', 'variable'])
+                    [[i], list(d.columns)], names=["idx", "variable"])
                 data.append(d)
                 if return_meta:
                     m = filehandler.metadata.to_pd()
@@ -769,7 +769,7 @@ class ISMN_Interface:
                 1.05,
                 feedback,
                 transform=ax.transAxes,
-                fontsize=5 * text_scalefactor,  #"xx-small",
+                fontsize=5 * text_scalefactor,  # "xx-small",
                 horizontalalignment="center",
             )
         else:
@@ -782,7 +782,7 @@ class ISMN_Interface:
             fig.savefig(
                 filename,
                 bbox_extra_artists=(lgd, text) if stats_text else (lgd),
-                bbox_inches='tight',
+                bbox_inches="tight",
                 dpi=dpi,
             )
         else:
@@ -841,7 +841,6 @@ class ISMN_Interface:
                 depth=Depth(min_depth, max_depth),
                 filter_meta_dict=filter_meta_dict,
         ):
-
             time_from = pd.Timestamp(sens.metadata["timerange_from"].val)
             time_to = pd.Timestamp(sens.metadata["timerange_to"].val)
 

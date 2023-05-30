@@ -54,3 +54,6 @@ MANIFEST
 networks/*
 .artifacts/*
 .coverage*
+
+# VSC config file
+.vscode/*

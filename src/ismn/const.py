@@ -108,16 +108,15 @@ CSV_COLS = [
     "quantity_source_name",
 ]
 
-lc_num_vars = ['lc_2000', 'lc_2005', 'lc_2010']
-lc_str_vars = ['lc_insitu']
+lc_num_vars = ["lc_2000", "lc_2005", "lc_2010"]
+lc_str_vars = ["lc_insitu"]
 LC_VARS = [*lc_num_vars, *lc_str_vars]
-CLIM_VARS = ['climate_KG', 'climate_insitu']
+CLIM_VARS = ["climate_KG", "climate_insitu"]
 
-CSV_META_TEMPLATE_SURF_VAR = OrderedDict(
-    [(c, np.nan) for c in lc_num_vars] +
-    [(c, 'unknown') for c in lc_str_vars] +
-    [(c, 'unknown') for c in CLIM_VARS]
-)
+CSV_META_TEMPLATE_SURF_VAR = OrderedDict([(c, np.nan) for c in lc_num_vars] +
+                                         [(c, "unknown")
+                                          for c in lc_str_vars] +
+                                         [(c, "unknown") for c in CLIM_VARS])
 CSV_META_TEMPLATE_GROUND_VAR = OrderedDict([
     ("saturation", np.nan),
     ("clay_fraction", np.nan),

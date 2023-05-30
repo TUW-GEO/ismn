@@ -5,7 +5,7 @@ Changelog
 Unreleased changes in master branch
 ===================================
 
--
+- Fixed bug with parsing sensor files for RISMA network in "header & files" format
 
 Version 1.3.3
 =============

@@ -22,6 +22,9 @@
 
 import os
 import pandas as pd
+import warnings
+
+warnings.simplefilter(action="ignore", category=UserWarning)
 from ismn.base import IsmnRoot
 from ismn.components import *
 from ismn import const
@@ -30,7 +33,7 @@ from ismn.meta import MetaVar, MetaData
 
 from tempfile import gettempdir, TemporaryDirectory
 from pathlib import Path
-
+from typing import Tuple
 
 class IsmnFile(object):
     """
@@ -203,7 +206,6 @@ class StaticMetaFile(IsmnFile):
         field_vars = []
 
         if fieldname in data.index:
-
             froms = np.atleast_1d(data.loc[fieldname]["depth_from[m]"])
             tos = np.atleast_1d(data.loc[fieldname]["depth_to[m]"])
             vals = np.atleast_1d(data.loc[fieldname]["value"])
@@ -274,8 +276,8 @@ class StaticMetaFile(IsmnFile):
         for key in lc_dict.keys():
             if key in lc["quantity_source_name"].values:
                 if key != "insitu":
-                    lc_dict[key] = np.int32(lc.loc[lc["quantity_source_name"] ==
-                                                 key]["value"].values[0])
+                    lc_dict[key] = np.int32(lc.loc[lc["quantity_source_name"]
+                                                   == key]["value"].values[0])
                 else:
                     lc_dict[key] = lc.loc[lc["quantity_source_name"] ==
                                           key]["value"].values[0]
@@ -377,7 +379,7 @@ class DataFile(IsmnFile):
             self.metadata = self.read_metadata(best_meta_for_sensor=True)
 
     @staticmethod
-    def __read_lines(filename: Path) -> (list, list, list):
+    def __read_lines(filename: Path) -> Tuple[list, list, list]:
         """
         Read fist and last line from file as list, skips empty lines.
         """
@@ -595,9 +597,16 @@ class DataFile(IsmnFile):
             varname + "_orig_flag",
         ]
 
-        return self.__read_csv(names, skiprows=1)
+        return self.__read_csv(
+            names=names,
+            usecols=[0, 1, 2, 3, 4],
+            skiprows=1,
+            sep=" ",
+            low_memory=False,
+            delim_whitespace=False,
+        )
 
-    def __read_csv(self, names=None, usecols=None, skiprows=0):
+    def __read_csv(self, names=None, usecols=None, skiprows=0, **kwargs):
         """
         Read data from csv.
 
@@ -615,24 +624,46 @@ class DataFile(IsmnFile):
         data : pd.DataFrame
             Time series.
         """
-        readf = lambda f: pd.read_csv(
+
+        def readf(
             f,
-            skiprows=skiprows,
-            usecols=usecols,
             names=names,
-            delim_whitespace=True,
+            usecols=usecols,
+            skiprows=skiprows,
             parse_dates=[[0, 1]],
             engine="c",
-        )
-        if self.root.zip:
+            delim_whitespace=None,
+            sep=None,
+            low_memory=None,
+        ):
+            try:
+                return pd.read_csv(
+                    filepath_or_buffer=f,
+                    skiprows=skiprows,
+                    usecols=usecols,
+                    names=names,
+                    parse_dates=parse_dates,
+                    engine=engine,
+                )
+            except pd.errors.ParserError as text_exception:
+                return pd.read_csv(
+                    filepath_or_buffer=f,
+                    skiprows=skiprows,
+                    usecols=usecols,
+                    names=names,
+                    delim_whitespace=True,
+                    parse_dates=parse_dates,
+                    engine="c",
+                )
 
+        if self.root.zip:
             with TemporaryDirectory(
                     prefix="ismn", dir=self.temp_root) as tempdir:
                 filename = self.root.extract_file(self.file_path, tempdir)
-                data = readf(filename)
+                data = readf(filename, **kwargs)
 
         else:
-            data = readf(self.root.path / self.file_path)
+            data = readf(self.root.path / self.file_path, **kwargs)
 
         data.set_index("date_time", inplace=True)
 

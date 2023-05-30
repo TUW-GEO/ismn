@@ -31,6 +31,7 @@ from typing import Union
 from multiprocessing import Pool, cpu_count
 from operator import itemgetter
 import time
+from typing import Tuple
 
 from ismn.base import IsmnRoot
 from ismn.const import *
@@ -43,7 +44,7 @@ def _read_station_dir(
     stat_dir: Union[Path, str],
     temp_root: Path,
     custom_meta_reader: list,
-) -> (dict, list):
+) -> Tuple[dict, list]:
     """
     Parallelizable function to read metadata for files in station dir
     """
@@ -125,8 +126,7 @@ def _load_metadata_df(meta_csv_file: Union[str, Path]) -> pd.DataFrame:
         index_col=0,
         header=[0, 1],
         low_memory=False,
-        engine="c",
-    )
+        engine="c")
 
     # parse date cols as datetime
     for col in ["timerange_from", "timerange_to"]:
@@ -333,7 +333,7 @@ class IsmnFileCollection(object):
         columns = np.array(list(metadata_df.columns))
 
         for i, row in enumerate(metadata_df.values):
-            #this_nw = row.loc['network', 'val']
+            # this_nw = row.loc['network', 'val']
             vars = np.unique(columns[:-2][:, 0])
             vals = row[:-2].reshape(-1, 3)
 
@@ -394,7 +394,7 @@ class IsmnFileCollection(object):
         metadata_df = _load_metadata_df(meta_csv_file)
 
         if network is not None:
-            metadata_df = metadata_df[np.isin(metadata_df['network'].values,
+            metadata_df = metadata_df[np.isin(metadata_df["network"].values,
                                               network)]
 
         metadata_df.index = range(len(metadata_df.index))

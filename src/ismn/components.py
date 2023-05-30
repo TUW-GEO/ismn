@@ -686,8 +686,9 @@ class NetworkCollection(IsmnComponent):
             for net in self.networks.values()
         ])
 
-    def __getitem__(self, item: Union[int, str, list]) -> \
-            Union["NetworkCollection", Network]:
+    def __getitem__(
+            self, item: Union[int, str,
+                              list]) -> Union["NetworkCollection", Network]:
         # shortcut to access networks directly
         if isinstance(item, (int, str)):
             if isinstance(item, int):
