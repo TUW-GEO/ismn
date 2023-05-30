@@ -122,14 +122,14 @@ class ISMN_Interface:
     """
 
     def __init__(
-        self,
-        data_path,
-        meta_path=None,
-        network=None,
-        parallel=False,
-        keep_loaded_data=False,
-        temp_root=gettempdir(),
-        custom_meta_reader=None,
+            self,
+            data_path,
+            meta_path=None,
+            network=None,
+            parallel=False,
+            keep_loaded_data=False,
+            temp_root=gettempdir(),
+            custom_meta_reader=None,
     ):
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
         self.parallel = parallel
@@ -144,14 +144,15 @@ class ISMN_Interface:
         self.temp_root = temp_root
 
         self.activate_network(
-            network=network, meta_path=self.meta_path, temp_root=self.temp_root
-        )
+            network=network,
+            meta_path=self.meta_path,
+            temp_root=self.temp_root)
 
     def activate_network(
-        self,
-        network=None,
-        meta_path: str = None,
-        temp_root: str = gettempdir(),
+            self,
+            network=None,
+            meta_path: str = None,
+            temp_root: str = gettempdir(),
     ):
         """
         Load (file) collection for specific file ids.
@@ -177,8 +178,7 @@ class ISMN_Interface:
             self.__file_collection.to_metadata_csv(meta_csv_file)
 
         self.__file_collection = IsmnFileCollection.from_metadata_csv(
-            self.root, meta_csv_file, network=network
-        )
+            self.root, meta_csv_file, network=network)
 
         networks = self._collect()
         self.collection = NetworkCollection(networks)
@@ -300,7 +300,9 @@ class ISMN_Interface:
             return np.array(stations)
 
     @deprecated
-    def list_sensors(self, network: str = None, station: str = None) -> np.ndarray:
+    def list_sensors(self,
+                     network: str = None,
+                     station: str = None) -> np.ndarray:
         # List sensors names for a specific sensor in an active network
         sensors = np.array([])
         for net in self.networks.values():
@@ -396,7 +398,8 @@ class ISMN_Interface:
         ISMN_station : Station
         """
         for network in self.networks.values():
-            for station in network.iter_stations(variable=variable, **filter_kwargs):
+            for station in network.iter_stations(
+                    variable=variable, **filter_kwargs):
                 yield station
 
     def get_dataset_ids(
@@ -439,7 +442,8 @@ class ISMN_Interface:
 
         depth = Depth(min_depth, max_depth)
 
-        for id, filehandler in enumerate(self.__file_collection.iter_filehandlers()):
+        for id, filehandler in enumerate(
+                self.__file_collection.iter_filehandlers()):
             eval = filehandler.check_metadata(
                 variable=variable,
                 allowed_depth=depth,
@@ -491,7 +495,8 @@ class ISMN_Interface:
             elif format.lower() == "obj":
                 return filehandler.metadata
             else:
-                raise NotImplementedError(f"{format} is not a supported format.")
+                raise NotImplementedError(
+                    f"{format} is not a supported format.")
         else:
             if format.lower() != "pandas":
                 warnings.warn(
@@ -504,7 +509,8 @@ class ISMN_Interface:
                 if len(idx) == 1:
                     return filehandler.metadata.to_pd()
                 else:
-                    df = filehandler.metadata.to_pd(transpose=True, dropna=False)
+                    df = filehandler.metadata.to_pd(
+                        transpose=True, dropna=False)
                     df.index = [i]
                     dfs.append(df)
 
@@ -546,8 +552,7 @@ class ISMN_Interface:
                 filehandler = self.__file_collection.get_filehandler(i)
                 d = filehandler.read_data()
                 d.columns = pd.MultiIndex.from_product(
-                    [[i], list(d.columns)], names=["idx", "variable"]
-                )
+                    [[i], list(d.columns)], names=["idx", "variable"])
                 data.append(d)
                 if return_meta:
                     m = filehandler.metadata.to_pd()
@@ -566,7 +571,11 @@ class ISMN_Interface:
         # alias of :func:`ismn.interface.ISMN_Interface.read_ts`
         return self.read_ts(*args, **kwargs)
 
-    def find_nearest_station(self, lon, lat, return_distance=False, max_dist=np.inf):
+    def find_nearest_station(self,
+                             lon,
+                             lat,
+                             return_distance=False,
+                             max_dist=np.inf):
         """
         Finds the nearest station to passed coordinates available in downloaded
         data.
@@ -592,7 +601,8 @@ class ISMN_Interface:
             a great circle. Should be OK for small distances
         """
         # what happens if there is no point within max dist if that works?
-        gpi, d = self.collection.grid.find_nearest_gpi(lon, lat, max_dist=max_dist)
+        gpi, d = self.collection.grid.find_nearest_gpi(
+            lon, lat, max_dist=max_dist)
 
         if (len(np.atleast_1d(gpi)) == 0) or (d == np.inf):
             stat = None
@@ -662,14 +672,12 @@ class ISMN_Interface:
 
         if filename and ax:
             raise ValueError(
-                "Either pass a filename OR pass ax to use for plot, not both."
-            )
+                "Either pass a filename OR pass ax to use for plot, not both.")
 
         if not plotlibs:
             warnings.warn(
                 "Could not import all plotting libs, plotting functions not available."
-                "Please install cartopy and matplotlib."
-            )
+                "Please install cartopy and matplotlib.")
             return
 
         data_crs = ccrs.PlateCarree()
@@ -734,7 +742,8 @@ class ISMN_Interface:
             ncols = 1
 
         handles, labels = ax.get_legend_handles_labels()
-        lgd = ax.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.1))
+        lgd = ax.legend(
+            handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.1))
 
         ax.legend(
             rect,
@@ -745,18 +754,14 @@ class ISMN_Interface:
             fontsize=4 * text_scalefactor,
         )
 
-        postfix_depth = (
-            "when only considering depth_from of the sensor"
-            if check_only_sensor_depth_from
-            else ""
-        )
+        postfix_depth = ("when only considering depth_from of the sensor"
+                         if check_only_sensor_depth_from else "")
         depth_text = f"between {min_depth} and {max_depth} m \n {postfix_depth}"
         feedback = (
             f"{n_sens} valid sensors in {len(act_stations)} stations "
             f"in {len(act_networks)} networks (of {len(all_networks)} potential networks) \n"
             f"for {f'variable {variable}' if variable is not None else 'all variables'} "
-            f"{depth_text}"
-        )
+            f"{depth_text}")
 
         if stats_text:
             text = ax.text(
@@ -832,9 +837,9 @@ class ISMN_Interface:
         t_max = None
 
         for net, stat, sens in self.collection.iter_sensors(
-            variable=variable,
-            depth=Depth(min_depth, max_depth),
-            filter_meta_dict=filter_meta_dict,
+                variable=variable,
+                depth=Depth(min_depth, max_depth),
+                filter_meta_dict=filter_meta_dict,
         ):
             time_from = pd.Timestamp(sens.metadata["timerange_from"].val)
             time_to = pd.Timestamp(sens.metadata["timerange_to"].val)
@@ -894,15 +899,17 @@ class ISMN_Interface:
         if static_var_name not in CSV_META_TEMPLATE_SURF_VAR.keys():
             raise ValueError(
                 f"{static_var_name} is not in the list of supported variables."
-                f"Choose one of {list(CSV_META_TEMPLATE_SURF_VAR.keys())}"
-            )
+                f"Choose one of {list(CSV_META_TEMPLATE_SURF_VAR.keys())}")
 
         vals = []
         for net in self.networks.values():
             for sta in net.stations.values():
                 for sen in sta.sensors.values():
-                    if sen.eval(variable=variable, depth=Depth(min_depth, max_depth)):
-                        vals.append(sen.filehandler.metadata[static_var_name].val)
+                    if sen.eval(
+                            variable=variable,
+                            depth=Depth(min_depth, max_depth)):
+                        vals.append(
+                            sen.filehandler.metadata[static_var_name].val)
 
         val_dict = {}
         for val in np.unique(np.array(vals)):
@@ -925,7 +932,8 @@ class ISMN_Interface:
         """
         See :func:`ismn.interface.ISMN_Interface.get_static_var_vals`
         """
-        return self.get_static_var_vals(variable, min_depth, max_depth, landcover)
+        return self.get_static_var_vals(variable, min_depth, max_depth,
+                                        landcover)
 
     def get_climate_types(
         self,
@@ -937,7 +945,8 @@ class ISMN_Interface:
         """
         See :func:`ismn.interface.ISMN_Interface.get_static_var_vals`
         """
-        return self.get_static_var_vals(variable, min_depth, max_depth, climate)
+        return self.get_static_var_vals(variable, min_depth, max_depth,
+                                        climate)
 
     def get_variables(self) -> np.ndarray:
         """

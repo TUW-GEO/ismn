@@ -33,6 +33,7 @@ from typing import Union, List
 
 
 def zip(func):
+
     def wrapper(cls, *args, **kwargs):
         if not cls.zip:
             raise IOError("Zip archive expected, use @dir functions instead.")
@@ -42,9 +43,11 @@ def zip(func):
 
 
 def dir(func):
+
     def wrapper(cls, *args, **kwargs):
         if cls.zip:
-            raise IOError("Unzipped archive expected, use @zip functions instead.")
+            raise IOError(
+                "Unzipped archive expected, use @zip functions instead.")
         return func(cls, *args, **kwargs)
 
     return wrapper
@@ -124,9 +127,8 @@ class IsmnRoot:
             subpath = PurePosixPath(subpath)
         else:
             if not (self.path / Path(subpath)).exists():
-                raise ValueError(
-                    f"Subpath {subpath} does not exist" f" in archive {self.path}"
-                )
+                raise ValueError(f"Subpath {subpath} does not exist"
+                                 f" in archive {self.path}")
 
         return subpath
 
@@ -186,7 +188,8 @@ class IsmnRoot:
                         if net not in cont.keys():
                             cont[net] = np.array([])
                         if station_subdirs:
-                            cont[net] = np.append(cont[net], Path(net, stat.name))
+                            cont[net] = np.append(cont[net],
+                                                  Path(net, stat.name))
                         else:
                             cont[net] = np.append(cont[net], stat.name)
 
@@ -195,7 +198,9 @@ class IsmnRoot:
         return self.cont
 
     @dir
-    def __find_files_dir(self, subpath: str = None, fn_templ: str = "*.csv") -> list:
+    def __find_files_dir(self,
+                         subpath: str = None,
+                         fn_templ: str = "*.csv") -> list:
         """
         Find files in the archive or a subdirectory of the archive
         that match to the passed filename template.
@@ -210,7 +215,9 @@ class IsmnRoot:
         return filenames
 
     @zip
-    def __find_files_zip(self, subpath: str = None, fn_templ: str = "*.csv") -> list:
+    def __find_files_zip(self,
+                         subpath: str = None,
+                         fn_templ: str = "*.csv") -> list:
         """
         Find files in zip archive that match the passed template and subdir.
         """
@@ -225,8 +232,7 @@ class IsmnRoot:
             filter(
                 lambda f: fnmatch.fnmatch(f, f"{subpath}/{fn_templ}"),
                 all_files,
-            )
-        ).copy()
+            )).copy()
 
         return filterlist
 
@@ -331,8 +337,7 @@ class IsmnRoot:
         ls = np.array(self.zip.namelist())
 
         filterlist = list(
-            filter(lambda x: x.startswith(str(subdir_in_archive)), ls)
-        ).copy()
+            filter(lambda x: x.startswith(str(subdir_in_archive)), ls)).copy()
 
         self.zip.extractall(members=filterlist, path=out_path)
 

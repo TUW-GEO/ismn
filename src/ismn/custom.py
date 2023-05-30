@@ -109,8 +109,7 @@ class CustomStationMetadataCsv(CustomMetaReader):
         vars = []
         for var in varnames:
             if var in self.fill_values.keys() and not (
-                var.endswith("_depth_from") or var.endswith("_depth_to")
-            ):
+                    var.endswith("_depth_from") or var.endswith("_depth_to")):
                 vars.append(MetaVar(var, self.fill_values[var]))
         return vars
 
@@ -167,8 +166,7 @@ class CustomStationMetadataCsv(CustomMetaReader):
         """
 
         cond = (self.df["network"] == meta["network"].val) & (
-            self.df["station"] == meta["station"].val
-        )
+            self.df["station"] == meta["station"].val)
 
         df = self.df[cond].set_index(["network", "station"])
 
@@ -216,18 +214,17 @@ class CustomSensorMetadataCsv(CustomStationMetadataCsv):
         meta: Metadata
             Additional depth-dependent metadata at the location
         """
-        cond = (
-            (self.df["network"] == meta["network"].val)
-            & (self.df["station"] == meta["station"].val)
-            & (self.df["instrument"] == meta["instrument"].val)
-            & (self.df["variable"] == meta["variable"].val)
-            & (self.df["depth_from"] == meta["instrument"].depth[0])
-            & (self.df["depth_to"] == meta["instrument"].depth[1])
-        )
+        cond = ((self.df["network"] == meta["network"].val)
+                & (self.df["station"] == meta["station"].val)
+                & (self.df["instrument"] == meta["instrument"].val)
+                & (self.df["variable"] == meta["variable"].val)
+                & (self.df["depth_from"] == meta["instrument"].depth[0])
+                & (self.df["depth_to"] == meta["instrument"].depth[1]))
 
-        df = self.df[cond].set_index(
-            ["network", "station", "instrument", "variable", "depth_from", "depth_to"]
-        )
+        df = self.df[cond].set_index([
+            "network", "station", "instrument", "variable", "depth_from",
+            "depth_to"
+        ])
 
         # drop potential duplicates, keep first
         df = df[~df.index.duplicated(keep="first")]
