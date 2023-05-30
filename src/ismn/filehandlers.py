@@ -33,7 +33,7 @@ from ismn.meta import MetaVar, MetaData
 
 from tempfile import gettempdir, TemporaryDirectory
 from pathlib import Path
-
+from typing import Tuple
 
 class IsmnFile(object):
     """
@@ -379,7 +379,7 @@ class DataFile(IsmnFile):
             self.metadata = self.read_metadata(best_meta_for_sensor=True)
 
     @staticmethod
-    def __read_lines(filename: Path) -> tuple[list, list, list]:
+    def __read_lines(filename: Path) -> Tuple[list, list, list]:
         """
         Read fist and last line from file as list, skips empty lines.
         """
