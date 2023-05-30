@@ -31,6 +31,7 @@ from typing import Union
 from multiprocessing import Pool, cpu_count
 from operator import itemgetter
 import time
+from typing import Tuple
 
 from ismn.base import IsmnRoot
 from ismn.const import *
@@ -43,7 +44,7 @@ def _read_station_dir(
     stat_dir: Union[Path, str],
     temp_root: Path,
     custom_meta_reader: list,
-) -> tuple[dict, list]:
+) -> Tuple[dict, list]:
     """
     Parallelizable function to read metadata for files in station dir
     """
