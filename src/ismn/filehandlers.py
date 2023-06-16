@@ -601,9 +601,9 @@ class DataFile(IsmnFile):
             names=names,
             usecols=[0, 1, 2, 3, 4],
             skiprows=1,
-            sep=" ",
+            #sep=" ",
             low_memory=False,
-            delim_whitespace=False,
+            delim_whitespace=True,
         )
 
     def __read_csv(self, names=None, usecols=None, skiprows=0, **kwargs):
@@ -632,9 +632,7 @@ class DataFile(IsmnFile):
             skiprows=skiprows,
             parse_dates=[[0, 1]],
             engine="c",
-            delim_whitespace=None,
-            sep=None,
-            low_memory=None,
+            **kwargs
         ):
             try:
                 return pd.read_csv(
@@ -644,8 +642,9 @@ class DataFile(IsmnFile):
                     names=names,
                     parse_dates=parse_dates,
                     engine=engine,
+                    **kwargs
                 )
-            except pd.errors.ParserError as text_exception:
+            except pd.errors.ParserError:
                 return pd.read_csv(
                     filepath_or_buffer=f,
                     skiprows=skiprows,
@@ -654,6 +653,7 @@ class DataFile(IsmnFile):
                     delim_whitespace=True,
                     parse_dates=parse_dates,
                     engine="c",
+                    **kwargs
                 )
 
         if self.root.zip:
