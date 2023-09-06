@@ -31,6 +31,8 @@ from collections import OrderedDict
 from ismn.meta import MetaData, Depth
 from ismn.const import deprecated, CITATIONS
 
+import json
+
 logger = logging.getLogger(__name__)
 
 ch = logging.StreamHandler()
@@ -820,3 +822,67 @@ class NetworkCollection(IsmnComponent):
                     out_file.write("\n")
 
         return refs
+
+    def export_geojson(self, path, extra_props=None, **filter_kwargs):
+        """
+        Filter sensors in collection and create geojson file containing all
+        features.
+
+        Parameters
+        ----------
+        path: str
+            Path to geojson file
+        extra_props: list[str]
+            List of extra properties to include in geojson file
+            By default only depth_from and depth_to are included
+            e.g. ['timerange_from', 'timerange_to', 'variable', 'frm_class']
+        filter_kwargs:
+            Keyword arguments to filter sensors in collection
+        """
+        extra_props = extra_props or []
+        geoinfo = {
+            "type": "FeatureCollection",
+            "features": [],
+        }
+
+        for nw in self.iter_networks():
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "MultiPoint",
+                    "coordinates": [],
+                    "properties": {
+                        "datasetName": nw.name,
+                        "datasetVersion": 1,
+                        "datasetProperties": [],
+                    }
+                }
+            }
+            for station, sensor in nw.iter_sensors(**filter_kwargs):
+                feature["geometry"]["coordinates"].append([
+                    station.lon,
+                    station.lat
+                ])
+
+                feature["geometry"]["properties"]["datasetProperties"] += [
+                    {
+                        "propertyName": "depth_from",
+                        "propertyValue": sensor.depth[0]
+                    },
+                    {
+                        "propertyName": "depth_to",
+                        "propertyValue": sensor.depth[1]
+                    },
+                ]
+                for prop in extra_props:
+                    feature["geometry"]["properties"]["datasetProperties"] += [
+                        {
+                            "propertyName": prop,
+                            "propertyValue": str(sensor.metadata[prop].val),
+                        }
+                    ]
+
+            geoinfo["features"].append(feature)
+
+        with open(path, 'w') as f:
+            json.dump(geoinfo, f, ensure_ascii=False)
