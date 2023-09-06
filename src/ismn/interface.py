@@ -620,9 +620,13 @@ class ISMN_Interface:
         variable=None,
         min_depth=-np.inf,
         max_depth=np.inf,
+        extent=None,
         stats_text=True,
         check_only_sensor_depth_from=False,
-        markersize=1,
+        markersize=12.5,
+        markeroutline=True,
+        borders=True,
+        legend=True,
         text_scalefactor=1,
         dpi=300,
         filename=None,
@@ -642,13 +646,23 @@ class ISMN_Interface:
         max_depth : float, optional (default: -np.inf)
             See description of min_depth. This is the bottom threshold for the
             allowed depth.
+        extent: list, optional (default: None)
+            [lon min, lon max, lat min, lat max]
+            Extent of the map that is plotted. If None is passed, a global map
+            is plotted.
         stats_text : bool, optianal (default: False)
             Include text of net/stat/sens counts in plot.
         check_only_sensor_depth_from : bool, optional (default: False)
             Ignores the sensors depth_to value and only checks if depth_from of
             the sensor is in the passed depth_range (e.g. for cosmic ray probes).
-        markersize : int, optional (default: 1)
+        markersize : int or float, optional (default: 12.5)
             Size of the marker, might depend on the amount of stations you plot.
+        markeroutline: bool, optional (default: True)
+            If True, a black outline is drawn around the markers.
+        borders: bool, optional (default: True)
+            If True, country borders are drawn.
+        legend: bool, optional (default: True)
+            If True, a legend is drawn.
         text_scalefactor : float, optional (default: 1)
             Scale factor that is applied to header and legend.
         dpi: float, optional (default: 300)
@@ -689,12 +703,14 @@ class ISMN_Interface:
         else:
             fig = None
 
-        ax.coastlines(linewidth=0.5)
+        ax.coastlines()
         # show global map
         ax.set_global()
-        ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor="gray")
-        if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
+        if borders:
+            ax.add_feature(cfeature.BORDERS, edgecolor="gray")
             ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor="gray")
+
+        if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
             colormap = plt.get_cmap("tab20")
         else:
             colormap = plt.get_cmap("Set1")
@@ -722,15 +738,21 @@ class ISMN_Interface:
 
             if stat.name not in act_stations:
                 act_stations.append(stat.name)
-                ax.plot(
+                ax.scatter(
                     stat.lon,
                     stat.lat,
                     color=netcolor,
-                    markersize=markersize,
+                    s=markersize,
+                    linewidth=0.5,
                     marker="s",
                     transform=data_crs,
+                    edgecolors="black" if markeroutline else None,
+                    zorder=2,
                 )
             n_sens += 1
+
+        if extent is not None:
+            ax.set_extent(extent, crs=data_crs)
 
         nrows = 8.0 if len(act_networks) > 8 else len(act_networks)
 
@@ -741,18 +763,19 @@ class ISMN_Interface:
         if ncols == 0:
             ncols = 1
 
-        handles, labels = ax.get_legend_handles_labels()
-        lgd = ax.legend(
-            handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.1))
+        if legend:
+            handles, labels = ax.get_legend_handles_labels()
+            lgd = ax.legend(
+                handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.1))
 
-        ax.legend(
-            rect,
-            act_networks,
-            loc="upper center",
-            ncol=ncols,
-            bbox_to_anchor=(0.5, -0.05),
-            fontsize=4 * text_scalefactor,
-        )
+            ax.legend(
+                rect,
+                act_networks,
+                loc="upper center",
+                ncol=ncols,
+                bbox_to_anchor=(0.5, -0.05),
+                fontsize=4 * text_scalefactor,
+            )
 
         postfix_depth = ("when only considering depth_from of the sensor"
                          if check_only_sensor_depth_from else "")
