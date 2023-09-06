@@ -31,6 +31,8 @@ import pytest
 
 from ismn.components import NetworkCollection, Network, Station, Sensor, Depth
 from pygeogrids.grids import BasicGrid
+from tempfile import TemporaryDirectory
+import json
 
 rpath = os.path.join(os.path.dirname(__file__), "test_data")
 
@@ -73,6 +75,16 @@ class NetCollTest(unittest.TestCase):
     def test_references(self):
         refs = self.netcol.export_citations(out_file=None)
         assert len(refs.keys()) == 2
+
+    def test_json_dump(self):
+        with TemporaryDirectory() as temp:
+            self.netcol.export_geojson(os.path.join(temp, "meta.json"))
+            with open(os.path.join(temp, "meta.json")) as f:
+                meta_dict = json.load(f)
+                for feature in meta_dict['features']:
+                    net = feature['geometry']['properties']['datasetName']
+                    assert self.netcol[net][0][0].depth[0] == 0.5
+                    assert self.netcol[net][0][0].depth[1] == 1.0
 
 class NetworkTest(unittest.TestCase):
     def setUp(self):
@@ -274,6 +286,3 @@ class SensorTest(unittest.TestCase):
         assert data.index.size == 7059
         assert data.columns.size == 3
 
-
-if __name__ == "__main__":
-    unittest.main()
