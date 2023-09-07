@@ -160,7 +160,3 @@ class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
         cleanup(metadata_path)
 
         cls.coll = IsmnFileCollection.build_from_scratch(testdata_zip_path)
-
-
-if __name__ == "__main__":
-    unittest.main()
