@@ -4,7 +4,8 @@
    :glob:
 
    README <readme>
-   Examples <examples/index>
+   Tutorial 1: Reading ISMN Data <examples/interface>
+   Tutorial 2: Add and use custom metadata <examples/custom_meta>
    License <license>
    Authors <authors>
    Changelog <changelog>
