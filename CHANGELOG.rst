@@ -5,7 +5,9 @@ Changelog
 Unreleased changes in master branch
 ===================================
 
--
+- Added method to NetworkCollection to export metadata as (geo)json.
+- Added more options when plotting the station overview map.
+- Network citation list updated.
 
 Version 1.3.4
 =============
