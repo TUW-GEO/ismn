@@ -8,6 +8,7 @@ Unreleased changes in master branch
 - Added method to NetworkCollection to export metadata as (geo)json.
 - Added more options when plotting the station overview map.
 - Network citation list updated.
+- Faster ISMN_Interface generation for large datasets by skipping some checks
 
 Version 1.3.4
 =============
