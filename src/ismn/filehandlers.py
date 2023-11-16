@@ -23,17 +23,18 @@
 import os
 import pandas as pd
 import warnings
+import numpy as np
+from tempfile import gettempdir, TemporaryDirectory
+from pathlib import Path
+from typing import Tuple, Union
+import logging
 
 warnings.simplefilter(action="ignore", category=UserWarning)
 from ismn.base import IsmnRoot
-from ismn.components import *
 from ismn import const
 from ismn.const import IsmnFileError
-from ismn.meta import MetaVar, MetaData
+from ismn.meta import MetaVar, MetaData, Depth
 
-from tempfile import gettempdir, TemporaryDirectory
-from pathlib import Path
-from typing import Tuple
 
 class IsmnFile(object):
     """
@@ -50,9 +51,14 @@ class IsmnFile(object):
         Temporary directory
     metadata : MetaData
         File MetaData collection
+    verify_filepath : bool
+        Switch to activate file path verification
+    verify_temp_root : bool
+        Switch to activate temp root verification
     """
 
-    def __init__(self, root, file_path, temp_root=gettempdir()):
+    def __init__(self, root, file_path, temp_root=gettempdir(),
+                 verify_filepath=True, verify_temp_root=True):
         """
         Parameters
         ----------
@@ -63,18 +69,27 @@ class IsmnFile(object):
         temp_root : Path or str, optional (default : gettempdir())
             Root directory where a separate subdir for temporary files
             will be created (and deleted).
+        verify_filepath: bool, optional (default: True)
+            Check if subpath is a valid path and adapt to archive format and os
+        verify_temp_root: bool, optional (default: True)
+            Check if temp_root is a valid path and create if if necessary
         """
         if not isinstance(root, IsmnRoot):
             root = IsmnRoot(root)
 
         self.root = root
-        self.file_path = self.root.clean_subpath(file_path)
 
-        if self.file_path not in self.root:
-            raise IOError(f"Archive does not contain file: {self.file_path}")
+        if verify_filepath:
+            self.file_path = self.root.clean_subpath(file_path)
+            if self.file_path not in self.root:
+                raise IOError(
+                    f"Archive does not contain file: {self.file_path}")
+        else:
+            self.file_path = file_path
 
-        if not os.path.exists(temp_root):
-            os.makedirs(temp_root, exist_ok=True)
+        if verify_temp_root:
+            if not os.path.exists(temp_root):
+                os.makedirs(temp_root, exist_ok=True)
 
         self.temp_root = temp_root
 
@@ -353,7 +368,9 @@ class DataFile(IsmnFile):
                  root,
                  file_path,
                  load_metadata=True,
-                 temp_root=gettempdir()):
+                 temp_root=gettempdir(),
+                 *args,
+                 **kwargs):
         """
         Parameters
         ----------
@@ -366,9 +383,14 @@ class DataFile(IsmnFile):
         temp_root : Path or str, optional (default : gettempdir())
             Root directory where a separate subdir for temporary files
             will be created (and deleted).
+        verify_filepath: bool, optional (default: True)
+            Check if subpath is a valid path and adapt to archive format and os
+        verify_temp_root: bool, optional (default: True)
+            Check if temp_root is a valid path and create if if necessary
         """
 
-        super(DataFile, self).__init__(root, file_path, temp_root)
+        super(DataFile, self).__init__(root, file_path, temp_root,
+                                       *args, **kwargs)
 
         self.file_type = "undefined"
         self.posix_path = file_path

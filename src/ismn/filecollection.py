@@ -22,9 +22,9 @@
 
 import logging
 
+import os
 from tempfile import gettempdir
 from pathlib import Path, PurePosixPath
-
 import numpy as np
 from tqdm import tqdm
 from typing import Union
@@ -32,9 +32,11 @@ from multiprocessing import Pool, cpu_count
 from operator import itemgetter
 import time
 from typing import Tuple
+import pandas as pd
+from collections import OrderedDict
 
 from ismn.base import IsmnRoot
-from ismn.const import *
+import ismn.const as const
 from ismn.filehandlers import DataFile, StaticMetaFile
 from ismn.meta import MetaData, MetaVar, Depth
 
@@ -60,8 +62,9 @@ def _read_station_dir(
 
     try:
         if len(csv) == 0:
-            raise IsmnFileError("Expected 1 csv file for station, found 0. "
-                                "Use empty static metadata.")
+            raise const.IsmnFileError(
+                "Expected 1 csv file for station, found 0. "
+                "Use empty static metadata.")
         else:
             if len(csv) > 1:
                 infos.append(
@@ -70,10 +73,10 @@ def _read_station_dir(
             static_meta_file = StaticMetaFile(
                 root, csv[0], load_metadata=True, temp_root=temp_root)
             station_meta = static_meta_file.metadata
-    except IsmnFileError as e:
+    except const.IsmnFileError as e:
         infos.append(f"Error loading static meta for station: {e}")
         station_meta = MetaData(
-            [MetaVar(k, v) for k, v in CSV_META_TEMPLATE.items()])
+            [MetaVar(k, v) for k, v in const.CSV_META_TEMPLATE.items()])
 
     data_files = root.find_files(stat_dir, "*.stm")
 
@@ -345,9 +348,11 @@ class IsmnFileCollection(object):
 
             f = DataFile(
                 root=root,
-                file_path=str(PurePosixPath(row[-2])),
+                file_path=Path(str(PurePosixPath(row[-2]))),
                 load_metadata=False,
                 temp_root=temp_root,
+                verify_filepath=False,
+                verify_temp_root=False,
             )
 
             f.metadata = metadata

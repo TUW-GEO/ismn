@@ -823,7 +823,8 @@ class NetworkCollection(IsmnComponent):
 
         return refs
 
-    def export_geojson(self, path, extra_props=None, **filter_kwargs):
+    def export_geojson(self, path, network=True, station=True, sensor=False,
+                       depth=True, extra_props=None, **filter_kwargs):
         """
         Filter sensors in collection and create geojson file containing all
         features.
@@ -832,12 +833,22 @@ class NetworkCollection(IsmnComponent):
         ----------
         path: str
             Path to geojson file
-        extra_props: list[str]
-            List of extra properties to include in geojson file
+        network: bool, optional (default: True)
+            If True, network names are included in geojson file
+        station: bool, optional (default: True)
+            If True, station names are included in geojson file
+        sensor: bool, optional (default: False)
+            If True, sensor names are included in geojson file
+        depth: bool, optional (default: True)
+            If True, depth_from and depth_to are included in geojson file
+        extra_props: list[str], optional (default: None)
+            List of extra properties from sensor metadata to include in
+            geojson file
             By default only depth_from and depth_to are included
             e.g. ['timerange_from', 'timerange_to', 'variable', 'frm_class']
         filter_kwargs:
             Keyword arguments to filter sensors in collection
+            see :func:`ismn.components.Sensor.eval`
         """
         extra_props = extra_props or []
         geoinfo = {
@@ -845,42 +856,61 @@ class NetworkCollection(IsmnComponent):
             "features": [],
         }
 
-        for nw in self.iter_networks():
+        for nw, stat, sens in self.iter_sensors(**filter_kwargs):
             feature = {
                 "type": "Feature",
                 "geometry": {
-                    "type": "MultiPoint",
-                    "coordinates": [],
-                    "properties": {
-                        "datasetName": nw.name,
-                        "datasetVersion": 1,
-                        "datasetProperties": [],
-                    }
+                    "type": "Point",
+                    "coordinates": [
+                        stat.lon,
+                        stat.lat
+                    ],
+                },
+                "properties": {
+                    "markerColor": "#00aa00",
+                    "datasetProperties": []
                 }
             }
-            for station, sensor in nw.iter_sensors(**filter_kwargs):
-                feature["geometry"]["coordinates"].append([
-                    station.lon,
-                    station.lat
-                ])
-
-                feature["geometry"]["properties"]["datasetProperties"] += [
+            if network:
+                feature["properties"]["datasetProperties"] += [
+                    {
+                        "propertyName": "network",
+                        "propertyValue": nw.name
+                    }
+                ]
+            if station:
+                feature["properties"]["datasetProperties"] += [
+                    {
+                        "propertyName": "station",
+                        "propertyValue": stat.name
+                    }
+                ]
+            if sensor:
+                feature["properties"]["datasetProperties"] += [
+                    {
+                        "propertyName": "sensor",
+                        "propertyValue": sens.name
+                    }
+                ]
+            if depth:
+                feature["properties"]["datasetProperties"] += [
                     {
                         "propertyName": "depth_from",
-                        "propertyValue": sensor.depth[0]
+                        "propertyValue": str(sens.depth[0])
                     },
                     {
                         "propertyName": "depth_to",
-                        "propertyValue": sensor.depth[1]
-                    },
+                        "propertyValue": str(sens.depth[1])
+                    }
                 ]
-                for prop in extra_props:
-                    feature["geometry"]["properties"]["datasetProperties"] += [
-                        {
-                            "propertyName": prop,
-                            "propertyValue": str(sensor.metadata[prop].val),
-                        }
-                    ]
+
+            for prop in extra_props:
+                feature["properties"]["datasetProperties"] += [
+                    {
+                        "propertyName": prop,
+                        "propertyValue": str(sens.metadata[prop].val),
+                    }
+                ]
 
             geoinfo["features"].append(feature)
 

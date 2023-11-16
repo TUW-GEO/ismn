@@ -78,13 +78,19 @@ class NetCollTest(unittest.TestCase):
 
     def test_json_dump(self):
         with TemporaryDirectory() as temp:
-            self.netcol.export_geojson(os.path.join(temp, "meta.json"))
+            self.netcol.export_geojson(os.path.join(temp, "meta.json"),
+                                       sensor=True)
+
             with open(os.path.join(temp, "meta.json")) as f:
                 meta_dict = json.load(f)
                 for feature in meta_dict['features']:
-                    net = feature['geometry']['properties']['datasetName']
-                    assert self.netcol[net][0][0].depth[0] == 0.5
-                    assert self.netcol[net][0][0].depth[1] == 1.0
+                    net_name = feature['properties']['datasetProperties'][0]['propertyValue']
+                    station_name = feature['properties']['datasetProperties'][1]['propertyValue']
+                    sensor_name = feature['properties']['datasetProperties'][2]['propertyValue']
+                    depth_from = feature['properties']['datasetProperties'][3]['propertyValue']
+                    depth_to = feature['properties']['datasetProperties'][4]['propertyValue']
+                    assert str(self.netcol[net_name][station_name][sensor_name].depth[0]) == depth_from
+                    assert str(self.netcol[net_name][station_name][sensor_name].depth[1]) == depth_to
 
 class NetworkTest(unittest.TestCase):
     def setUp(self):

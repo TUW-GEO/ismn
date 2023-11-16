@@ -17,10 +17,9 @@ testdata_root = os.path.join(os.path.dirname(__file__), "test_data")
 
 def test_metadata_dataframe():
     # make sure that metadata.index represents same values as get_dataset_ids
-    testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
-    metadata_path = os.path.join(testdata, "python_metadata")
-    cleanup(metadata_path)
-    ds_one = ISMN_Interface(testdata, meta_path=metadata_path, network='FR_Aqui')
+    with TemporaryDirectory() as metadata_path:
+        testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
+        ds_one = ISMN_Interface(testdata, meta_path=metadata_path, network='FR_Aqui')
 
     assert np.all(ds_one.metadata.index.values == ds_one.get_dataset_ids(None, -np.inf, np.inf))
     ids = ds_one.get_dataset_ids('soil_moisture')
@@ -333,6 +332,3 @@ class Test_ISMN_Interface_HeaderValuesZipped(Test_ISMN_Interface_CeopUnzipped):
 
         self.ds = ISMN_Interface(self.testdata_zip_path)
 
-
-if __name__ == "__main__":
-    unittest.main()
