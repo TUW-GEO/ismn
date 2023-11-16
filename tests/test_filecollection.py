@@ -107,9 +107,9 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
         for thisfile, otherfile in zip(
             self.coll.iter_filehandlers(), other.iter_filehandlers()
         ):
-            assert str(thisfile.file_path) == str(otherfile.file_path)
+            assert Path(thisfile.file_path) == Path(otherfile.file_path)
             "Paths dont match"
-            assert str(thisfile.root.path) == str(otherfile.root.path)
+            assert Path(thisfile.root.path) == Path(otherfile.root.path)
             "Paths dont match"
             assert thisfile.metadata == otherfile.metadata
             "Meta dont match"
