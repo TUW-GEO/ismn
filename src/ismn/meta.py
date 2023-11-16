@@ -23,7 +23,8 @@
 
 from typing import Optional, List, Any, Union
 import pandas as pd
-from ismn.const import *
+import numpy as np
+import ismn.const as const
 
 
 class Depth:
@@ -63,11 +64,12 @@ class Depth:
 
         if self.across0:
             if self.start > 0:
-                raise DepthError("Start must be negative for Depths across 0")
+                raise const.DepthError(
+                    "Start must be negative for Depths across 0")
         else:
             if abs(start) > abs(end):
-                raise DepthError("Depth end can not be further from 0"
-                                 " than depth start")
+                raise const.DepthError(
+                    "Depth end can not be further from 0 than depth start")
 
     @property
     def is_profile(self) -> bool:
@@ -288,7 +290,7 @@ class MetaVar:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}([{self.name}, {self.val}, "
-            f"{None.__repr__() if not self.depth else self.depth.__repr__()}])"
+            f"{str(None) if not self.depth else self.depth.__repr__()}])"
         )
 
     def __getitem__(self, item: int):
@@ -565,7 +567,7 @@ class MetaData:
             self.metadata.remove(Var)
             self.metadata.append(MetaVar(name, val, depth))
         else:
-            raise MetadataError(
+            raise const.MetadataError(
                 "There is no MetaVar with name '{}'".format(name))
 
     def best_meta_for_depth(self, depth):

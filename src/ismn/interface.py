@@ -21,18 +21,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import numpy as np
 from pathlib import Path
 from tempfile import gettempdir
 import platform
 import sys
 import pandas as pd
-
-from ismn.filecollection import IsmnFileCollection
+from collections import OrderedDict
 from collections.abc import Iterable
-from ismn.components import *
-from ismn.const import *
-from ismn.base import IsmnRoot
+from typing import Union
+import warnings
 
+from ismn.components import NetworkCollection, Network
+from ismn.filecollection import IsmnFileCollection
+from ismn.meta import Depth
+from ismn.base import IsmnRoot
+from ismn.const import (
+    ISMNError,
+    KOEPPENGEIGER,
+    LANDCOVER,
+    deprecated,
+    CSV_META_TEMPLATE_SURF_VAR
+)
 try:
     import cartopy.crs as ccrs
     import cartopy.feature as cfeature

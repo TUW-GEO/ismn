@@ -107,9 +107,12 @@ class Test_FileCollectionCeopSepUnzipped(unittest.TestCase):
         for thisfile, otherfile in zip(
             self.coll.iter_filehandlers(), other.iter_filehandlers()
         ):
-            assert thisfile.file_path == otherfile.file_path, "Paths dont match"
-            assert thisfile.root.path == otherfile.root.path, "Paths dont match"
-            assert thisfile.metadata == otherfile.metadata, "Meta dont match"
+            assert Path(thisfile.file_path) == Path(otherfile.file_path)
+            "Paths dont match"
+            assert Path(thisfile.root.path) == Path(otherfile.root.path)
+            "Paths dont match"
+            assert thisfile.metadata == otherfile.metadata
+            "Meta dont match"
 
 
 class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped):
@@ -160,3 +163,4 @@ class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
         cleanup(metadata_path)
 
         cls.coll = IsmnFileCollection.build_from_scratch(testdata_zip_path)
+
