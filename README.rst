@@ -2,8 +2,7 @@
 ismn
 ====
 
-
-.. image:: https://github.com/TUW-GEO/ismn/workflows/Automated%20Tests/badge.svg?branch=master
+.. image:: https://github.com/TUW-GEO/ismn/actions/workflows/build.yml/badge.svg?branch=master
    :target: https://github.com/TUW-GEO/ismn/actions
 
 .. image:: https://coveralls.io/repos/TUW-GEO/ismn/badge.png?branch=master
