@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os.path
 
 from pygeogrids import BasicGrid
 from typing import Union
@@ -823,7 +824,8 @@ class NetworkCollection(IsmnComponent):
 
         return refs
 
-    def export_geojson(self, path, network=True, station=True, sensor=False,
+    def export_geojson(self, path, markercolor="#00aa00",
+                       network=True, station=True, sensor=False,
                        depth=True, extra_props=None, **filter_kwargs):
         """
         Filter sensors in collection and create geojson file containing all
@@ -867,7 +869,7 @@ class NetworkCollection(IsmnComponent):
                     ],
                 },
                 "properties": {
-                    "markerColor": "#00aa00",
+                    "markerColor": markercolor,
                     "datasetProperties": []
                 }
             }
