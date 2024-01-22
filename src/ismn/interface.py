@@ -95,6 +95,9 @@ class ISMN_Interface:
         Additional readers to collect station/sensor metadata
         from external sources e.g. csv files.
         See :class:`ismn.custom.CustomMetaReader`.
+    force_metadata_collection: bool, optional (default: False)
+        If true, will run metadata collection and replace any existing metadata
+        that would otherwise be re-used.
 
     Raises
     ------
@@ -141,6 +144,7 @@ class ISMN_Interface:
             keep_loaded_data=False,
             temp_root=gettempdir(),
             custom_meta_reader=None,
+            force_metadata_collection=False,
     ):
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
         self.parallel = parallel
@@ -150,6 +154,7 @@ class ISMN_Interface:
         self.keep_loaded_data = keep_loaded_data
 
         self.custom_meta_reader = custom_meta_reader
+        self.force_metadata_collection = force_metadata_collection
 
         self.meta_path = meta_path
         self.temp_root = temp_root
@@ -178,7 +183,7 @@ class ISMN_Interface:
 
         meta_csv_file = meta_path / meta_csv_filename
 
-        if not os.path.isfile(meta_csv_file):
+        if not os.path.isfile(meta_csv_file) or self.force_metadata_collection:
             self.__file_collection = IsmnFileCollection.build_from_scratch(
                 self.root,
                 parallel=self.parallel,
@@ -1015,3 +1020,24 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
+
+if __name__ == '__main__':
+    ds = ISMN_Interface("/home/wpreimes/shares/climers/Projects/FRM4SM/07_data/ismn_data/ISMN_v202301/extracted/")
+
+    df = ds.metadata.loc[:, [('latitude', 'val'),
+                             ('longitude', 'val'),
+                             ('instrument', 'depth_from'),
+                             ('instrument', 'depth_to'),
+                             ('frm_class', 'val'),
+                             ('network', 'val'),
+                             ('station', 'val'),
+                             ('timerange_from', 'val'),
+                             ('timerange_to', 'val'),
+                            ('instrument', 'val')]]
+    df.columns = df.columns.droplevel(1)
+    df.columns = ['latitude[degN]', 'longitude[degW]', 'depth_from[cm]', 'depth_to[cm]', 'frm_class',
+                  'network', 'station', 'timerange_from', 'timerange_to', 'instrument']
+    df = df[['network', 'station', 'instrument', 'latitude[degN]', 'longitude[degW]',
+             'depth_from[cm]', 'depth_to[cm]', 'timerange_from', 'timerange_to', 'frm_class']]
+    df.index.name = 'index'
+    df.to_csv("/tmp/ismn_v202312_station_list.csv")
