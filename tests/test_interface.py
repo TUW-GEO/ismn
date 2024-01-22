@@ -19,7 +19,8 @@ def test_metadata_dataframe():
     # make sure that metadata.index represents same values as get_dataset_ids
     with TemporaryDirectory() as metadata_path:
         testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
-        ds_one = ISMN_Interface(testdata, meta_path=metadata_path, network='FR_Aqui')
+        ds_one = ISMN_Interface(testdata, meta_path=metadata_path, network='FR_Aqui',
+                                force_metadata_collection=True)
 
     assert np.all(ds_one.metadata.index.values == ds_one.get_dataset_ids(None, -np.inf, np.inf))
     ids = ds_one.get_dataset_ids('soil_moisture')
@@ -37,7 +38,8 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         metadata_path = os.path.join(testdata, "python_metadata")
 
         cleanup(metadata_path)
-        ds = ISMN_Interface(testdata, network=[], parallel=True)
+        ds = ISMN_Interface(testdata, network=[], parallel=True,
+                            force_metadata_collection=False)
         assert ds.networks == OrderedDict()
         cls.testdata = testdata
 
@@ -56,8 +58,9 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
             assert len(self.ds.list_sensors(station="Barrow-ARM")) == 1
 
     def test_network_for_station(self):
-        assert self.ds.network_for_station("Barrow-ARM") == "COSMOS"
-        assert self.ds.network_for_station("ARM-1") == "COSMOS"
+        with pytest.warns(DeprecationWarning):
+            assert self.ds.network_for_station("Barrow-ARM") == "COSMOS"
+            assert self.ds.network_for_station("ARM-1") == "COSMOS"
 
     def test_stations_that_measure(self):
         for s in self.ds.stations_that_measure("soil_moisture"):
@@ -231,9 +234,11 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
                 assert net.stations[station.name].lon == should_lon
                 assert net.stations[station.name].lat == should_lat
 
-        station, dist = self.ds.find_nearest_station(
-            0, 0, return_distance=True, max_dist=100
-        )
+        with pytest.warns(UserWarning):
+            # expect a warning as no points are within the dist
+            station, dist = self.ds.find_nearest_station(
+                0, 0, return_distance=True, max_dist=100
+            )
         assert station == dist == None
 
     def test_citation(self):

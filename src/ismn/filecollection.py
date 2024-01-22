@@ -243,10 +243,16 @@ class IsmnFileCollection(object):
 
         logging.info(f"Collecting metadata with {n_proc} processes.")
 
+        if not parallel:
+            hint = 'Hint: Use `parallel=True` to speed up metadata ' \
+                   'generation for large datasets'
+        else:
+            hint = ''
+
         print(
-            f"Processing metadata for all ismn stations into folder {root.path}.\n"
-            f"This may take a few minutes, but is only done once..."
-            f"\n{'Hint: Use `parallel=True` to speed up metadata generation for large datasets' if not parallel else ''}"
+            f"Processing metadata for all ismn stations into folder "
+            f"{root.path}.\n"
+            f"This may take a few minutes, but is only done once...\n{hint}"
         )
 
         process_stat_dirs = []
