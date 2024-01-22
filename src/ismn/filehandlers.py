@@ -623,9 +623,8 @@ class DataFile(IsmnFile):
             names=names,
             usecols=[0, 1, 2, 3, 4],
             skiprows=1,
-            #sep=" ",
+            sep=r'\s+',
             low_memory=False,
-            delim_whitespace=True,
         )
 
     def __read_csv(self, names=None, usecols=None, skiprows=0, **kwargs):
@@ -672,7 +671,7 @@ class DataFile(IsmnFile):
                     skiprows=skiprows,
                     usecols=usecols,
                     names=names,
-                    delim_whitespace=True,
+                    sep=r'\s+',
                     parse_dates=parse_dates,
                     engine="c",
                     **kwargs

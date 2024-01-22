@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import pytest
 import logging
 from collections import OrderedDict
@@ -19,7 +20,8 @@ def test_metadata_dataframe():
     # make sure that metadata.index represents same values as get_dataset_ids
     with TemporaryDirectory() as metadata_path:
         testdata = os.path.join(testdata_root, "Data_seperate_files_20170810_20180809")
-        ds_one = ISMN_Interface(testdata, meta_path=metadata_path, network='FR_Aqui')
+        ds_one = ISMN_Interface(testdata, meta_path=metadata_path, network='FR_Aqui',
+                                force_metadata_collection=True)
 
     assert np.all(ds_one.metadata.index.values == ds_one.get_dataset_ids(None, -np.inf, np.inf))
     ids = ds_one.get_dataset_ids('soil_moisture')
@@ -37,7 +39,8 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         metadata_path = os.path.join(testdata, "python_metadata")
 
         cleanup(metadata_path)
-        ds = ISMN_Interface(testdata, network=[], parallel=True)
+        ds = ISMN_Interface(testdata, network=[], parallel=True,
+                            force_metadata_collection=False)
         assert ds.networks == OrderedDict()
         cls.testdata = testdata
 
@@ -56,8 +59,9 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
             assert len(self.ds.list_sensors(station="Barrow-ARM")) == 1
 
     def test_network_for_station(self):
-        assert self.ds.network_for_station("Barrow-ARM") == "COSMOS"
-        assert self.ds.network_for_station("ARM-1") == "COSMOS"
+        with pytest.warns(DeprecationWarning):
+            assert self.ds.network_for_station("Barrow-ARM") == "COSMOS"
+            assert self.ds.network_for_station("ARM-1") == "COSMOS"
 
     def test_stations_that_measure(self):
         for s in self.ds.stations_that_measure("soil_moisture"):
@@ -120,9 +124,13 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         data2, meta = self.ds.read_ts(1, return_meta=True)
         assert all(meta == self.ds.read_metadata(1, format="pandas"))
         d2, m2 = self.ds.read([0, 1], return_meta=True)
-        assert np.all(d2[1]['soil_moisture'].dropna() ==
-                      data2['soil_moisture'].dropna())
-        assert np.all(m2[1].dropna() == meta.dropna())
+        pd.testing.assert_series_equal(
+            d2[1]['soil_moisture'].dropna(),
+            data2['soil_moisture'].dropna()
+        )
+        pd.testing.assert_series_equal(
+            m2[1].dropna(), meta.dropna(), check_names=False
+        )
         assert self.ds.read_metadata(1, format="dict") is not None
         assert self.ds.read_metadata([1], format="obj") is not None
 
@@ -231,9 +239,11 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
                 assert net.stations[station.name].lon == should_lon
                 assert net.stations[station.name].lat == should_lat
 
-        station, dist = self.ds.find_nearest_station(
-            0, 0, return_distance=True, max_dist=100
-        )
+        with pytest.warns(UserWarning):
+            # expect a warning as no points are within the dist
+            station, dist = self.ds.find_nearest_station(
+                0, 0, return_distance=True, max_dist=100
+            )
         assert station == dist == None
 
     def test_citation(self):

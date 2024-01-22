@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python>3.7,<3.12
+  # - python>3.7,<3.12
   - numpy
   - pandas
   - matplotlib
@@ -14,6 +14,7 @@ dependencies:
      - pygeogrids>=0.3.2
      - configparser
      - tqdm
+     - click
      - more_itertools
      - sphinx
      - nbsphinx

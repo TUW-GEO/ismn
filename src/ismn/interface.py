@@ -95,6 +95,9 @@ class ISMN_Interface:
         Additional readers to collect station/sensor metadata
         from external sources e.g. csv files.
         See :class:`ismn.custom.CustomMetaReader`.
+    force_metadata_collection: bool, optional (default: False)
+        If true, will run metadata collection and replace any existing metadata
+        that would otherwise be re-used.
 
     Raises
     ------
@@ -141,6 +144,7 @@ class ISMN_Interface:
             keep_loaded_data=False,
             temp_root=gettempdir(),
             custom_meta_reader=None,
+            force_metadata_collection=False,
     ):
         self.climate, self.landcover = KOEPPENGEIGER, LANDCOVER
         self.parallel = parallel
@@ -150,6 +154,7 @@ class ISMN_Interface:
         self.keep_loaded_data = keep_loaded_data
 
         self.custom_meta_reader = custom_meta_reader
+        self.force_metadata_collection = force_metadata_collection
 
         self.meta_path = meta_path
         self.temp_root = temp_root
@@ -178,7 +183,7 @@ class ISMN_Interface:
 
         meta_csv_file = meta_path / meta_csv_filename
 
-        if not os.path.isfile(meta_csv_file):
+        if not os.path.isfile(meta_csv_file) or self.force_metadata_collection:
             self.__file_collection = IsmnFileCollection.build_from_scratch(
                 self.root,
                 parallel=self.parallel,
@@ -570,7 +575,8 @@ class ISMN_Interface:
                     m = pd.DataFrame(data={i: m})
                     metadata.append(m)
 
-            data = pd.concat(data, axis=1)
+            # would it make more sense to concat along time dimension?
+            data = pd.concat(data, axis=1).sort_index()
 
             if return_meta:
                 meta = pd.concat(metadata, axis=1)
