@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import pytest
 import logging
 from collections import OrderedDict
@@ -123,9 +124,13 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         data2, meta = self.ds.read_ts(1, return_meta=True)
         assert all(meta == self.ds.read_metadata(1, format="pandas"))
         d2, m2 = self.ds.read([0, 1], return_meta=True)
-        assert np.all(d2[1]['soil_moisture'].dropna() ==
-                      data2['soil_moisture'].dropna())
-        assert np.all(m2[1].dropna() == meta.dropna())
+        pd.testing.assert_series_equal(
+            d2[1]['soil_moisture'].dropna(),
+            data2['soil_moisture'].dropna()
+        )
+        pd.testing.assert_series_equal(
+            m2[1].dropna(), meta.dropna(), check_names=False
+        )
         assert self.ds.read_metadata(1, format="dict") is not None
         assert self.ds.read_metadata([1], format="obj") is not None
 

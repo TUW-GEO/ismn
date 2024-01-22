@@ -575,7 +575,8 @@ class ISMN_Interface:
                     m = pd.DataFrame(data={i: m})
                     metadata.append(m)
 
-            data = pd.concat(data, axis=1)
+            # would it make more sense to concat along time dimension?
+            data = pd.concat(data, axis=1).sort_index()
 
             if return_meta:
                 meta = pd.concat(metadata, axis=1)
