@@ -1021,24 +1021,3 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-
-if __name__ == '__main__':
-    ds = ISMN_Interface("/home/wpreimes/shares/climers/Projects/FRM4SM/07_data/ismn_data/ISMN_v202301/extracted/")
-
-    df = ds.metadata.loc[:, [('latitude', 'val'),
-                             ('longitude', 'val'),
-                             ('instrument', 'depth_from'),
-                             ('instrument', 'depth_to'),
-                             ('frm_class', 'val'),
-                             ('network', 'val'),
-                             ('station', 'val'),
-                             ('timerange_from', 'val'),
-                             ('timerange_to', 'val'),
-                            ('instrument', 'val')]]
-    df.columns = df.columns.droplevel(1)
-    df.columns = ['latitude[degN]', 'longitude[degW]', 'depth_from[cm]', 'depth_to[cm]', 'frm_class',
-                  'network', 'station', 'timerange_from', 'timerange_to', 'instrument']
-    df = df[['network', 'station', 'instrument', 'latitude[degN]', 'longitude[degW]',
-             'depth_from[cm]', 'depth_to[cm]', 'timerange_from', 'timerange_to', 'frm_class']]
-    df.index.name = 'index'
-    df.to_csv("/tmp/ismn_v202312_station_list.csv")
