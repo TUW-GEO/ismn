@@ -43,7 +43,6 @@ def collect_metadata(data_path, meta_path, parallel):
                    "If the file already exists it will be overwritten. "
                    "If not specified this is a file called "
                    "`ismn_sensors.json` and stored in the DATA_PATH.")
-<<<<<<< HEAD
 @click.option('--field', '-f', multiple=True,
               help="Fields to include. This option can be called multiple times"
                    "with different fields. Allowed are: "
@@ -51,13 +50,6 @@ def collect_metadata(data_path, meta_path, parallel):
                    "Or any sensor properties (also custom ones) that have a "
                    "value.")
 def export_geojson(data_path, file_out, field):
-=======
-@click.option('--markercolor', '-m',
-              type=click.STRING, default='"#00aa00"', show_default=True,
-              help='Hex color (USE QUOTES!, e.g. "#00aa00") to assign to '
-                   'markers in json file. The default color is green.')
-def export_geojson(data_path, file_out, markercolor):
->>>>>>> b84092d811b47c0b9b104d92d8f710e629ef23fb
     """
     Calls
     Command line program to initialise ISMN metadata collection. THIS WILL
@@ -74,10 +66,6 @@ def export_geojson(data_path, file_out, markercolor):
     """
     # The docstring above is slightly different to the normal python one to
     # display it properly on the command line.
-<<<<<<< HEAD
-=======
-    markercolor = str(markercolor.replace('"', '').replace("'", ""))
->>>>>>> b84092d811b47c0b9b104d92d8f710e629ef23fb
     if not os.path.exists(data_path):
         raise ValueError("The passed DATA_PATH does not exist.")
     ds = ISMN_Interface(data_path)
@@ -85,7 +73,6 @@ def export_geojson(data_path, file_out, markercolor):
         file_out = os.path.join(ds.root.root_dir, 'ismn_sensors.json')
     os.makedirs(os.path.dirname(file_out), exist_ok=True)
     print(f"Exporting geojson to: {file_out}")
-<<<<<<< HEAD
 
     kwargs = {}
     field = [f.lower() for f in field]
@@ -98,10 +85,6 @@ def export_geojson(data_path, file_out, markercolor):
 
     kwargs['extra_props'] = field if len(field) > 0 else None
     ds.collection.export_geojson(file_out, **kwargs)
-=======
-    ds.collection.export_geojson(file_out, markercolor=markercolor)
->>>>>>> b84092d811b47c0b9b104d92d8f710e629ef23fb
-
 
 @click.group(short_help="ISMN Command Line Programs.")
 def ismn():

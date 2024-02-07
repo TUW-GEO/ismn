@@ -824,15 +824,9 @@ class NetworkCollection(IsmnComponent):
 
         return refs
 
-<<<<<<< HEAD
     def export_geojson(self, path, network=True, station=True, sensor=False,
                        depth=True, timerange=True, extra_props=None,
                        **filter_kwargs):
-=======
-    def export_geojson(self, path, markercolor="#00aa00",
-                       network=True, station=True, sensor=False,
-                       depth=True, extra_props=None, **filter_kwargs):
->>>>>>> b84092d811b47c0b9b104d92d8f710e629ef23fb
         """
         Filter sensors in collection and create geojson file containing all
         features.
@@ -877,10 +871,6 @@ class NetworkCollection(IsmnComponent):
                     ],
                 },
                 "properties": {
-<<<<<<< HEAD
-=======
-                    "markerColor": markercolor,
->>>>>>> b84092d811b47c0b9b104d92d8f710e629ef23fb
                     "datasetProperties": []
                 }
             }
