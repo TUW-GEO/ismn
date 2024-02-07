@@ -26,9 +26,14 @@ def test_cli_export_geojson():
         result = runner.invoke(export_geojson,
                                [data_path, "--file_out",
                                 os.path.join(tempdir, "test.geojson"),
-                                "-m", "testcolor"])
+                                "-f", "network",
+                                '-f', "timerange",
+                                "-f", "lc_2010"])
         assert result.exit_code == 0
         assert os.path.isfile(os.path.join(tempdir, "test.geojson"))
         with open(os.path.join(tempdir, "test.geojson"), "r") as f:
             content = f.readlines()
-            assert "testcolor" in content[0]
+            assert "network" in content[0]
+            assert "timerange_from" in content[0]
+            assert "timerange_to" in content[0]
+            assert "lc_2010" in content[0]
