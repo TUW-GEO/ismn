@@ -824,9 +824,9 @@ class NetworkCollection(IsmnComponent):
 
         return refs
 
-    def export_geojson(self, path, markercolor="#00aa00",
-                       network=True, station=True, sensor=False,
-                       depth=True, extra_props=None, **filter_kwargs):
+    def export_geojson(self, path, network=True, station=True, sensor=False,
+                       depth=True, timerange=True, extra_props=None,
+                       **filter_kwargs):
         """
         Filter sensors in collection and create geojson file containing all
         features.
@@ -843,11 +843,13 @@ class NetworkCollection(IsmnComponent):
             If True, sensor names are included in geojson file
         depth: bool, optional (default: True)
             If True, depth_from and depth_to are included in geojson file
+        timerange: bool, optional (default: True)
+            If True, timerange_from and timerange_to are included in geojson
         extra_props: list[str], optional (default: None)
             List of extra properties from sensor metadata to include in
             geojson file
             By default only depth_from and depth_to are included
-            e.g. ['timerange_from', 'timerange_to', 'variable', 'frm_class']
+            e.g. ['variable', 'frm_class'] etc.
         filter_kwargs:
             Keyword arguments to filter sensors in collection
             see :func:`ismn.components.Sensor.eval`
@@ -869,7 +871,6 @@ class NetworkCollection(IsmnComponent):
                     ],
                 },
                 "properties": {
-                    "markerColor": markercolor,
                     "datasetProperties": []
                 }
             }
@@ -905,8 +906,21 @@ class NetworkCollection(IsmnComponent):
                         "propertyValue": str(sens.depth[1])
                     }
                 ]
-
+            if timerange:
+                feature["properties"]["datasetProperties"] += [
+                    {
+                        "propertyName": "timerange_from",
+                        "propertyValue": str(sens.metadata["timerange_from"].val)
+                    },
+                    {
+                        "propertyName": "timerange_to",
+                        "propertyValue": str(sens.metadata["timerange_to"].val)
+                    }
+                ]
             for prop in extra_props:
+                if prop not in sens.metadata:
+                    raise KeyError(f"No sensor property '{prop}' found. "
+                                   f"Choose one of {sens.metadata.keys()}.")
                 feature["properties"]["datasetProperties"] += [
                     {
                         "propertyName": prop,

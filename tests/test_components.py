@@ -79,7 +79,7 @@ class NetCollTest(unittest.TestCase):
     def test_json_dump(self):
         with TemporaryDirectory() as temp:
             self.netcol.export_geojson(os.path.join(temp, "meta.json"),
-                                       sensor=True)
+                                       sensor=True, timerange=False)
 
             with open(os.path.join(temp, "meta.json")) as f:
                 meta_dict = json.load(f)
