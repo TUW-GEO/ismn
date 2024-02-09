@@ -826,7 +826,7 @@ class NetworkCollection(IsmnComponent):
 
     def export_geojson(self, path, network=True, station=True, sensor=False,
                        depth=True, timerange=True, extra_props=None,
-                       **filter_kwargs):
+                       filter_kwargs=None):
         """
         Filter sensors in collection and create geojson file containing all
         features.
@@ -850,8 +850,9 @@ class NetworkCollection(IsmnComponent):
             geojson file
             By default only depth_from and depth_to are included
             e.g. ['variable', 'frm_class'] etc.
-        filter_kwargs:
-            Keyword arguments to filter sensors in collection
+        filter_kwargs: dict, optional (default: None)
+            Keyword arguments to filter sensors in collection before extracting
+            metadata.
             see :func:`ismn.components.Sensor.eval`
         """
         extra_props = extra_props or []
@@ -859,6 +860,8 @@ class NetworkCollection(IsmnComponent):
             "type": "FeatureCollection",
             "features": [],
         }
+
+        filter_kwargs = filter_kwargs or dict()
 
         for nw, stat, sens in self.iter_sensors(**filter_kwargs):
             feature = {

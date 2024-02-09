@@ -28,7 +28,9 @@ def test_cli_export_geojson():
                                 os.path.join(tempdir, "test.geojson"),
                                 "-f", "network",
                                 '-f', "timerange",
-                                "-f", "lc_2010"])
+                                "-f", "lc_2010",
+                                "-f", "variable",
+                                "-var", "soil_moisture"])
         assert result.exit_code == 0
         assert os.path.isfile(os.path.join(tempdir, "test.geojson"))
         with open(os.path.join(tempdir, "test.geojson"), "r") as f:
@@ -37,3 +39,5 @@ def test_cli_export_geojson():
             assert "timerange_from" in content[0]
             assert "timerange_to" in content[0]
             assert "lc_2010" in content[0]
+            assert 'soil_moisture' in content[0]
+            assert "precipitation" not in content[0]
