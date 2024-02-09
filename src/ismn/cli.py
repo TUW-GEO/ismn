@@ -37,7 +37,7 @@ def collect_metadata(data_path, meta_path, parallel):
 
 @click.command("export_geojson", short_help="Export ISMN sensors to geojson.")
 @click.argument('data_path', type=click.STRING)
-@click.option('--file_out',
+@click.option('--file_out', '-o',
               type=click.STRING, default=None,
               help="Path to the json file that should be created. "
                    "If the file already exists it will be overwritten. "
@@ -49,7 +49,11 @@ def collect_metadata(data_path, meta_path, parallel):
                    "network, station, sensor, depth, timerange. \n "
                    "Or any sensor properties (also custom ones) that have a "
                    "value.")
-def export_geojson(data_path, file_out, field):
+@click.option('--variable', '-var', multiple=True,
+              help="To include only the metadata for a certain variable (e.g."
+                   "soil_moisture) pass the name here. This option is allowed"
+                   "multiple times.")
+def export_geojson(data_path, file_out, field, variable):
     """
     Calls
     Command line program to initialise ISMN metadata collection. THIS WILL
@@ -73,6 +77,8 @@ def export_geojson(data_path, file_out, field):
         file_out = os.path.join(ds.root.root_dir, 'ismn_sensors.json')
     os.makedirs(os.path.dirname(file_out), exist_ok=True)
     print(f"Exporting geojson to: {file_out}")
+    print(f"Include fields: {field}")
+    print(f"Filter for variables: {variable}")
 
     kwargs = {}
     field = [f.lower() for f in field]
@@ -84,6 +90,10 @@ def export_geojson(data_path, file_out, field):
             kwargs[opt] = False
 
     kwargs['extra_props'] = field if len(field) > 0 else None
+
+    if len(variable) > 0:
+        kwargs['filter_kwargs'] = {'variable': variable}
+
     ds.collection.export_geojson(file_out, **kwargs)
 
 @click.group(short_help="ISMN Command Line Programs.")
