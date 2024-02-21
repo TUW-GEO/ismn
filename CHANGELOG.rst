@@ -5,6 +5,10 @@ Changelog
 Unreleased changes in master branch
 ===================================
 
+
+Version 1.4.0
+=============
+
 - Added `ismn collect_metadata` and `ismn export_geojson` CLI programs.
 - Added method to NetworkCollection to export metadata as (geo)json.
 - Added more options when plotting the station overview map.
