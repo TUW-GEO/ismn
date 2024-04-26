@@ -43,7 +43,6 @@ def zip(func):
 
 
 def dir(func):
-
     def wrapper(cls, *args, **kwargs):
         if cls.zip:
             raise IOError(

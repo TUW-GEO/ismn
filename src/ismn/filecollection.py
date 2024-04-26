@@ -443,7 +443,7 @@ class IsmnFileCollection(object):
 
         dfs = dfs[[c for c in dfs.columns if c[0] not in cols_end] +
                   [c for c in dfs.columns if c[0] in cols_end]]
-        dfs = dfs.fillna(np.nan)
+        dfs = dfs.infer_objects(copy=False).fillna(np.nan)
 
         os.makedirs(Path(os.path.dirname(meta_csv_file)), exist_ok=True)
         dfs.to_csv(meta_csv_file)

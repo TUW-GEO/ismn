@@ -2,16 +2,18 @@
 ismn
 ====
 
-.. image:: https://github.com/TUW-GEO/ismn/actions/workflows/build.yml/badge.svg?branch=master
+|ci| |cov| |pip| |doc|
+
+.. |ci| image:: https://github.com/TUW-GEO/ismn/actions/workflows/build.yml/badge.svg?branch=master
    :target: https://github.com/TUW-GEO/ismn/actions
 
-.. image:: https://coveralls.io/repos/TUW-GEO/ismn/badge.png?branch=master
+.. |cov| image:: https://coveralls.io/repos/TUW-GEO/ismn/badge.png?branch=master
   :target: https://coveralls.io/r/TUW-GEO/ismn?branch=master
 
-.. image:: https://badge.fury.io/py/ismn.svg
+.. |pip| image:: https://badge.fury.io/py/ismn.svg
     :target: http://badge.fury.io/py/ismn
 
-.. image:: https://readthedocs.org/projects/ismn/badge/?version=latest
+.. |doc| image:: https://readthedocs.org/projects/ismn/badge/?version=latest
    :target: http://ismn.readthedocs.org/
 
 Readers for the data from the International Soil Moisture Database (ISMN).
@@ -22,13 +24,19 @@ The full documentation is available at https://ismn.readthedocs.io and includes
 a tutorial on reading ISMN data in python after downloading it from
 https://ismn.earth
 
-The following **tutorials** are also available as ipython notebooks ``docs/examples``:
+The following **tutorials** are also available as ipython notebooks in ``docs/examples``:
 
  #. `ISMN reader basic functionality <https://ismn.readthedocs.io/en/latest/examples/interface.html>`_
  #. `Adding custom metadata readers <https://ismn.readthedocs.io/en/latest/examples/custom_meta.html>`_
 
 Data used in the tutorials is *not* provided in this package. Please create an account at `ismn.earth <https://ismn.earth/en/>`_
 to download the required files.
+
+For a general overview about the ISMN, technical data aspects (properties, coverage, etc.) and correct usage (applications), see
+
+    W. Dorigo et al. **The International Soil Moisture Network: serving Earth system science for over a decade**,
+    Hydrol. Earth Syst. Sci., 25, 5749–5804, https://doi.org/10.5194/hess-25-5749-2021, 2021.
+
 
 Citation
 ========
@@ -62,8 +70,7 @@ They can be installed separately with:
 
 .. code::
 
-    conda install -c conda-forge matplotlib
-    conda install -c conda-forge cartopy
+    conda install -c conda-forge matplotlib cartopy
 
 Example installation script
 ---------------------------
@@ -79,13 +86,11 @@ like system. Miniconda will be installed into ``$HOME/miniconda``.
    git clone git@github.com:TUW-GEO/ismn.git ismn
    cd ismn
    conda env create -f environment.yml
-   source activate ismn
+   conda activate ismn
 
 This script adds ``$HOME/miniconda/bin`` temporarily to the ``PATH`` to do this
 permanently add ``export PATH="$HOME/miniconda/bin:$PATH"`` to your ``.bashrc``
-or ``.zshrc``
-
-The second to last line in the example activates the ``ismn`` environment.
+or ``.zshrc``. The second to last line in the example activates the ``ismn`` environment.
 
 After that you should be able to run:
 
@@ -104,18 +109,77 @@ ISMN data can be downloaded for free after creating an account on the `ISMN Webs
 ISMN data can be downloaded in two different formats:
 
 * Variables stored in separate files (CEOP formatted)
+* Variables stored in separate files (Header+values) (default format)
 
-	this format is supported 100% and should work with all examples
-
-* Variables stored in separate files (Header+values)
-
-	this format is supported 100% and should work with all examples
+Both formats are supported by this package.
 
 If you downloaded ISMN data in one of the supported formats in the past it can
 be that station names are not recognized correctly because they contained the
 '_' character which is supposed to be the separator. If you experience problems
 because of this please download new data from the ISMN since this issue should
 be fixed.
+
+Variables and Units
+-------------------
+The following variables are available in the ISMN. Note that not every station
+measures all of the variables. You can use this package to read only data for
+locations where one or multiple of the variables were measured.
+
+.. list-table:: Temporally dynamic variables and their units in ISMN
+   :widths: 25 15
+   :header-rows: 1
+
+   * - Variable
+     - Units
+   * - Soil Moisture
+     - m\ :sup:`3`\ /m\ :sup:`3`\
+   * - Soil Suction
+     - kPa
+   * - Soil Temperature
+     - °C
+   * - Air Temperature
+     - °C
+   * - Surface Temperature
+     - °C
+   * - Precipitation
+     - mm
+   * - Snow Depth
+     - mm
+   * - Snow Water Equivalent
+     - mm
+
+----
+
+.. list-table:: Temporally static variables and their units in ISMN
+   :widths: 35 35
+   :header-rows: 1
+
+   * - Variable
+     - Units
+   * - Climate classification
+     - None
+   * - Land cover classification
+     - None
+   * - Soil classification
+     - None
+   * - Bulk density
+     - g/cm³
+   * - Sand fraction
+     - % weight
+   * - Silt fraction
+     - % weight
+   * - Clay fraction
+     - % weight
+   * - Organic carbon
+     - % weight
+   * - Saturation
+     - % vol
+   * - Field capacity
+     - % vol
+   * - Potential plant available water
+     - % vol
+   * - Permanent wilting point
+     - % vol
 
 Landcover Classification
 ------------------------
@@ -127,42 +191,84 @@ to the corresponding integer values (e.g. 10) in the list below. To get a list o
 possible values for filtering by in-situ values (keyword parameter: "landcover_insitu"),
 call the get_landcover_types method of your ISMN_Interface object and set landcover='landcover_insitu'.
 
-* 10: Cropland, rainfed
-* 11: Cropland, rainfed / Herbaceous cover
-* 12: Cropland, rainfed / Tree or shrub cover,
-* 20: Cropland, irrigated or post-flooding,
-* 30: Mosaic cropland (>50%) / natural vegetation (tree, shrub, herbaceous,
-* 40: Mosaic natural vegetation (tree, shrub, herbaceous cover) (>50%) / cropland (<50%),
-* 50: Tree cover, broadleaved, evergreen, Closed to open (>15%),
-* 60: Tree cover, broadleaved, deciduous, Closed to open (>15%),
-* 61: Tree cover, broadleaved, deciduous, Closed (>40%),
-* 62: Tree cover, broadleaved, deciduous, Open (15-40%),
-* 70: Tree cover, needleleaved, evergreen, closed to open (>15%),
-* 71: Tree cover, needleleaved, evergreen, closed (>40%),
-* 72: Tree cover, needleleaved, evergreen, open (15-40%),
-* 80: Tree cover, needleleaved, deciduous, closed to open (>15%),
-* 81: Tree cover, needleleaved, deciduous, closed (>40%),
-* 82: Tree cover, needleleaved, deciduous, open (15-40%),
-* 90: Tree cover, mixed leaf type (broadleaved and needleleaved),
-* 100: Mosaic tree and shrub (>50%) / herbaceous cover (<50%),
-* 110: Mosaic herbaceous cover (>50%) / tree and shrub (<50%),
-* 120: Shrubland,
-* 121: Shrubland / Evergreen Shrubland,
-* 122: Shrubland / Deciduous Shrubland,
-* 130: Grassland,
-* 140: Lichens and mosses,
-* 150: Sparse vegetation (tree, shrub, herbaceous cover) (<15%),
-* 152: Sparse vegetation (tree, shrub, herbaceous cover) (<15%) / Sparse shrub (<15%),
-* 153: Sparse vegetation (tree, shrub, herbaceous cover) (<15%) / Sparse herbaceous cover (<15%),
-* 160: Tree cover, flooded, fresh or brakish water,
-* 170: Tree cover, flooded, saline water,
-* 180: Shrub or herbaceous cover, flooded, fresh/saline/brakish water,
-* 190: Urban areas,
-* 200: Bare areas,
-* 201: Consolidated bare areas,
-* 202: Unconsolidated bare areas,
-* 210: Water,
-* 220: Permanent snow and ice,
+.. list-table:: ISMN Landcover classes and meanings
+   :widths: 5 50
+   :header-rows: 1
+
+   * - Value
+     - Meaning
+   * - 10
+     - Cropland, rainfed
+   * - 11
+     - Cropland, rainfed / Herbaceous cover
+   * - 12
+     - Cropland, rainfed / Tree or shrub cover
+   * - 20
+     - Cropland, irrigated or post-flooding
+   * - 30
+     - Mosaic cropland (>50%) / natural vegetation (tree, shrub, herbaceous)
+   * - 40
+     - Mosaic natural vegetation (>50%) / cropland (<50%)
+   * - 50
+     - Tree cover, broadleaved, evergreen, Closed to open (>15%)
+   * - 60
+     - Tree cover, broadleaved, deciduous, Closed to open (>15%)
+   * - 61
+     - Tree cover, broadleaved, deciduous, Closed (>40%)
+   * - 62
+     - Tree cover, broadleaved, deciduous, Open (15-40%)
+   * - 70
+     - Tree cover, needleleaved, evergreen, Closed to open (>15%)
+   * - 71
+     - Tree cover, needleleaved, evergreen, Closed (>40%)
+   * - 72
+     - Tree cover, needleleaved, evergreen, Open (15-40%)
+   * - 80
+     - Tree cover, needleleaved, deciduous, Closed to open (>15%)
+   * - 81
+     - Tree cover, needleleaved, deciduous, Closed (>40%)
+   * - 82
+     - Tree cover, needleleaved, deciduous, Open (15-40%)
+   * - 90
+     - Tree cover, mixed leaf type (broadleaved and needleleaved)
+   * - 100
+     - Mosaic tree and shrub (>50%) / herbaceous cover (<50%)
+   * - 110
+     - Mosaic herbaceous cover (>50%) / tree and shrub (<50%)
+   * - 120
+     - Shrubland
+   * - 121
+     - Shrubland / Evergreen Shrubland
+   * - 122
+     - Shrubland / Deciduous Shrubland
+   * - 130
+     - Grassland
+   * - 140
+     - Lichens and mosses
+   * - 150
+     - Sparse vegetation (tree, shrub, herbaceous cover) (<15%)
+   * - 152
+     - Sparse vegetation (<15%) / Sparse shrub (<15%)
+   * - 153
+     - Sparse vegetation (<15%) / Sparse herbaceous cover (<15%)
+   * - 160
+     - Tree cover, flooded, fresh or brackish water
+   * - 170
+     - Tree cover, flooded, saline water
+   * - 180
+     - Shrub or herbaceous cover, flooded, fresh/saline/brackish water
+   * - 190
+     - Urban areas
+   * - 200
+     - Bare areas
+   * - 201
+     - Consolidated bare areas
+   * - 202
+     - Unconsolidated bare areas
+   * - 210
+     - Water
+   * - 220
+     - Permanent snow and ice
 
 Climate Classification
 ----------------------
@@ -173,40 +279,80 @@ keyword parameter "climate" to the corresponding keys (e.g. 'Af') in the list be
 possible values for filtering by in-situ values (keyword parameter: "climate_insitu"), call the
 get_climate_types method of your ISMN_Interface object and set climate='climate_insitu'.
 
-* Af: Tropical Rainforest
-* Am: Tropical Monsoon
-* As: Tropical Savanna Dry
-* Aw: Tropical Savanna Wet
-* BWk: Arid Desert Cold
-* BWh: Arid Desert Hot
-* BWn: Arid Desert With Frequent Fog
-* BSk: Arid Steppe Cold
-* BSh: Arid Steppe Hot
-* BSn: Arid Steppe With Frequent Fog
-* Csa: Temperate Dry Hot Summer
-* Csb: Temperate Dry Warm Summer
-* Csc: Temperate Dry Cold Summer
-* Cwa: Temperate Dry Winter, Hot Summer
-* Cwb: Temperate Dry Winter, Warm Summer
-* Cwc: Temperate Dry Winter, Cold Summer
-* Cfa: Temperate Without Dry Season, Hot Summer
-* Cfb: Temperate Without Dry Season, Warm Summer
-* Cfc: Temperate Without Dry Season, Cold Summer
-* Dsa: Cold Dry Summer, Hot Summer
-* Dsb: Cold Dry Summer, Warm Summer
-* Dsc: Cold Dry Summer, Cold Summer
-* Dsd: Cold Dry Summer, Very Cold Winter
-* Dwa: Cold Dry Winter, Hot Summer
-* Dwb: Cold Dry Winter, Warm Summer
-* Dwc: Cold Dry Winter, Cold Summer
-* Dwd: Cold Dry Winter, Very Cold Winter
-* Dfa: Cold Dry Without Dry Season, Hot Summer
-* Dfb: Cold Dry Without Dry Season, Warm Summer
-* Dfc: Cold Dry Without Dry Season, Cold Summer
-* Dfd: Cold Dry Without Dry Season, Very Cold Winter
-* ET: Polar Tundra
-* EF: Polar Eternal Winter
-* W: Water
+.. list-table:: Climate Classes and Meanings
+   :widths: 5 50
+   :header-rows: 1
+
+   * - Class
+     - Meaning
+   * - Af
+     - Tropical Rainforest
+   * - Am
+     - Tropical Monsoon
+   * - As
+     - Tropical Savanna Dry
+   * - Aw
+     - Tropical Savanna Wet
+   * - BWk
+     - Arid Desert Cold
+   * - BWh
+     - Arid Desert Hot
+   * - BWn
+     - Arid Desert With Frequent Fog
+   * - BSk
+     - Arid Steppe Cold
+   * - BSh
+     - Arid Steppe Hot
+   * - BSn
+     - Arid Steppe With Frequent Fog
+   * - Csa
+     - Temperate Dry Hot Summer
+   * - Csb
+     - Temperate Dry Warm Summer
+   * - Csc
+     - Temperate Dry Cold Summer
+   * - Cwa
+     - Temperate Dry Winter, Hot Summer
+   * - Cwb
+     - Temperate Dry Winter, Warm Summer
+   * - Cwc
+     - Temperate Dry Winter, Cold Summer
+   * - Cfa
+     - Temperate Without Dry Season, Hot Summer
+   * - Cfb
+     - Temperate Without Dry Season, Warm Summer
+   * - Cfc
+     - Temperate Without Dry Season, Cold Summer
+   * - Dsa
+     - Cold Dry Summer, Hot Summer
+   * - Dsb
+     - Cold Dry Summer, Warm Summer
+   * - Dsc
+     - Cold Dry Summer, Cold Summer
+   * - Dsd
+     - Cold Dry Summer, Very Cold Winter
+   * - Dwa
+     - Cold Dry Winter, Hot Summer
+   * - Dwb
+     - Cold Dry Winter, Warm Summer
+   * - Dwc
+     - Cold Dry Winter, Cold Summer
+   * - Dwd
+     - Cold Dry Winter, Very Cold Winter
+   * - Dfa
+     - Cold Dry Without Dry Season, Hot Summer
+   * - Dfb
+     - Cold Dry Without Dry Season, Warm Summer
+   * - Dfc
+     - Cold Dry Without Dry Season, Cold Summer
+   * - Dfd
+     - Cold Dry Without Dry Season, Very Cold Winter
+   * - ET
+     - Polar Tundra
+   * - EF
+     - Polar Eternal Winter
+   * - W
+     - Water
 
 
 Contribute
