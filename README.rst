@@ -125,7 +125,7 @@ The following variables are available in the ISMN. Note that not every station
 measures all of the variables. You can use this package to read only data for
 locations where one or multiple of the variables were measured.
 
-.. list-table:: Variables and Units
+.. list-table:: Temporally dynamic variables and their units in ISMN
    :widths: 25 15
    :header-rows: 1
 
@@ -147,6 +147,39 @@ locations where one or multiple of the variables were measured.
      - mm
    * - Snow Water Equivalent
      - mm
+
+----
+
+.. list-table:: Temporally static variables and their units in ISMN
+   :widths: 35 35
+   :header-rows: 1
+
+   * - Variable
+     - Units
+   * - Climate classification
+     - None
+   * - Land cover classification
+     - None
+   * - Soil classification
+     - None
+   * - Bulk density
+     - g/cm³
+   * - Sand fraction
+     - % weight
+   * - Silt fraction
+     - % weight
+   * - Clay fraction
+     - % weight
+   * - Organic carbon
+     - % weight
+   * - Saturation
+     - % vol
+   * - Field capacity
+     - % vol
+   * - Potential plant available water
+     - % vol
+   * - Permanent wilting point
+     - % vol
 
 Landcover Classification
 ------------------------
