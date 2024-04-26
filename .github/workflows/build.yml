@@ -60,7 +60,7 @@ jobs:
       - name: Install package and test
         shell: bash -l {0}
         run: |
-          python setup.py develop
+          pip install -e .
           pytest
       - name: Upload Coverage
         shell: bash -l {0}
