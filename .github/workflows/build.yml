@@ -10,20 +10,24 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *' # daily
+  #schedule:
+  #  - cron: '0 0 * * *' # daily
 
 jobs:
   build:
-    name: Build py${{ matrix.python-version }} @ ${{ matrix.os }} 🐍
+    name: py${{ matrix.python-version }} @ ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-        os: ["ubuntu-latest"]
         include:
+          - os: "ubuntu-latest"
+            python-version: '3.8'  # first supported
+          - os: "ubuntu-latest"
+            python-version: '3.12'  # latest supported
           - os: "windows-latest"
-            python-version: '3.11'
+            python-version: '3.12'  # latest supported
+          - os: "macos-latest"
+            python-version: '3.12'  # latest supported
     steps:
       - uses: actions/checkout@v2
         with:
