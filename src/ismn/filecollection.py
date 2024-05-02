@@ -26,14 +26,14 @@ import os
 from tempfile import gettempdir
 from pathlib import Path, PurePosixPath
 import numpy as np
-from tqdm import tqdm
 from typing import Union
-from multiprocessing import Pool, cpu_count
 from operator import itemgetter
 import time
-from typing import Tuple
+from typing import List
 import pandas as pd
 from collections import OrderedDict
+from repurpose.process import parallel_process_async
+import itertools
 
 from ismn.base import IsmnRoot
 import ismn.const as const
@@ -46,11 +46,12 @@ def _read_station_dir(
     stat_dir: Union[Path, str],
     temp_root: Path,
     custom_meta_reader: list,
-) -> Tuple[dict, list]:
+    logger_name=None,
+) -> List:
     """
     Parallelizable function to read metadata for files in station dir
     """
-    infos = []
+    logger = logging.getLogger(logger_name)
 
     if not isinstance(root, IsmnRoot):
         proc_root = True
@@ -67,14 +68,14 @@ def _read_station_dir(
                 "Use empty static metadata.")
         else:
             if len(csv) > 1:
-                infos.append(
+                logger.warning(
                     f"Expected 1 csv file for station, found {len(csv)}. "
                     f"Use first file in dir.")
             static_meta_file = StaticMetaFile(
                 root, csv[0], load_metadata=True, temp_root=temp_root)
             station_meta = static_meta_file.metadata
     except const.IsmnFileError as e:
-        infos.append(f"Error loading static meta for station: {e}")
+        logger.warning(f"Error loading static meta for station: {e}")
         station_meta = MetaData(
             [MetaVar(k, v) for k, v in const.CSV_META_TEMPLATE.items()])
 
@@ -86,7 +87,7 @@ def _read_station_dir(
         try:
             f = DataFile(root, file_path, temp_root=temp_root)
         except Exception as e:
-            infos.append(f"Error loading ismn file: {e}")
+            logger.error(f"Error loading ismn file: {e}")
             continue
 
         f.metadata.merge(station_meta, inplace=True, exclude_empty=False)
@@ -111,12 +112,12 @@ def _read_station_dir(
 
         filelist.append((network, station, f))
 
-        infos.append(f"Processed file {file_path}")
+        logger.info(f"Processed file {file_path}")
 
     if proc_root:
         root.close()
 
-    return filelist, infos
+    return filelist
 
 
 def _load_metadata_df(meta_csv_file: Union[str, Path]) -> pd.DataFrame:
@@ -225,21 +226,9 @@ class IsmnFileCollection(object):
 
         os.makedirs(temp_root, exist_ok=True)
 
-        if log_path is not None:
-            log_file = os.path.join(log_path, f"{root.name}.log")
-        else:
-            log_file = None
+        log_filename = f"{root.name}.log"
 
-        if log_file:
-            os.makedirs(os.path.dirname(log_file), exist_ok=True)
-            logging.basicConfig(
-                filename=log_file,
-                level=logging.INFO,
-                format="%(levelname)s %(asctime)s %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
-
-        n_proc = 1 if not parallel else cpu_count()
+        n_proc = 1 if not parallel else os.cpu_count()
 
         logging.info(f"Collecting metadata with {n_proc} processes.")
 
@@ -259,45 +248,68 @@ class IsmnFileCollection(object):
         for net_dir, stat_dirs in root.cont.items():
             process_stat_dirs += list(stat_dirs)
 
-        args = [(root.path if root.zip else root, d, temp_root,
-                 custom_meta_readers) for d in process_stat_dirs]
+        # args = [( d, temp_root,
+        #          custom_meta_readers) for d in process_stat_dirs]
 
-        pbar = tqdm(total=len(args), desc="Files Processed")
+        STATIC_KWARGS = {
+            'root': root.path if root.zip else root,
+            'temp_root': temp_root,
+            'custom_meta_reader': custom_meta_readers,
+            'logger_name': 'worker'
+        }
 
-        fl_elements = []
+        ITER_KWARGS = {
+            'stat_dir': process_stat_dirs
+        }
 
-        def update(r):
-            net_stat_fh, infos = r
-            for i in infos:
-                logging.info(i)
-            for elements in net_stat_fh:
-                fl_elements.append(elements)
-            pbar.update()
+        fl_elements = parallel_process_async(
+            _read_station_dir, ITER_KWARGS=ITER_KWARGS,
+            STATIC_KWARGS=STATIC_KWARGS,
+            n_proc=n_proc, show_progress_bars=True,
+            ignore_errors=True, log_path=log_path,
+            log_filename=log_filename, loglevel='WARNING',
+            progress_bar_label="Stations Processed",
+            backend='loky', verbose=False,
+        )
 
-        def error(e):
-            logging.error(e)
-            pbar.update()
+        fl_elements = list(itertools.chain.from_iterable(fl_elements))
 
-        if n_proc == 1:
-            for arg in args:
-                try:
-                    r = _read_station_dir(*arg)
-                    update(r)
-                except Exception as e:
-                    error(e)
-        else:
-            with Pool(n_proc) as pool:
-                for arg in args:
-                    pool.apply_async(
-                        _read_station_dir,
-                        arg,
-                        callback=update,
-                        error_callback=error,
-                    )
-                pool.close()
-                pool.join()
+        # pbar = tqdm(total=len(args), desc="Files Processed")
 
-        pbar.close()
+        # fl_elements = []
+        #
+        # def update(r):
+        #     net_stat_fh, infos = r
+        #     for i in infos:
+        #         logging.info(i)
+        #     for elements in net_stat_fh:
+        #         fl_elements.append(elements)
+        #     pbar.update()
+        #
+        # def error(e):
+        #     logging.error(e)
+        #     pbar.update()
+        #
+        # if n_proc == 1:
+        #     for arg in args:
+        #         try:
+        #             r = _read_station_dir(*arg)
+        #             update(r)
+        #         except Exception as e:
+        #             error(e)
+        # else:
+        #     with Pool(n_proc) as pool:
+        #         for arg in args:
+        #             pool.apply_async(
+        #                 _read_station_dir,
+        #                 arg,
+        #                 callback=update,
+        #                 error_callback=error,
+        #             )
+        #         pool.close()
+        #         pool.join()
+        #
+        # pbar.close()
 
         fl_elements.sort(key=itemgetter(0, 1))  # sort by net name, stat name
         # to ensure alphabetical order... not sure if necessary, slow?
@@ -309,8 +321,9 @@ class IsmnFileCollection(object):
 
         t1 = time.time()
         info = f"Metadata generation finished after {int(t1-t0)} Seconds."
-        if log_file is not None:
-            info += f"\nMetadata and Log stored in {os.path.dirname(log_file)}"
+        if log_path is not None:
+            info += (f"\nMetadata and Log stored in "
+                     f"{os.path.join(log_path, log_filename)}")
 
         logging.info(info)
         print(info)
