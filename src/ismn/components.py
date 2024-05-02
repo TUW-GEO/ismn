@@ -20,27 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import os.path
-
+import sys
 from pygeogrids import BasicGrid
 from typing import Union
 
 import numpy as np
 import warnings
-import logging
 from collections import OrderedDict
 
 from ismn.meta import MetaData, Depth
-from ismn.const import deprecated, CITATIONS
+from ismn.const import deprecated, CITATIONS, ismnlog
 
 import json
-
-logger = logging.getLogger(__name__)
-
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter("%(levelname)s - %(asctime)s: %(message)s")
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
 
 class IsmnComponent:
@@ -133,7 +124,7 @@ class Sensor(IsmnComponent):
             (if it was loaded and kept before).
         """
         if self.filehandler is None:
-            logging.warning(f"No filehandler found for sensor {self.name}")
+            ismnlog.warning(f"No filehandler found for sensor {self.name}")
         else:
             if self._data is None:
                 data = self.filehandler.read_data()
@@ -413,7 +404,7 @@ class Station(IsmnComponent):
                 keep_loaded_data,
             )
         else:
-            logger.warning(f"Sensor already exists: {name}")
+            ismnlog.warning(f"Sensor already exists: {name}")
 
     def remove_sensor(self, name):
         """
@@ -427,7 +418,7 @@ class Station(IsmnComponent):
         if name in self.sensors:
             del self.sensors[name]
         else:
-            logger.warning(f"Sensor not found: {name}")
+            ismnlog.warning(f"Sensor not found: {name}")
 
     def iter_sensors(self, **filter_kwargs):
         """
@@ -564,7 +555,7 @@ class Network(IsmnComponent):
         if name not in self.stations:
             self.stations[name] = Station(name, lon, lat, elev)
         else:
-            logger.warning(f"Station already exists: {name}")
+            ismnlog.warning(f"Station already exists: {name}")
 
     def remove_station(self, name):
         """
@@ -578,7 +569,7 @@ class Network(IsmnComponent):
         if name in self.stations:
             del self.stations[name]
         else:
-            logger.warning(f"Station not found {name}")
+            ismnlog.warning(f"Station not found {name}")
 
     def iter_stations(self, **filter_kwargs):
         """

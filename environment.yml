@@ -16,6 +16,7 @@ dependencies:
      - tqdm
      - click
      - more_itertools
+     - git+https://github.com/TUW-GEO/repurpose@61333b9f2ae9a3bbfa61c2be33c60e274787ff2a
      - sphinx
      - nbsphinx
      - sphinx_rtd_theme

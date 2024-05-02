@@ -20,13 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
+import sys
 from collections import OrderedDict
 import functools
 import warnings
 import os
 import pandas as pd
+import logging
+import numpy as np
 
+ismnlog = logging.getLogger('ismn')
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+formatter = logging.Formatter("%(levelname)s - %(asctime)s: %(message)s")
+ch.setFormatter(formatter)
+ismnlog.addHandler(ch)
 
 def deprecated(func):
     # mark func as deprecated (warn when used)
@@ -58,7 +66,6 @@ class IsmnFileError(IOError):
 
 class DepthError(ValueError):
     pass
-
 
 # Note: At the moment citations are stored in this package, keep them updated.
 #  Once the full list of citations is provided together with the downloaded

@@ -1022,10 +1022,3 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-
-
-if __name__ == '__main__':
-    # ds = ISMN_Interface("/Users/wpreimes/code/ismn/tests/test_data/zip_archives/header/Data_seperate_files_header_20170810_20180809.zip",
-    #                     parallel=True)
-    ds = ISMN_Interface("/Users/wpreimes/data/Archive.zip",
-                        parallel=True)
