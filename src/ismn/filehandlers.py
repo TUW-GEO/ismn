@@ -658,26 +658,30 @@ class DataFile(IsmnFile):
             **kwargs
         ):
             try:
-                return pd.read_csv(
+                df = pd.read_csv(
                     filepath_or_buffer=f,
                     skiprows=skiprows,
                     usecols=usecols,
                     names=names,
-                    parse_dates=parse_dates,
                     engine=engine,
                     **kwargs
                 )
             except pd.errors.ParserError:
-                return pd.read_csv(
+                df = pd.read_csv(
                     filepath_or_buffer=f,
                     skiprows=skiprows,
                     usecols=usecols,
                     names=names,
                     sep=r'\s+',
-                    parse_dates=parse_dates,
                     engine="c",
                     **kwargs
                 )
+            for tup in parse_dates:
+                c = [df.columns[t] for t in tup]
+                df.insert(0, '_'.join(c),
+                          pd.to_datetime(df.pop(c[0]) + ' ' + df.pop(c[1])))
+
+            return df
 
         if self.root.zip:
             with TemporaryDirectory(
