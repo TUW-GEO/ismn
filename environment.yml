@@ -16,6 +16,7 @@ dependencies:
      - tqdm
      - click
      - more_itertools
+     - repurpose
      - sphinx
      - nbsphinx
      - sphinx_rtd_theme

@@ -22,6 +22,7 @@
 # SOFTWARE.
 
 import os
+from repurpose.process import parallel_process_async  # keep this import
 import numpy as np
 from pathlib import Path
 from tempfile import gettempdir

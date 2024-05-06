@@ -20,27 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import os.path
-
+import sys
 from pygeogrids import BasicGrid
 from typing import Union
 
 import numpy as np
 import warnings
-import logging
 from collections import OrderedDict
+import pandas as pd
 
 from ismn.meta import MetaData, Depth
-from ismn.const import deprecated, CITATIONS
+from ismn.const import deprecated, CITATIONS, ismnlog
 
 import json
-
-logger = logging.getLogger(__name__)
-
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter("%(levelname)s - %(asctime)s: %(message)s")
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
 
 class IsmnComponent:
@@ -121,6 +113,52 @@ class Sensor(IsmnComponent):
     def data(self):
         return self.read_data()
 
+    def get_coverage(self, only_good=True, start=None, end=None,
+                     freq='1h'):
+        """
+        Estimate the temporal coverage of this sensor, i.e. the percentage
+        of valid observations in the sensor time series.
+
+        Returns
+        -------
+        only_good: bool, optional (default: True)
+            Only consider values where the ISMN quality flag is 'G'
+            as valid observations
+        start: str or datetime, optional (default: None)
+            Beginning of the period in which measurements are expected.
+            If None, the start of the time series is used.
+        end: str or datetime, optional (default: None)
+            End of the period in which measurements are expected.
+            If None, the start of the time series is used.
+        freq: str, optional (default: '1h')
+            Frequency at which the sensor is expected to take measurements.
+            Most sensors in ISMN provide hourly measurements (default).
+            If a different frequency is used, it must be on that
+            :func:`pd.date_range` can interpret.
+
+        Returns
+        -------
+        perc_coverage : float
+            Data coverage of the sensor at the chosen expected measurement
+            frequency within the chosen period. 0=No data, 100=no data gaps
+        """
+        data = self.read_data()
+        if start is None:
+            start = pd.Timestamp(data.index.values[0]).to_pydatetime()
+        else:
+            start = pd.to_datetime(start)
+        if end is None:
+            end = pd.Timestamp(data.index.values[-1]).to_pydatetime()
+        else:
+            end = pd.to_datetime(end)
+
+        if only_good:
+            data = data[data[f"{self.variable}_flag"] == 'G'].loc[:, self.variable]
+
+        cov = (len(data.values) / len(pd.date_range(start, end, freq=freq))) * 100
+
+        return cov
+
     def read_data(self):
         """
         Load data from filehandler for this Sensor by calling
@@ -133,7 +171,7 @@ class Sensor(IsmnComponent):
             (if it was loaded and kept before).
         """
         if self.filehandler is None:
-            logging.warning(f"No filehandler found for sensor {self.name}")
+            ismnlog.warning(f"No filehandler found for sensor {self.name}")
         else:
             if self._data is None:
                 data = self.filehandler.read_data()
@@ -413,7 +451,7 @@ class Station(IsmnComponent):
                 keep_loaded_data,
             )
         else:
-            logger.warning(f"Sensor already exists: {name}")
+            ismnlog.warning(f"Sensor already exists: {name}")
 
     def remove_sensor(self, name):
         """
@@ -427,7 +465,7 @@ class Station(IsmnComponent):
         if name in self.sensors:
             del self.sensors[name]
         else:
-            logger.warning(f"Sensor not found: {name}")
+            ismnlog.warning(f"Sensor not found: {name}")
 
     def iter_sensors(self, **filter_kwargs):
         """
@@ -564,7 +602,7 @@ class Network(IsmnComponent):
         if name not in self.stations:
             self.stations[name] = Station(name, lon, lat, elev)
         else:
-            logger.warning(f"Station already exists: {name}")
+            ismnlog.warning(f"Station already exists: {name}")
 
     def remove_station(self, name):
         """
@@ -578,7 +616,7 @@ class Network(IsmnComponent):
         if name in self.stations:
             del self.stations[name]
         else:
-            logger.warning(f"Station not found {name}")
+            ismnlog.warning(f"Station not found {name}")
 
     def iter_stations(self, **filter_kwargs):
         """

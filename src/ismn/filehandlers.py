@@ -21,6 +21,8 @@
 # SOFTWARE.
 
 import os
+import traceback
+
 import pandas as pd
 import warnings
 import numpy as np
@@ -29,10 +31,10 @@ from pathlib import Path
 from typing import Tuple, Union
 import logging
 
-warnings.simplefilter(action="ignore", category=UserWarning)
+#warnings.simplefilter(action="ignore", category=UserWarning)
 from ismn.base import IsmnRoot
 from ismn import const
-from ismn.const import IsmnFileError
+from ismn.const import IsmnFileError, ismnlog
 from ismn.meta import MetaVar, MetaData, Depth
 
 
@@ -221,8 +223,8 @@ class StaticMetaFile(IsmnFile):
         field_vars = []
 
         if fieldname in data.index:
-            froms = np.atleast_1d(data.loc[fieldname]["depth_from[m]"])
-            tos = np.atleast_1d(data.loc[fieldname]["depth_to[m]"])
+            froms = np.atleast_1d(data.loc[fieldname]["depth_from[m]"]).astype(float)
+            tos = np.atleast_1d(data.loc[fieldname]["depth_to[m]"]).astype(float)
             vals = np.atleast_1d(data.loc[fieldname]["value"])
 
             for d_from, d_to, val in zip(froms, tos, vals):
@@ -244,7 +246,7 @@ class StaticMetaFile(IsmnFile):
             data.set_index("quantity_name", inplace=True)
         except Exception:
             # set columns manually
-            logging.info("no header: {}".format(csvfile))
+            ismnlog.info("no header: {}".format(csvfile))
             data = pd.read_csv(csvfile, delimiter=";", header=None)
             cols = list(data.columns)
             cols[:len(const.CSV_COLS)] = const.CSV_COLS  # todo: not safe
@@ -296,7 +298,7 @@ class StaticMetaFile(IsmnFile):
                 else:
                     lc_dict[key] = lc.loc[lc["quantity_source_name"] ==
                                           key]["value"].values[0]
-                    logging.info(
+                    ismnlog.info(
                         f"insitu land cover classification available: {self.file_path}"
                     )
 
@@ -309,11 +311,11 @@ class StaticMetaFile(IsmnFile):
                     cl_dict[key] = cl.loc[cl["quantity_source_name"] ==
                                           key]["value"].values[0]
                     if key == "insitu":
-                        logging.info(
+                        ismnlog.info(
                             f"insitu climate classification available: {self.file_path}"
                         )
         except KeyError:
-            logging.info(f"No climate metadata found for {self.file_path}")
+            ismnlog.info(f"No climate metadata found for {self.file_path}")
 
         metavars = [
             MetaVar("lc_2000", lc_dict["CCI_landcover_2000"]),
@@ -656,26 +658,30 @@ class DataFile(IsmnFile):
             **kwargs
         ):
             try:
-                return pd.read_csv(
+                df = pd.read_csv(
                     filepath_or_buffer=f,
                     skiprows=skiprows,
                     usecols=usecols,
                     names=names,
-                    parse_dates=parse_dates,
                     engine=engine,
                     **kwargs
                 )
             except pd.errors.ParserError:
-                return pd.read_csv(
+                df = pd.read_csv(
                     filepath_or_buffer=f,
                     skiprows=skiprows,
                     usecols=usecols,
                     names=names,
                     sep=r'\s+',
-                    parse_dates=parse_dates,
                     engine="c",
                     **kwargs
                 )
+            for tup in parse_dates:
+                c = [df.columns[t] for t in tup]
+                df.insert(0, '_'.join(c),
+                          pd.to_datetime(df.pop(c[0]) + ' ' + df.pop(c[1])))
+
+            return df
 
         if self.root.zip:
             with TemporaryDirectory(
@@ -729,21 +735,18 @@ class DataFile(IsmnFile):
         try:
             headr, scnd, last, fname = self.get_elements_from_file()
         except Exception as e:
-            raise IOError(f"Unknown file format found for: {self.file_path}")
+            raise IOError(f"Unknown file format found for {self.file_path}:"
+                          f"{traceback.format_exc()}")
 
         elements = dict(headr=headr, scnd=scnd, last=last, fname=fname)
 
-        if len(fname) == 5 and len(headr) == 16:
-            self.file_type = "ceop"
-            raise RuntimeError("CEOP format not supported")
-        elif len(headr) == 15 and len(fname) >= 9:
+        if (len(headr) == 15) and (len(headr) == len(scnd)):
             metadata, depth = self.get_metadata_ceop_sep(elements)
             self.file_type = "ceop_sep"
-        elif len(headr) < 14 and len(fname) >= 9:
+        else:
+            # the default / fallback format is header_values
             metadata, depth = self.get_metadata_header_values(elements)
             self.file_type = "header_values"
-        else:
-            raise IOError(f"Unknown file format found for: {self.file_path}")
 
         if best_meta_for_sensor:
             depth = metadata["instrument"].depth

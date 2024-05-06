@@ -10,8 +10,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-  #schedule:
-  #  - cron: '0 0 * * *' # daily
+  schedule:
+    - cron: '0 0 * * *'  # nightly build
 
 jobs:
   build:
@@ -85,9 +85,9 @@ jobs:
           fi
           ls .artifacts/dist
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
+          name: Artifacts-py${{ matrix.python-version }}-${{ matrix.os }}
           path: .artifacts/*
   coveralls:
     name: Submit Coveralls 👚
@@ -111,7 +111,11 @@ jobs:
           echo "GITHUB_REF = $GITHUB_REF"
           echo "GITHUB_REPOSITORY = $GITHUB_REPOSITORY"
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
+        with:
+          path: Artifacts
+          pattern: Artifacts-*
+          merge-multiple: true
       - name: Display downloaded files
         run: ls -aR
       - name: Upload to PyPI
