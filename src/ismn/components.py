@@ -27,6 +27,7 @@ from typing import Union
 import numpy as np
 import warnings
 from collections import OrderedDict
+import pandas as pd
 
 from ismn.meta import MetaData, Depth
 from ismn.const import deprecated, CITATIONS, ismnlog
@@ -111,6 +112,52 @@ class Sensor(IsmnComponent):
     @property
     def data(self):
         return self.read_data()
+
+    def get_coverage(self, only_good=True, start=None, end=None,
+                     freq='1h'):
+        """
+        Estimate the temporal coverage of this sensor, i.e. the percentage
+        of valid observations in the sensor time series.
+
+        Returns
+        -------
+        only_good: bool, optional (default: True)
+            Only consider values where the ISMN quality flag is 'G'
+            as valid observations
+        start: str or datetime, optional (default: None)
+            Beginning of the period in which measurements are expected.
+            If None, the start of the time series is used.
+        end: str or datetime, optional (default: None)
+            End of the period in which measurements are expected.
+            If None, the start of the time series is used.
+        freq: str, optional (default: '1h')
+            Frequency at which the sensor is expected to take measurements.
+            Most sensors in ISMN provide hourly measurements (default).
+            If a different frequency is used, it must be on that
+            :func:`pd.date_range` can interpret.
+
+        Returns
+        -------
+        perc_coverage : float
+            Data coverage of the sensor at the chosen expected measurement
+            frequency within the chosen period. 0=No data, 100=no data gaps
+        """
+        data = self.read_data()
+        if start is None:
+            start = pd.Timestamp(data.index.values[0]).to_pydatetime()
+        else:
+            start = pd.to_datetime(start)
+        if end is None:
+            end = pd.Timestamp(data.index.values[-1]).to_pydatetime()
+        else:
+            end = pd.to_datetime(end)
+
+        if only_good:
+            data = data[data[f"{self.variable}_flag"] == 'G'].loc[:, self.variable]
+
+        cov = (len(data.values) / len(pd.date_range(start, end, freq=freq))) * 100
+
+        return cov
 
     def read_data(self):
         """

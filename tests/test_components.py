@@ -28,6 +28,8 @@ import os
 import unittest
 
 import pytest
+import numpy as np
+from datetime import datetime, timedelta
 
 from ismn.components import NetworkCollection, Network, Station, Sensor, Depth
 from pygeogrids.grids import BasicGrid
@@ -262,6 +264,14 @@ class SensorTest(unittest.TestCase):
         name = "{}_{}_{:1.6f}_{:1.6f}".format(instrument, variable, d.start, d.end)
 
         assert self.sensor.name == name
+
+    def test_sensor_coverage(self):
+        cov = self.sensor.get_coverage()
+        np.testing.assert_almost_equal(cov, 56.752, decimal=3)
+        start = self.sensor.metadata['timerange_from'].val.to_pydatetime()
+        assert self.sensor.get_coverage(start=start-timedelta(days=100)) < cov
+        np.testing.assert_almost_equal(
+            self.sensor.get_coverage(freq='2H'), 113.492, decimal=3)
 
     def test_sensor_attributes(self):
         """

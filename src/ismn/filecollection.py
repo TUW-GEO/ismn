@@ -250,7 +250,7 @@ class IsmnFileCollection(object):
             hint = ''
 
         print(
-            f"Collecting metadata for all ismn stations into folder "
+            f"Collecting metadata for all ismn stations in archive "
             f"{root.path}.\n"
             f"This may take a few minutes, but is only done once...\n{hint}"
         )
@@ -297,12 +297,14 @@ class IsmnFileCollection(object):
         t1 = time.time()
         info = f"Metadata collection finished after {int(t1-t0)} Seconds."
         if log_path is not None:
-            info += (f"\nMetadata for future use and Log file stored in "
-                     f"{log_path}")
+            info += (f"\nMetadata for this archive and "
+                     f"Logfile stored in {log_path}")
 
         if len(errors) > 0:
             info += (f"\nNOTE: {len(errors)} potentially malformed file(s) "
-                     f"will be ignored. Files and errors are listed in: "
+                     f"found during metadata collection. These files will be "
+                     f"ignored by the reader. "
+                     f"Affected files and errors are listed in: "
                      f"{os.path.join(log_path, log_filename)}.")
 
             with open(os.path.join(log_path, log_filename), mode='a') as f:
@@ -398,9 +400,10 @@ class IsmnFileCollection(object):
         if network is not None:
             network = np.atleast_1d(network)
 
-        print(f"Found existing ismn metadata in {meta_csv_file}. \n"
-              "If there are issues with the data reader, remove this file "
-              "to repeat metadata collection.")
+        print(f"Using the existing ismn metadata in {meta_csv_file} to set "
+              f"up ISMN_Interface. \n"
+              "If there are issues with the data reader, you can remove "
+              "the metadata csv file to repeat metadata collection.")
 
         metadata_df = _load_metadata_df(meta_csv_file)
 
