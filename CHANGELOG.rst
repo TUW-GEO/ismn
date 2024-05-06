@@ -5,6 +5,14 @@ Changelog
 Unreleased changes in master branch
 ===================================
 
+-
+
+Version 1.4.1
+=============
+
+- Fixed a bug where some ISMN files could not be parsed correctly due to empty spaces in the sensor name (`Issue #81 <https://github.com/TUW-GEO/ismn/issues/81>`_)
+- Parallel metadata collection now uses the repurpose package wrapper around joblib
+- Logging was improved for metadata collection
 
 Version 1.4.0
 =============
