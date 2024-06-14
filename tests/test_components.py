@@ -32,7 +32,7 @@ import numpy as np
 from datetime import datetime, timedelta
 
 from ismn.components import NetworkCollection, Network, Station, Sensor, Depth
-from pygeogrids.grids import BasicGrid
+from pygeogrids.grids import CellGrid
 from tempfile import TemporaryDirectory
 import json
 
@@ -119,7 +119,7 @@ class NetworkTest(unittest.TestCase):
         assert self.network.stations[name].lat == 0
         assert self.network.stations[name].elev == 0
 
-        assert self.network.grid == BasicGrid([0], [0])
+        assert self.network.grid == CellGrid([0], [0], [0])
 
     def test_remove_station(self):
         """

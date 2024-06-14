@@ -19,9 +19,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import os.path
 import sys
-from pygeogrids import BasicGrid
+from pygeogrids import CellGrid
 from typing import Union
 
 import numpy as np
@@ -571,11 +572,13 @@ class Network(IsmnComponent):
         return lons, lats
 
     @property
-    def grid(self) -> BasicGrid:
+    def grid(self) -> CellGrid:
         """
         Get grid for all Stations in Network
         """
-        return BasicGrid(*self.coords)
+        # CellGrid is intentional
+        lons, lats = self.coords
+        return CellGrid(lons, lats, cells=np.full(len(lons), 0))
 
     @property
     def n_stations(self) -> int:
@@ -694,7 +697,7 @@ class NetworkCollection(IsmnComponent):
     ----------
     networks : OrderedDict
         Collection of network names and Networks
-    grid : BasicGrid
+    grid : CellGrid
         Grid that contains one point for each station in all networks.
     """
 
@@ -718,8 +721,11 @@ class NetworkCollection(IsmnComponent):
             lons += net_lons
             lats += net_lats
 
-        self.grid = BasicGrid(lons, lats) if (len(lons) > 0 and
-                                              len(lats) > 0) else None
+        if (len(lons) > 0) and (len(lats) > 0):
+            # Should be CellGrid
+            self.grid: CellGrid = CellGrid(lons, lats, cells=np.full(len(lons), 0))
+        else:
+            self.grid = None
 
     def __repr__(self, indent: str = ""):
         return ",\n".join([
