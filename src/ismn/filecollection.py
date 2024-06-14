@@ -78,13 +78,14 @@ def _read_station_dir(
                 root, csv[0], load_metadata=True, temp_root=temp_root)
             station_meta = static_meta_file.metadata
     except const.IsmnFileError as e:
-        logger.warning(f"Error loading static meta file: {stat_dir}/{csv[0]}. "
+        _csv = "*missing*" if len(csv) == 0 else csv[0]
+        logger.warning(f"Error loading static meta file for {stat_dir}/{_csv}. "
                        f"We will use the placeholder metadata here. "
                        f"Error traceback: {traceback.format_exc()}")
         station_meta = MetaData(
             [MetaVar(k, v) for k, v in const.CSV_META_TEMPLATE.items()]
         )
-        erroneous_files.append(os.path.join(str(root), str(csv[0])))
+        erroneous_files.append(os.path.join(str(root.path), str(stat_dir), str(_csv)))
 
     data_files = root.find_files(stat_dir, "*.stm")
 
@@ -309,7 +310,8 @@ class IsmnFileCollection(object):
 
             with open(os.path.join(log_path, log_filename), mode='a') as f:
                 f.write("\n----- Summary: Erroneous Files -----\n")
-                f.writelines(errors)
+                for e in errors:
+                    f.write(f"{e}\n")
                 f.write("\n-------------------------------------\n")
 
         ismnlog.info(info)
