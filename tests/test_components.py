@@ -101,6 +101,10 @@ class NetworkTest(unittest.TestCase):
         """
         self.network = Network("Network1")
 
+    def test_to_xarray_empty(self):
+        ds = self.network.to_xarray()
+        assert ds is None
+
     def test_attributes(self):
         """
         Test network attributes.
@@ -183,6 +187,10 @@ class StationTest(unittest.TestCase):
 
         assert self.station.n_sensors == 2
 
+    def test_to_xarray_empty(self):
+        ds = self.station.to_xarray()
+        assert ds is None
+
     def test_add_sensor(self):
         """
         Test adding sensors.
@@ -264,6 +272,14 @@ class SensorTest(unittest.TestCase):
         name = "{}_{}_{:1.6f}_{:1.6f}".format(instrument, variable, d.start, d.end)
 
         assert self.sensor.name == name
+
+    def test_sensor_to_xarray(self):
+        ds = self.sensor.to_xarray()
+        df = ds['soil_moisture'].isel(sensor=0).to_dataframe()
+        np.testing.assert_array_almost_equal(df['soil_moisture'].values,
+                                             self.sensor.data['soil_moisture'].values)
+        assert df.index.equals(self.sensor.data.index)
+        assert ds['depth_from'].attrs['units'] == 'm'
 
     def test_sensor_coverage(self):
         cov = self.sensor.get_coverage()

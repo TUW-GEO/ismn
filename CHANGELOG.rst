@@ -4,19 +4,18 @@ Changelog
 
 Unreleased changes in master branch
 ===================================
-
--
+- Fixed a bug where metadata collection failed when a station static meta csv file was completely missing
+- ISMN grid is now a CellGrid
+- Added a method to sensors, stations and networks components for conversion to xarray Datasets
 
 Version 1.4.1
 =============
-
 - Fixed a bug where some ISMN files could not be parsed correctly due to empty spaces in the sensor name (`Issue #81 <https://github.com/TUW-GEO/ismn/issues/81>`_)
 - Parallel metadata collection now uses the repurpose package wrapper around joblib
 - Logging was improved for metadata collection
 
 Version 1.4.0
 =============
-
 - Added `ismn collect_metadata` and `ismn export_geojson` CLI programs.
 - Added method to NetworkCollection to export metadata as (geo)json.
 - Added more options when plotting the station overview map.
@@ -25,23 +24,19 @@ Version 1.4.0
 
 Version 1.3.4
 =============
-
 - Fixed bug with parsing sensor files for RISMA network in "header & files" format
 
 Version 1.3.3
 =============
-
 - Continue metadata collection for station on any type of error (PR #64)
 
 Version 1.3.2
 =============
-
 - Fix bug where station names in metadata can be different between Header and CEOP format.
 - Custom Sensor Metadata reader now also checks the measured variable.
 
 Version 1.3.1
 =============
-
 - Added functionality to provide fill values with predefined custom metadata readers.
 - Documentation and constants updated.
 - ``ISMN_Interface.read_ts`` raised an error when np.int64 was passed.
@@ -49,7 +44,6 @@ Version 1.3.1
 
 Version 1.3.0
 =============
-
 - Add module to assign custom metadata readers to ISMN_Interface
 - Notebook added that describes using a custom metadata reader
 - RTD build uses a separate, smaller environment.yml now (and mamba)
@@ -57,7 +51,6 @@ Version 1.3.0
 
 Version 1.2.0
 =============
-
 - Citation for `COSMOS-UK` network added
 - Metadata for empty variables now also generated
 - Added citation for `SMN-SDR` network (`Issue #44 <https://github.com/TUW-GEO/ismn/issues/44>`_)
@@ -65,7 +58,6 @@ Version 1.2.0
 
 Version 1.1.0
 =============
-
 - Fixed bug in the metadata dataframe when not using all available networks.
 - Citation export functions added to `Collection` and `Network` components.
 - Citations for all networks are now stored in this package until they are reliably provided together with the data
@@ -73,13 +65,11 @@ Version 1.1.0
 
 Version 1.0.1
 =============
-
 - Remove setuptools_scm from dependencies
 - Remove option to pip install ismn[plot] for now.
 
 Version 1.0
 ===========
-
 - Rewrite package, objects for Networks, Stations, Sensors etc.
 - Update ISMN_Interface to use new components, similar behaviour to old interface.
 - Add MetaVar and MetaData modules for ismn metadata handling.
@@ -94,7 +84,6 @@ Version 1.0
 
 Version 0.4
 ===========
-
 - Update package pyscaffold package structure
 - Drop python 2 support
 - Add read function to ISMN_Interface
@@ -103,7 +92,6 @@ Version 0.4
 
 Version 0.3.2
 =============
-
 - Add function to initialise different network
 
 Version 0.3.1
@@ -112,16 +100,13 @@ Version 0.3.1
 
 Version 0.3
 ===========
-
 - Update readme
 - Added information about landcover and climate to metadata.
 
 Version 0.2
 ===========
-
 - Add additional authors.
 
 Version 0.1
 ===========
-
 - Moved code from pytesmo into this package.

@@ -29,15 +29,21 @@ import numpy as np
 import warnings
 from collections import OrderedDict
 import pandas as pd
+from tqdm import tqdm
 
 from ismn.meta import MetaData, Depth
 from ismn.const import deprecated, CITATIONS, ismnlog
+from ismn.const import xarray_available, xr
 
 import json
 
 
 class IsmnComponent:
-    pass
+    def _eval_xarray_installed(self):
+        if not xarray_available:
+            raise ImportError(
+                "Please install `xarray` and `dask` with `conda install xarray "
+                "dask` to use the conversion to xarray feature.")
 
 
 class Sensor(IsmnComponent):
@@ -92,6 +98,7 @@ class Sensor(IsmnComponent):
             calls of data faster (if e.g. a station is accessed multiple times)
             but can fill up memory if multiple networks are loaded.
         """
+        super().__init__()
 
         self.instrument = instrument
         self.variable = variable
@@ -100,6 +107,7 @@ class Sensor(IsmnComponent):
         self.keep_loaded_data = keep_loaded_data
         self._data = None
         self.name = name if name is not None else self.__repr__()
+
 
     def __repr__(self):
         return (f"{self.instrument}_{self.variable}_"
@@ -113,6 +121,44 @@ class Sensor(IsmnComponent):
     @property
     def data(self):
         return self.read_data()
+
+    def to_xarray(self) -> xr.Dataset:
+        """
+        Convert the Sensors data to an xarray.DataSet object
+        with a location and time dimension in a single chunk.
+        The dataset will contain static (dimension `sensor`) and
+        dynamic (dimensions `sensor` & `time`) variables.
+
+        Returns
+        -------
+        dat: xarray.DataSet
+            Sensor data as xarray dataset
+        """
+        self._eval_xarray_installed()
+
+        dat = self.data
+        metadata = self.metadata
+        
+        if dat is None or metadata is None:
+            return None
+
+        data_vars = {v: (("sensor", "date_time"), np.array([dat[v].values]))
+                     for v in dat.columns}
+        data_vars['depth_from'] = (("sensor",), [self.depth.start])
+        data_vars['depth_to'] = (("sensor",), [self.depth.end])
+
+        for var in metadata:
+            data_vars[var.name] = (("sensor",), [var.val])
+
+        ds = xr.Dataset(
+            data_vars=data_vars,
+            coords={'date_time': dat.index.values},
+        )
+
+        ds['depth_from'].attrs['units'] = 'm'
+        ds['depth_to'].attrs['units'] = 'm'
+
+        return ds
 
     def get_coverage(self, only_good=True, start=None, end=None,
                      freq='1h'):
@@ -293,6 +339,7 @@ class Station(IsmnComponent):
         elev : float
             Elevation information.
         """
+        super().__init__()
 
         self.name = name
         self.lon = lon
@@ -325,6 +372,52 @@ class Station(IsmnComponent):
             return self.sensors[list(self.sensors.keys())[item]]
         else:
             return self.sensors[item]
+
+    def to_xarray(self, **filter_kwargs) -> xr.Dataset:
+        """
+        Collect all sensor data at this station into a xarray.DataSet object
+        with a location and time dimension in a single chunk.
+        The dataset will contain static (dimension `sensor`) and
+        dynamic (dimensions `sensor` & `time`) variables.
+
+        Parameters
+        ----------
+        filter_kwargs: optional
+            Filter sensors at the station to include in the dataset
+            (variable, depth, etc.).
+            For a description of possible filter kwargs, see
+            :func:`ismn.components.Sensor.eval`
+
+        Returns
+        -------
+        dat: xarray.DataSet
+            Sensor data as xarray dataset
+        """
+        self._eval_xarray_installed()
+
+        station = []
+        for sensor in self.iter_sensors(**filter_kwargs):
+            s = sensor.to_xarray()
+            if s is not None:
+                station.append(s)
+
+        if len(station) == 0:
+            return None
+        
+        station = xr.concat(station, dim='sensor')
+
+        if 'depth_from' in station.attrs:
+            station.attrs.pop('depth_from')
+        if 'depth_to' in station.attrs:
+            station.attrs.pop('depth_to')
+
+        station.attrs['station_name'] = self.name
+        station.attrs['lat'] = self.lat
+        station.attrs['lon'] = self.lon
+        station.attrs['n_sensors'] = len(station['sensor'].values)
+
+        return station
+
 
     def get_variables(self):
         """
@@ -541,6 +634,8 @@ class Network(IsmnComponent):
             Initial list of Station object to fill the network with.
             Additional Stations can be added later.
         """
+        super().__init__()
+
         # todo: using station dicts means that duplicate station names are not possible
         self.name = name
         self.stations = OrderedDict([])
@@ -586,6 +681,53 @@ class Network(IsmnComponent):
         Number of Stations in this Network.
         """
         return len(self.stations)
+
+    def to_xarray(self, **filter_kwargs) -> xr.Dataset:
+        """
+        Collect all sensor data at this station into a xarray.DataSet object
+        with a location and time dimension in a single chunk.
+        The dataset will contain static (dimension `sensor`) and
+        dynamic (dimensions `sensor` & `time`) variables.
+
+        Parameters
+        ----------
+        filter_kwargs: optional
+            Filter sensors in the network to include in the dataset
+            (variable, depth, etc.).
+            For a description of possible filter kwargs, see
+            :func:`ismn.components.Sensor.eval`
+
+        Returns
+        -------
+        dat: xarray.DataSet
+            Sensor data as xarray Dataset. Sensor data are stored as
+            Dask arrays!
+        """
+        self._eval_xarray_installed()
+
+        net = []
+        for station in tqdm(self.iter_stations(), total=self.n_stations):
+            s = station.to_xarray(**filter_kwargs)
+            # store sensor data as dask arrays to save memory
+            s = s.chunk(dict(date_time=None, sensor=1))
+            if s is not None:
+                net.append(s)
+
+        if len(net) == 0:
+            return None
+
+        n_stations = len(net)
+
+        net = xr.concat(net, dim="sensor")
+
+        net.attrs.pop('station_name')
+        net.attrs.pop('lat')
+        net.attrs.pop('lon')
+        net.attrs['n_sensors'] = len(net['sensor'].values)
+        net.attrs['n_stations'] = n_stations
+        net.attrs['network'] = self.name
+
+        return net
 
     def add_station(self, name, lon, lat, elev):
         """
@@ -710,6 +852,7 @@ class NetworkCollection(IsmnComponent):
         networks : list[Network]
             List of Networks that build the collection.
         """
+        super().__init__()
 
         self.networks = OrderedDict([])
 

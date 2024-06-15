@@ -29,6 +29,13 @@ import pandas as pd
 import logging
 import numpy as np
 
+try:
+    import xarray as xr
+    import dask
+    xarray_available = True
+except ImportError:
+    xarray_available = False
+
 ismnlog = logging.getLogger('ismn')
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
