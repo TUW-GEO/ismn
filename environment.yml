@@ -8,6 +8,8 @@ dependencies:
   - pandas
   - matplotlib
   - cartopy
+  - xarray
+  - dask
   - ipykernel
   - pip
   - pip:

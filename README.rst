@@ -16,11 +16,53 @@ ismn
 .. |doc| image:: https://readthedocs.org/projects/ismn/badge/?version=latest
    :target: http://ismn.readthedocs.org/
 
-Readers for the data from the International Soil Moisture Database (ISMN).
+Readers for the data from the International Soil Moisture Network (ISMN) https://ismn.earth.
+
+Quickstart
+----------
+Initialise a `ISMN_Interface` by passing the path to your downloaded data.
+The interface shows you available ISMN networks, stations, sensors.
+You can load a pandas DataFrame for each downloaded sensor time series as well
+as metadata on each measurement series.
+
+.. code-block:: python
+
+    >> from ismn.interface import ISMN_Interface
+    >> ds = ISMN_Interface('Data_separate_files_header_20090101_20201231_9289_Cwpc_20221201.zip')
+
+    """ Read time series from your previously downloaded ISMN archive as pandas DataFrames"""
+    >> ds["REMEDHUS"]["Canizal"][0].data
+
+    Out[1]:
+                             soil_moisture soil_moisture_flag soil_moisture_orig_flag
+    date_time
+    2009-01-01 00:00:00          0.372                  G                       M
+    2009-01-01 01:00:00          0.372                  G                       M
+    ...                          ...                   ...                     ...
+    2020-12-31 22:00:00          0.285                  G                       M
+    2020-12-31 23:00:00          0.285                  G                       M
+
+    """ Each ISMN sensor comes with additional information on soil/landcover/climate etc. """
+    >>ds["REMEDHUS"]["Canizal"][0].metadata.to_pd()
+
+    Out[1]:
+    variable        key
+    climate_KG      val                           BSk
+    instrument      val           Stevens-Hydra-Probe
+                    depth_from                    0.0
+                    depth_to                     0.05
+    ...             ...                           ...
+    latitude        val                      41.19603
+    lc_2010         val                            20
+    longitude       val                      -5.35997
+    network         val                      REMEDHUS
+    station         val                       Canizal
+
+Many more features are available. See the `full documentation <https://ismn.readthedocs.io/en/latest/>`_.
 
 Documentation
 -------------
-The full documentation is available at https://ismn.readthedocs.io and includes
+The full documentation is available at https://ismn.readthedocs.io/en/latest and includes
 a tutorial on reading ISMN data in python after downloading it from
 https://ismn.earth
 
@@ -32,26 +74,10 @@ The following **tutorials** are also available as ipython notebooks in ``docs/ex
 Data used in the tutorials is *not* provided in this package. Please create an account at `ismn.earth <https://ismn.earth/en/>`_
 to download the required files.
 
-For a general overview about the ISMN, technical data aspects (properties, coverage, etc.) and correct usage (applications), see
+For a detailed description of the ISMN, technical data aspects (properties, coverage, etc.) and correct usage (applications), see
 
     W. Dorigo et al. **The International Soil Moisture Network: serving Earth system science for over a decade**,
     Hydrol. Earth Syst. Sci., 25, 5749–5804, https://doi.org/10.5194/hess-25-5749-2021, 2021.
-
-
-Citation
-========
-
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.855308.svg
-   :target: https://doi.org/10.5281/zenodo.855308
-
-If you use the software in a publication then please cite it using the Zenodo DOI.
-Be aware that this badge links to the latest package version.
-
-Please select your specific version at https://doi.org/10.5281/zenodo.855308 to get the DOI of that version.
-You should normally always use the DOI for the specific version of your record in citations.
-This is to ensure that other researchers can access the exact research artefact you used for reproducibility.
-
-You can find additional information regarding DOI versioning at http://help.zenodo.org/#versioning
 
 Installation
 ============
@@ -72,8 +98,29 @@ They can be installed separately with:
 
     conda install -c conda-forge matplotlib cartopy
 
+If you want to convert ISMN data into xarray objects, please install ``xarray`` and ``dask``
+
+.. code::
+
+    conda install -c conda-forge xarray dask
+
+Citation
+========
+
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.855308.svg
+   :target: https://doi.org/10.5281/zenodo.855308
+
+If you use the software in a publication then please cite it using the Zenodo DOI.
+Be aware that this badge links to the latest package version.
+
+Please select your specific version at https://doi.org/10.5281/zenodo.855308 to get the DOI of that version.
+You should normally always use the DOI for the specific version of your record in citations.
+This is to ensure that other researchers can access the exact research artefact you used for reproducibility.
+
+You can find additional information regarding DOI versioning at http://help.zenodo.org/#versioning
+
 Example installation script
----------------------------
+===========================
 
 The following script will install miniconda and setup the environment on a UNIX
 like system. Miniconda will be installed into ``$HOME/miniconda``.
