@@ -16,7 +16,13 @@ ismn
 .. |doc| image:: https://readthedocs.org/projects/ismn/badge/?version=latest
    :target: http://ismn.readthedocs.org/
 
-Readers for the data from the International Soil Moisture Network (ISMN) https://ismn.earth.
+Readers for data from the International Soil Moisture Network (ISMN) https://ismn.earth.
+
+This package is installable through pip:
+
+.. code::
+
+    pip install ismn
 
 Quickstart
 ----------
@@ -79,17 +85,8 @@ For a detailed description of the ISMN, technical data aspects (properties, cove
     W. Dorigo et al. **The International Soil Moisture Network: serving Earth system science for over a decade**,
     Hydrol. Earth Syst. Sci., 25, 5749–5804, https://doi.org/10.5194/hess-25-5749-2021, 2021.
 
-Installation
-============
-
-This package should be installable through pip:
-
-.. code::
-
-    pip install ismn
-
 Optional dependencies
----------------------
+=====================
 
 The ``cartopy`` and ``matplotlib`` packages are only needed when creating data visualisations.
 They can be installed separately with:
