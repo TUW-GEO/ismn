@@ -86,7 +86,7 @@ For a detailed description of the ISMN, technical data aspects (properties, cove
     Hydrol. Earth Syst. Sci., 25, 5749–5804, https://doi.org/10.5194/hess-25-5749-2021, 2021.
 
 Optional dependencies
-=====================
+---------------------
 
 The ``cartopy`` and ``matplotlib`` packages are only needed when creating data visualisations.
 They can be installed separately with:
@@ -102,7 +102,7 @@ If you want to convert ISMN data into xarray objects, please install ``xarray`` 
     conda install -c conda-forge xarray dask
 
 Citation
-========
+--------
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.855308.svg
    :target: https://doi.org/10.5281/zenodo.855308
@@ -115,34 +115,6 @@ You should normally always use the DOI for the specific version of your record i
 This is to ensure that other researchers can access the exact research artefact you used for reproducibility.
 
 You can find additional information regarding DOI versioning at http://help.zenodo.org/#versioning
-
-Example installation script
-===========================
-
-The following script will install miniconda and setup the environment on a UNIX
-like system. Miniconda will be installed into ``$HOME/miniconda``.
-
-.. code::
-
-   wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-   bash miniconda.sh -b -p $HOME/miniconda
-   export PATH="$HOME/miniconda/bin:$PATH"
-   git clone git@github.com:TUW-GEO/ismn.git ismn
-   cd ismn
-   conda env create -f environment.yml
-   conda activate ismn
-
-This script adds ``$HOME/miniconda/bin`` temporarily to the ``PATH`` to do this
-permanently add ``export PATH="$HOME/miniconda/bin:$PATH"`` to your ``.bashrc``
-or ``.zshrc``. The second to last line in the example activates the ``ismn`` environment.
-
-After that you should be able to run:
-
-.. code::
-
-    pytest
-
-to run the test suite.
 
 Description
 ===========
@@ -405,6 +377,34 @@ Contribute
 We are happy if you want to contribute. Please raise an issue explaining what
 is missing or if you find a bug. We will also gladly accept pull requests
 against our master branch for new features or bug fixes.
+
+Example installation script
+---------------------------
+
+The following script will install miniconda and setup the environment on a UNIX
+like system. Miniconda will be installed into ``$HOME/miniconda``.
+
+.. code::
+
+   wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+   bash miniconda.sh -b -p $HOME/miniconda
+   export PATH="$HOME/miniconda/bin:$PATH"
+   git clone git@github.com:TUW-GEO/ismn.git ismn
+   cd ismn
+   conda env create -f environment.yml
+   conda activate ismn
+
+This script adds ``$HOME/miniconda/bin`` temporarily to the ``PATH`` to do this
+permanently add ``export PATH="$HOME/miniconda/bin:$PATH"`` to your ``.bashrc``
+or ``.zshrc``. The second to last line in the example activates the ``ismn`` environment.
+
+After that you should be able to run:
+
+.. code::
+
+    pytest
+
+to run the test suite.
 
 Development setup
 -----------------
