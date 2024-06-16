@@ -51,6 +51,16 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         self.ds.close_files()
         logging.shutdown()
 
+    def test_to_xarray(self):
+        ds = self.ds['COSMOS'].to_xarray(variable='soil_moisture')
+        df_should = self.ds['COSMOS'][0][0].data[['soil_moisture']].dropna()
+        df_is = ds['soil_moisture'].isel(sensor=0).to_dataframe().dropna()
+        np.testing.assert_almost_equal(df_is['soil_moisture'].values,
+                                       df_should['soil_moisture'].values)
+        df_is.index.equals(df_should.index)
+        assert ds.attrs['network'] == 'COSMOS'
+        assert ds.attrs['n_stations'] == 2
+
     def test_list(self):
         with pytest.deprecated_call():
             assert len(self.ds.list_networks()) == 1

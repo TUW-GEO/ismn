@@ -16,11 +16,59 @@ ismn
 .. |doc| image:: https://readthedocs.org/projects/ismn/badge/?version=latest
    :target: http://ismn.readthedocs.org/
 
-Readers for the data from the International Soil Moisture Database (ISMN).
+Readers for data from the International Soil Moisture Network (ISMN) https://ismn.earth.
+
+This package is installable through pip:
+
+.. code::
+
+    pip install ismn
+
+Quickstart
+----------
+Initialise a `ISMN_Interface` by passing the path to your downloaded data.
+The interface shows you available ISMN networks, stations, sensors.
+You can load a pandas DataFrame for each downloaded sensor time series as well
+as metadata on each measurement series.
+
+.. code-block:: python
+
+    >> from ismn.interface import ISMN_Interface
+    >> ds = ISMN_Interface('Data_separate_files_header_20090101_20201231_9289_Cwpc_20221201.zip')
+
+    """ Read time series from your previously downloaded ISMN archive as pandas DataFrames """
+    >> ds["REMEDHUS"]["Canizal"][0].data
+
+        Out[0]:
+                                 soil_moisture soil_moisture_flag soil_moisture_orig_flag
+        date_time
+        2009-01-01 00:00:00          0.372                  G                       M
+        2009-01-01 01:00:00          0.372                  G                       M
+        ...                          ...                   ...                     ...
+        2020-12-31 22:00:00          0.285                  G                       M
+        2020-12-31 23:00:00          0.285                  G                       M
+
+    """ Each ISMN sensor comes with additional information on soil/landcover/climate etc. """
+    >> ds["REMEDHUS"]["Canizal"][0].metadata.to_pd()
+
+        Out[0]:
+        variable        key
+        climate_KG      val                           BSk
+        instrument      val           Stevens-Hydra-Probe
+                        depth_from                    0.0
+                        depth_to                     0.05
+        ...             ...                           ...
+        latitude        val                      41.19603
+        lc_2010         val                            20
+        longitude       val                      -5.35997
+        network         val                      REMEDHUS
+        station         val                       Canizal
+
+Many more features are available. See the `full documentation <https://ismn.readthedocs.io/en/latest/>`_.
 
 Documentation
 -------------
-The full documentation is available at https://ismn.readthedocs.io and includes
+The full documentation is available at https://ismn.readthedocs.io/en/latest and includes
 a tutorial on reading ISMN data in python after downloading it from
 https://ismn.earth
 
@@ -32,14 +80,29 @@ The following **tutorials** are also available as ipython notebooks in ``docs/ex
 Data used in the tutorials is *not* provided in this package. Please create an account at `ismn.earth <https://ismn.earth/en/>`_
 to download the required files.
 
-For a general overview about the ISMN, technical data aspects (properties, coverage, etc.) and correct usage (applications), see
+For a detailed description of the ISMN, technical data aspects (properties, coverage, etc.) and correct usage (applications), see
 
     W. Dorigo et al. **The International Soil Moisture Network: serving Earth system science for over a decade**,
     Hydrol. Earth Syst. Sci., 25, 5749–5804, https://doi.org/10.5194/hess-25-5749-2021, 2021.
 
+Optional dependencies
+---------------------
+
+The ``cartopy`` and ``matplotlib`` packages are only needed when creating data visualisations.
+They can be installed separately with:
+
+.. code::
+
+    conda install -c conda-forge matplotlib cartopy
+
+If you want to convert ISMN data into xarray objects, please install ``xarray`` and ``dask``
+
+.. code::
+
+    conda install -c conda-forge xarray dask
 
 Citation
-========
+--------
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.855308.svg
    :target: https://doi.org/10.5281/zenodo.855308
@@ -52,53 +115,6 @@ You should normally always use the DOI for the specific version of your record i
 This is to ensure that other researchers can access the exact research artefact you used for reproducibility.
 
 You can find additional information regarding DOI versioning at http://help.zenodo.org/#versioning
-
-Installation
-============
-
-This package should be installable through pip:
-
-.. code::
-
-    pip install ismn
-
-Optional dependencies
----------------------
-
-The ``cartopy`` and ``matplotlib`` packages are only needed when creating data visualisations.
-They can be installed separately with:
-
-.. code::
-
-    conda install -c conda-forge matplotlib cartopy
-
-Example installation script
----------------------------
-
-The following script will install miniconda and setup the environment on a UNIX
-like system. Miniconda will be installed into ``$HOME/miniconda``.
-
-.. code::
-
-   wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-   bash miniconda.sh -b -p $HOME/miniconda
-   export PATH="$HOME/miniconda/bin:$PATH"
-   git clone git@github.com:TUW-GEO/ismn.git ismn
-   cd ismn
-   conda env create -f environment.yml
-   conda activate ismn
-
-This script adds ``$HOME/miniconda/bin`` temporarily to the ``PATH`` to do this
-permanently add ``export PATH="$HOME/miniconda/bin:$PATH"`` to your ``.bashrc``
-or ``.zshrc``. The second to last line in the example activates the ``ismn`` environment.
-
-After that you should be able to run:
-
-.. code::
-
-    pytest
-
-to run the test suite.
 
 Description
 ===========
@@ -361,6 +377,34 @@ Contribute
 We are happy if you want to contribute. Please raise an issue explaining what
 is missing or if you find a bug. We will also gladly accept pull requests
 against our master branch for new features or bug fixes.
+
+Example installation script
+---------------------------
+
+The following script will install miniconda and setup the environment on a UNIX
+like system. Miniconda will be installed into ``$HOME/miniconda``.
+
+.. code::
+
+   wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+   bash miniconda.sh -b -p $HOME/miniconda
+   export PATH="$HOME/miniconda/bin:$PATH"
+   git clone git@github.com:TUW-GEO/ismn.git ismn
+   cd ismn
+   conda env create -f environment.yml
+   conda activate ismn
+
+This script adds ``$HOME/miniconda/bin`` temporarily to the ``PATH`` to do this
+permanently add ``export PATH="$HOME/miniconda/bin:$PATH"`` to your ``.bashrc``
+or ``.zshrc``. The second to last line in the example activates the ``ismn`` environment.
+
+After that you should be able to run:
+
+.. code::
+
+    pytest
+
+to run the test suite.
 
 Development setup
 -----------------
