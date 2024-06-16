@@ -30,33 +30,33 @@ as metadata on each measurement series.
     >> from ismn.interface import ISMN_Interface
     >> ds = ISMN_Interface('Data_separate_files_header_20090101_20201231_9289_Cwpc_20221201.zip')
 
-    """ Read time series from your previously downloaded ISMN archive as pandas DataFrames"""
+    """ Read time series from your previously downloaded ISMN archive as pandas DataFrames """
     >> ds["REMEDHUS"]["Canizal"][0].data
 
-    Out[1]:
-                             soil_moisture soil_moisture_flag soil_moisture_orig_flag
-    date_time
-    2009-01-01 00:00:00          0.372                  G                       M
-    2009-01-01 01:00:00          0.372                  G                       M
-    ...                          ...                   ...                     ...
-    2020-12-31 22:00:00          0.285                  G                       M
-    2020-12-31 23:00:00          0.285                  G                       M
+        Out[0]:
+                                 soil_moisture soil_moisture_flag soil_moisture_orig_flag
+        date_time
+        2009-01-01 00:00:00          0.372                  G                       M
+        2009-01-01 01:00:00          0.372                  G                       M
+        ...                          ...                   ...                     ...
+        2020-12-31 22:00:00          0.285                  G                       M
+        2020-12-31 23:00:00          0.285                  G                       M
 
     """ Each ISMN sensor comes with additional information on soil/landcover/climate etc. """
-    >>ds["REMEDHUS"]["Canizal"][0].metadata.to_pd()
+    >> ds["REMEDHUS"]["Canizal"][0].metadata.to_pd()
 
-    Out[1]:
-    variable        key
-    climate_KG      val                           BSk
-    instrument      val           Stevens-Hydra-Probe
-                    depth_from                    0.0
-                    depth_to                     0.05
-    ...             ...                           ...
-    latitude        val                      41.19603
-    lc_2010         val                            20
-    longitude       val                      -5.35997
-    network         val                      REMEDHUS
-    station         val                       Canizal
+        Out[0]:
+        variable        key
+        climate_KG      val                           BSk
+        instrument      val           Stevens-Hydra-Probe
+                        depth_from                    0.0
+                        depth_to                     0.05
+        ...             ...                           ...
+        latitude        val                      41.19603
+        lc_2010         val                            20
+        longitude       val                      -5.35997
+        network         val                      REMEDHUS
+        station         val                       Canizal
 
 Many more features are available. See the `full documentation <https://ismn.readthedocs.io/en/latest/>`_.
 
