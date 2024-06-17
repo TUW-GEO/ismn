@@ -3,8 +3,8 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  # - python>3.7,<3.12
-  - numpy<2.0.0
+  # - python>3.7,<=3.12
+  - numpy
   - pandas
   - matplotlib
   - cartopy
@@ -13,7 +13,7 @@ dependencies:
   - ipykernel
   - pip
   - pip:
-     - pygeogrids>=0.3.2
+     - pygeogrids>=0.5.1
      - configparser
      - tqdm
      - click
