@@ -960,7 +960,7 @@ class NetworkCollection(IsmnComponent):
             Longitude coordinate(s).
         lat : float or list[float]
             Latitude coordinate(s).
-        max_dist : float, optional (default: np.Inf)
+        max_dist : float, optional (default: np.inf)
             Maximum search distance.
 
         Returns

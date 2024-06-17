@@ -8,7 +8,7 @@ build:
 python:
   install:
     - method: pip
-      path: .
+      path: .[xr,plot]
 
 sphinx:
   configuration: docs/conf.py
