@@ -26,16 +26,17 @@ This package is installable through pip:
 
 Quickstart
 ----------
-Initialise a `ISMN_Interface` by passing the path to your downloaded data.
-The interface shows you available ISMN networks, stations, sensors.
-You can load a pandas DataFrame for each downloaded sensor time series as well
-as metadata on each measurement series.
+Initialise an `ISMN_Interface` by passing the path to your downloaded data.
+The interface shows you available ISMN networks, stations and sensors.
+You can load sensor time series as pandas DataFrames as well as metadata
+on the stations surroundings, soil conditions and probes
+(depths, sensor type, etc.).
 
 .. code-block:: python
 
     >> from ismn.interface import ISMN_Interface
+    """ .zip archives are downloaded from https://ismn.earth """
     >> ds = ISMN_Interface('Data_separate_files_header_20090101_20201231_9289_Cwpc_20221201.zip')
-
     """ Read time series from your previously downloaded ISMN archive as pandas DataFrames """
     >> ds["REMEDHUS"]["Canizal"][0].data
 
@@ -64,7 +65,8 @@ as metadata on each measurement series.
         network         val                      REMEDHUS
         station         val                       Canizal
 
-Many more features are available. See the `full documentation <https://ismn.readthedocs.io/en/latest/>`_.
+Many more features to e.g. visualise, select or transform data are available.
+See the `full documentation <https://ismn.readthedocs.io/en/latest/>`_.
 
 Documentation
 -------------
@@ -89,13 +91,14 @@ Optional dependencies
 ---------------------
 
 The ``cartopy`` and ``matplotlib`` packages are only needed when creating data visualisations.
-They can be installed separately with:
+They can be installed separately with `pip install ismn[plot]` or
 
 .. code::
 
     conda install -c conda-forge matplotlib cartopy
 
 If you want to convert ISMN data into xarray objects, please install ``xarray`` and ``dask``
+via `pip install ismn[xr]` or
 
 .. code::
 
