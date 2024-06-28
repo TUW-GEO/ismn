@@ -33,7 +33,7 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-      - uses: conda-incubator/setup-miniconda@v2.0.1
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"
           auto-update-conda: true
