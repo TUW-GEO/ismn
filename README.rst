@@ -90,7 +90,7 @@ For a detailed description of the ISMN, technical data aspects (properties, cove
 Optional dependencies
 ---------------------
 
-The `cartopy <https://github.com/SciTools/cartopy>`_ and `xarray <https://github.com/matplotlib/matplotlib>`_ packages
+The `cartopy <https://github.com/SciTools/cartopy>`_ and `matplotlib <https://github.com/matplotlib/matplotlib>`_ packages
 are only needed when creating data visualisations. They can be installed separately via
 
 .. code::
