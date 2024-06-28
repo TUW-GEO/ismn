@@ -706,10 +706,10 @@ class ISMN_Interface:
                 "Either pass a filename OR pass ax to use for plot, not both.")
 
         if not plotlibs:
-            warnings.warn(
-                "Could not import all plotting libs, plotting functions not available."
-                "Please install cartopy and matplotlib.")
-            return
+            raise ImportError(
+                "Optional dependencies missing: `matplotlib` and/or `cartopy`. "
+                "Please run `conda install -c conda-forge matplotlib cartopy` "
+                "to use this feature.")
 
         data_crs = ccrs.PlateCarree()
 

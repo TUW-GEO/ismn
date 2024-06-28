@@ -42,8 +42,8 @@ class IsmnComponent:
     def _eval_xarray_installed(self):
         if not xarray_available:
             raise ImportError(
-                "Please install `xarray` and `dask` with `conda install xarray "
-                "dask` to use the conversion to xarray feature.")
+                "Optional dependencies missing: `xarray` and/or `dask`. "
+                "Please run `conda install -c conda-forge xarray dask` to use this feature.")
 
 
 class Sensor(IsmnComponent):
@@ -122,7 +122,7 @@ class Sensor(IsmnComponent):
     def data(self):
         return self.read_data()
 
-    def to_xarray(self) -> xr.Dataset:
+    def to_xarray(self):
         """
         Convert the Sensors data to an xarray.DataSet object
         with a location and time dimension in a single chunk.
@@ -373,7 +373,7 @@ class Station(IsmnComponent):
         else:
             return self.sensors[item]
 
-    def to_xarray(self, **filter_kwargs) -> xr.Dataset:
+    def to_xarray(self, **filter_kwargs):
         """
         Collect all sensor data at this station into a xarray.DataSet object
         with a location and time dimension in a single chunk.
@@ -682,7 +682,7 @@ class Network(IsmnComponent):
         """
         return len(self.stations)
 
-    def to_xarray(self, **filter_kwargs) -> xr.Dataset:
+    def to_xarray(self, **filter_kwargs):
         """
         Collect all sensor data at this station into a xarray.DataSet object
         with a location and time dimension in a single chunk.
