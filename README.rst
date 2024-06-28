@@ -90,19 +90,19 @@ For a detailed description of the ISMN, technical data aspects (properties, cove
 Optional dependencies
 ---------------------
 
-The ``cartopy`` and ``matplotlib`` packages are only needed when creating data visualisations.
-They can be installed separately with `pip install ismn[plot]` or
+The `cartopy <https://github.com/SciTools/cartopy>`_ and `xarray <https://github.com/matplotlib/matplotlib>`_ packages
+are only needed when creating data visualisations. They can be installed separately via
 
 .. code::
 
-    conda install -c conda-forge matplotlib cartopy
+    pip install ismn[plot]
 
-If you want to convert ISMN data into xarray objects, please install ``xarray`` and ``dask``
-via `pip install ismn[xr]` or
+If you want to convert ISMN data into xarray objects, please install `xarray <https://github.com/pydata/xarray>`_ and
+`dask <https://github.com/dask/dask>`_ via
 
 .. code::
 
-    conda install -c conda-forge xarray dask
+    pip install ismn[xr]
 
 Citation
 --------
