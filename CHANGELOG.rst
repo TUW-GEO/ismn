@@ -4,6 +4,10 @@ Changelog
 
 Unreleased changes in master branch
 ===================================
+-
+
+Version 1.5.0
+=============
 - Fixed a bug where metadata collection failed when a station static meta csv file was completely missing
 - ISMN grid is now a CellGrid
 - Added a method to sensors, stations and networks components for conversion to xarray Datasets
