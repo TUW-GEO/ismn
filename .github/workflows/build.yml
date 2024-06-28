@@ -60,7 +60,7 @@ jobs:
       - name: Install plot requirements and run plot tests
         shell: bash -l {0}
         run: |
-          conda install -c conda-forge geos
+          conda install -c conda-forge cartopy
           pip install -e .[plot]
           pytest -m "requires_plot"
       - name: Export Environment
