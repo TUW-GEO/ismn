@@ -6,6 +6,12 @@ Unreleased changes in master branch
 ===================================
 -
 
+Version 1.5.1
+=============
+- Fixed a bug where missing optional requirements (xarray, dask) lead to an error
+- CI uses dependencies from setup.cfg now
+- Switched to `treading` backend for multiprocessing
+
 Version 1.5.0
 =============
 - Fixed a bug where metadata collection failed when a station static meta csv file was completely missing
