@@ -708,7 +708,8 @@ class ISMN_Interface:
         if not plotlibs:
             raise ImportError(
                 "Optional dependencies missing: `matplotlib` and/or `cartopy`. "
-                "Please run `pip install ismn[plot]` to use this feature.")
+                "Please run `conda install -c conda-forge matplotlib cartopy` "
+                "to use this feature.")
 
         data_crs = ccrs.PlateCarree()
 

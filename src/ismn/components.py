@@ -43,7 +43,7 @@ class IsmnComponent:
         if not xarray_available:
             raise ImportError(
                 "Optional dependencies missing: `xarray` and/or `dask`. "
-                "Please run `pip install ismn[xr]` to use this feature.")
+                "Please run `conda install -c conda-forge xarray dask` to use this feature.")
 
 
 class Sensor(IsmnComponent):
