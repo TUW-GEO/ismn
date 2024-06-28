@@ -35,14 +35,9 @@ jobs:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
         with:
-          miniconda-version: "latest"
           auto-update-conda: true
-          channel-priority: flexible
           python-version: ${{ matrix.python-version }}
-          #environment-file: environment.yml
-          mamba-version: "*"
           activate-environment: ismn
-          auto-activate-base: false
       - name: Print environment infos
         shell: bash -l {0}
         run: |
