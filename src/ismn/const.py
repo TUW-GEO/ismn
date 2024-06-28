@@ -34,6 +34,8 @@ try:
     import dask
     xarray_available = True
 except ImportError:
+    xr = None
+    dask = None
     xarray_available = False
 
 ismnlog = logging.getLogger('ismn')

@@ -101,6 +101,7 @@ class NetworkTest(unittest.TestCase):
         """
         self.network = Network("Network1")
 
+    @pytest.mark.requires_xr
     def test_to_xarray_empty(self):
         ds = self.network.to_xarray()
         assert ds is None
@@ -187,6 +188,7 @@ class StationTest(unittest.TestCase):
 
         assert self.station.n_sensors == 2
 
+    @pytest.mark.requires_xr
     def test_to_xarray_empty(self):
         ds = self.station.to_xarray()
         assert ds is None
@@ -273,6 +275,7 @@ class SensorTest(unittest.TestCase):
 
         assert self.sensor.name == name
 
+    @pytest.mark.requires_xr
     def test_sensor_to_xarray(self):
         ds = self.sensor.to_xarray()
         df = ds['soil_moisture'].isel(sensor=0).to_dataframe()

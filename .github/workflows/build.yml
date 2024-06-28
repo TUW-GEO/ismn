@@ -33,13 +33,13 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2.0.1
         with:
           miniconda-version: "latest"
           auto-update-conda: true
           channel-priority: flexible
           python-version: ${{ matrix.python-version }}
-          environment-file: environment.yml
+          #environment-file: environment.yml
           mamba-version: "*"
           activate-environment: ismn
           auto-activate-base: false
@@ -47,21 +47,29 @@ jobs:
         shell: bash -l {0}
         run: |
           conda info -a
-          conda list
-          pip list
           which pip
           which python
+      - name: Install base package and test
+        shell: bash -l {0}
+        run: |
+          pip install -e .[testing]
+          pytest -m "not required_xr and not requires_plot"
+      - name: Install xarray requirements and run tests
+        shell: bash -l {0}
+        run: |
+          pip install -e .[xr]
+          pytest -m "required_xr"
+      - name: Install plot requirements and run tests
+        shell: bash -l {0}
+        run: |
+          pip install -e .[plot]
+          pytest -m "requires_plot"
       - name: Export Environment
         shell: bash -l {0}
         run: |
           mkdir -p .artifacts
           filename=env_py${{ matrix.python-version }}_${{ matrix.os }}.yml
           conda env export --no-builds | grep -v "prefix" > .artifacts/$filename
-      - name: Install package and test
-        shell: bash -l {0}
-        run: |
-          python setup.py develop
-          pytest
       - name: Upload Coverage
         shell: bash -l {0}
         run: |

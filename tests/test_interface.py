@@ -51,6 +51,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         self.ds.close_files()
         logging.shutdown()
 
+    @pytest.mark.requires_xr
     def test_to_xarray(self):
         ds = self.ds['COSMOS'].to_xarray(variable='soil_moisture')
         df_should = self.ds['COSMOS'][0][0].data[['soil_moisture']].dropna()
@@ -156,6 +157,7 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert station.lon == should_lon
         assert station.lat == should_lat
 
+    @pytest.mark.requires_plot
     def test_plot_station_locations(self):
         with TemporaryDirectory() as out_dir:
             outpath = os.path.join(out_dir, "plot.png")

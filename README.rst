@@ -381,42 +381,6 @@ We are happy if you want to contribute. Please raise an issue explaining what
 is missing or if you find a bug. We will also gladly accept pull requests
 against our master branch for new features or bug fixes.
 
-Example installation script
----------------------------
-
-The following script will install miniconda and setup the environment on a UNIX
-like system. Miniconda will be installed into ``$HOME/miniconda``.
-
-.. code::
-
-   wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-   bash miniconda.sh -b -p $HOME/miniconda
-   export PATH="$HOME/miniconda/bin:$PATH"
-   git clone git@github.com:TUW-GEO/ismn.git ismn
-   cd ismn
-   conda env create -f environment.yml
-   conda activate ismn
-
-This script adds ``$HOME/miniconda/bin`` temporarily to the ``PATH`` to do this
-permanently add ``export PATH="$HOME/miniconda/bin:$PATH"`` to your ``.bashrc``
-or ``.zshrc``. The second to last line in the example activates the ``ismn`` environment.
-
-After that you should be able to run:
-
-.. code::
-
-    pytest
-
-to run the test suite.
-
-Development setup
------------------
-
-For Development we also recommend a ``conda`` environment. You can create one
-including test dependencies and debugger by running
-``conda env create -f environment.yml``. This will create a new
-``ismn`` environment which you can activate by using
-``conda activate ismn``.
 
 Guidelines
 ----------
