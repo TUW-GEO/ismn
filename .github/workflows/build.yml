@@ -49,17 +49,17 @@ jobs:
           conda info -a
           which pip
           which python
-      - name: Install base package and test
+      - name: Install base package and run tests
         shell: bash -l {0}
         run: |
           pip install -e .[testing]
-          pytest -m "not required_xr and not requires_plot"
-      - name: Install xarray requirements and run tests
+          pytest  # run only basic tests, see setup.cfg
+      - name: Install xr requirements and run xr tests
         shell: bash -l {0}
         run: |
           pip install -e .[xr]
-          pytest -m "required_xr"
-      - name: Install plot requirements and run tests
+          pytest -m "requires_xr"
+      - name: Install plot requirements and run plot tests
         shell: bash -l {0}
         run: |
           pip install -e .[plot]
