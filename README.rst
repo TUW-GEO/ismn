@@ -97,7 +97,7 @@ are only needed when creating data visualisations. They can be installed separat
 
     conda install -c conda-forge matplotlib cartopy
 
- or ``pip install ismn[plot]`` for most operating systems if you already have `geos <https://libgeos.org/>`_ installed.
+or ``pip install ismn[plot]`` for most operating systems if you already have `geos <https://libgeos.org/>`_ installed.
 
 If you want to convert ISMN data into xarray objects, please install `xarray <https://github.com/pydata/xarray>`_ and
 `dask <https://github.com/dask/dask>`_ via
