@@ -277,7 +277,7 @@ class IsmnFileCollection(object):
             ignore_errors=True, log_path=log_path,
             log_filename=log_filename, logger_name='ismn_meta_collector',
             loglevel='INFO', progress_bar_label="Stations Processed",
-            backend='multiprocessing', verbose=False,
+            backend='threading', verbose=False,
         )
 
         elements = []
