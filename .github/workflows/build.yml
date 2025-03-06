@@ -63,7 +63,7 @@ jobs:
       - name: Install plot requirements and run plot tests
         shell: bash -l {0}
         run: |
-          conda install -c conda-forge -c defaults cartopy matplotlib
+          # conda install -c conda-forge -c defaults cartopy matplotlib
           pip install -e .[plot]
           python -c "import matplotlib, cartopy"
           pytest -m "requires_plot" --cov-append
