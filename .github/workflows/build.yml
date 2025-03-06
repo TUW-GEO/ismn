@@ -65,6 +65,7 @@ jobs:
         run: |
           conda install -c conda-forge -c defaults cartopy matplotlib
           pip install -e .[plot]
+          python -c "import matplotlib, cartopy"
           pytest -m "requires_plot" --cov-append
       - name: Export Environment
         shell: bash -l {0}
