@@ -42,7 +42,6 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
           channel-priority: flexible
-          # mamba-version: "*"
           activate-environment: ismn
           auto-activate-base: false
       - name: Print environment infos
@@ -64,7 +63,7 @@ jobs:
       - name: Install plot requirements and run plot tests
         shell: bash -l {0}
         run: |
-          conda install -c conda-forge cartopy
+          conda install -c conda-forge -c defaults cartopy matplotlib
           pip install -e .[plot]
           pytest -m "requires_plot" --cov-append
       - name: Export Environment
