@@ -4,7 +4,12 @@ Changelog
 
 Unreleased changes in master branch
 ===================================
-- Fixed dependency list for `ismn[plot]` install (PyQt5)
+-
+
+Version 1.5.2
+=============
+- Fixed dependency list for `ismn[plot]` install (PyQt5 and cartopy>=0.22)
+- Use `repurpose.process.parallel_process` now
 
 Version 1.5.1
 =============
