@@ -310,7 +310,7 @@ class Test_ISMN_Interface_HeaderValuesUnzipped(Test_ISMN_Interface_CeopUnzipped)
         self.ds = ISMN_Interface(self.testdata)
 
 
-@pytest.mark.zip
+@pytest.mark.data_from_zip
 class Test_ISMN_Interface_CeopZipped(Test_ISMN_Interface_CeopUnzipped):
     @classmethod
     def setUpClass(cls):
@@ -332,7 +332,7 @@ class Test_ISMN_Interface_CeopZipped(Test_ISMN_Interface_CeopUnzipped):
         self.ds = ISMN_Interface(self.testdata_zip_path)
 
 
-@pytest.mark.zip
+@pytest.mark.data_from_zip
 class Test_ISMN_Interface_HeaderValuesZipped(Test_ISMN_Interface_CeopUnzipped):
     @classmethod
     def setUpClass(cls):

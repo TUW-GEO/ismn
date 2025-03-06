@@ -4,7 +4,7 @@ Changelog
 
 Unreleased changes in master branch
 ===================================
--
+- Fixed dependency list for `ismn[plot]` install (PyQt5)
 
 Version 1.5.1
 =============
