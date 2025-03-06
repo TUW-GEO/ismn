@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 import os
-from repurpose.process import parallel_process_async  # keep this import
+from repurpose.process import parallel_process  # keep this import
 import numpy as np
 from pathlib import Path
 from tempfile import gettempdir
@@ -1021,4 +1021,3 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-
