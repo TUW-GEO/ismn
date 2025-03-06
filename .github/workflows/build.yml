@@ -24,14 +24,14 @@ jobs:
             python-version: '3.9'  # first supported
           - os: "windows-latest"
             python-version: '3.9'  # first supported
-          # - os: "macos-latest"
-          #  python-version: '3.9'  # first supported
+          - os: "macos-latest"
+            python-version: '3.9'  # first supported
           - os: "ubuntu-latest"
             python-version: '3.12'  # latest supported
           - os: "windows-latest"
             python-version: '3.12'  # latest supported
-          # - os: "macos-latest"
-          #  python-version: '3.12'  # latest supported
+          - os: "macos-latest"
+            python-version: '3.12'  # latest supported
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,7 +63,6 @@ jobs:
       - name: Install plot requirements and run plot tests
         shell: bash -l {0}
         run: |
-          # conda install -c conda-forge -c defaults cartopy matplotlib
           pip install -e .[plot]
           python -c "import matplotlib, cartopy"
           pytest -m "requires_plot" --cov-append
