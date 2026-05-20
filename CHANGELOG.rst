@@ -6,6 +6,11 @@ Unreleased changes in master branch
 ===================================
 -
 
+Version 1.5.3
+=============
+- Update workflow for docker image creation
+- Add download and extraction functions for ISMN archive
+
 Version 1.5.2
 =============
 - Fixed dependency list for `ismn[plot]` install (PyQt5 and cartopy>=0.22)
