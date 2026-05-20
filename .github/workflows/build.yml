@@ -84,25 +84,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
-      - name: Create wheel and dist package
-        shell: bash -l {0}
-        run: |
-          pip install setuptools_scm twine
-          if [ ${{ matrix.os }} == "windows-latest" ]
-          then
-            # build whls on windows
-            pip install wheel
-            python setup.py bdist_wheel --dist-dir artifacts/dist
-          else
-            # build dist on linux
-            python setup.py sdist --dist-dir artifacts/dist
-          fi
-          ls artifacts/dist
-          twine check artifacts/dist/*
-      - name: Upload Artifacts
+      - name: Upload Environment Artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: Artifacts-py${{ matrix.python-version }}-${{ matrix.os }}
+          name: env-py${{ matrix.python-version }}-${{ matrix.os }}
           path: artifacts/*
   coveralls:
     name: Submit Coveralls 👚
@@ -115,31 +100,53 @@ jobs:
           pip3 install --upgrade coveralls && coveralls --service=github --finish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  package:
+    name: Build sdist & wheel 📦
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+          fetch-depth: 0  # needed for setuptools_scm to determine version
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Build sdist and wheel
+        run: |
+          pip install build twine
+          python -m build
+          ls -la dist/
+          twine check dist/*
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
   publish:
     name: Upload to PyPI 🚀
     if: startsWith(github.ref, 'refs/tags/v') && startsWith(github.repository, 'TUW-GEO')
-    needs: build
+    needs: package
     runs-on: ubuntu-latest
     steps:
       - name: Print environment variables
         run: |
           echo "GITHUB_REF = $GITHUB_REF"
           echo "GITHUB_REPOSITORY = $GITHUB_REPOSITORY"
-      - name: Download Artifacts
+      - name: Download distribution artifacts
         uses: actions/download-artifact@v6
         with:
-          path: Artifacts
-          pattern: Artifacts-*
-          merge-multiple: true
+          name: dist
+          path: dist/
       - name: Display downloaded files
-        run: ls -aR
+        run: ls -aR dist/
       - name: Upload to PyPI
         uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           skip_existing: true
           verbose: true
           verify_metadata: true
-          packages_dir: Artifacts/dist/
+          packages_dir: dist/
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }} # this needs to be uploaded to github actions secrets
   publish-docker-image:
