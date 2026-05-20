@@ -9,7 +9,8 @@ Unreleased changes in master branch
 Version 1.5.3
 =============
 - Update workflow for docker image creation
-- Add download and extraction functions for ISMN archive
+- Add download of archive from ISMN website
+- Extract near real-time networks from archive
 
 Version 1.5.2
 =============
