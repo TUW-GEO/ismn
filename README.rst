@@ -18,7 +18,7 @@ ismn
 
 Readers for data from the International Soil Moisture Network (ISMN) https://ismn.earth.
 
-This package is installable through pip (verified for ``python>=3.9``)
+This package is installable through pip (verified for ``python>=3.10``)
 
 .. code::
 
