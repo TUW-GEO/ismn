@@ -6,6 +6,10 @@ Unreleased changes in master branch
 ===================================
 -
 
+Version 1.5.4
+=============
+- Bugfix ISMN extraction from archive, leaves sensor filenames in place
+
 Version 1.5.3
 =============
 - Update workflow for docker image creation
