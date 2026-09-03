@@ -249,3 +249,23 @@ KOEPPENGEIGER = OrderedDict([
     ("W", "Water"),
 ])
 # ==============================================================================
+# ISMN near real-time (NRT) network names
+
+nrt_networks = [
+    "XMS-CAT",
+    "CW3E",
+    "SCAN",
+    "USCRN",
+    "SNOTEL",
+    "SOILSCAPE",
+    "Berlin",
+    "WEGENERNET",
+    "ROMPS",
+    "ARM",
+    "BFG_Nw",
+    "DWD",
+    "FMI",
+    "RSMN",
+    "TERENO"
+]
+

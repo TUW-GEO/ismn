@@ -6,6 +6,21 @@ Unreleased changes in master branch
 ===================================
 -
 
+Version 1.5.4
+=============
+- Bugfix ISMN extraction from archive, leaves sensor filenames in place
+
+Version 1.5.3
+=============
+- Update workflow for docker image creation
+- Add download of archive from ISMN website
+- Extract near real-time networks from archive
+
+Version 1.5.2
+=============
+- Fixed dependency list for `ismn[plot]` install (PyQt5 and cartopy>=0.22)
+- Use `repurpose.process.parallel_process` now
+
 Version 1.5.1
 =============
 - Fixed a bug where missing optional requirements (xarray, dask) lead to an error

@@ -1,6 +1,8 @@
 import os
 import click
 from ismn.interface import ISMN_Interface
+from ismn.download import ISMNDownloader, ISMNExtractor
+from ismn.const import nrt_networks
 
 @click.command("collect_metadata", short_help="Collect all ISMN metadata.")
 @click.argument('data_path', type=click.STRING)
@@ -100,5 +102,59 @@ def export_geojson(data_path, file_out, field, variable):
 def ismn():
     pass
 
+@click.command("nrt-download", short_help="Download the ISMN archive from ismn.earth.")
+@click.argument(
+    "output_path",
+    type=click.Path(dir_okay=False, writable=True),
+    default="/tmp/ismn_archive.zip",
+    required=False,
+)
+@click.option(
+    "--username",
+    default=lambda: os.environ.get("ISMN_USERNAME"),
+    help="ISMN account username. Falls back to $ISMN_USERNAME.",
+)
+@click.option(
+    "--password",
+    default=lambda: os.environ.get("ISMN_PASSWORD"),
+    help="ISMN account password. Falls back to $ISMN_PASSWORD.",
+)
+def nrt_download(output_path, username, password):
+    """Download the ISMN archive from ismn.earth.
+
+    OUTPUT_PATH is where to write the downloaded archive
+    (default: /tmp/ismn_archive.zip).
+    """
+    if not username or not password:
+        raise click.UsageError(
+            "username and password are required "
+            "(pass --username/--password or set $ISMN_USERNAME/$ISMN_PASSWORD)."
+        )
+
+    ISMNDownloader(
+        username=username,
+        password=password,
+        output_path=output_path,
+    ).run()
+
+
+@click.command("nrt-extract", short_help="Extract hardcoded NRT networks from an ISMN archive.")
+@click.argument("archive_path", type=click.Path(exists=True, dir_okay=False))
+@click.argument("output_dir", type=click.Path(file_okay=False))
+def nrt_extract(archive_path, output_dir):
+    """Extract hardcoded NRT networks from an ISMN archive.
+
+    ARCHIVE_PATH is the path to the ISMN archive zip.
+    OUTPUT_DIR is where to write extracted output.
+    """
+    ISMNExtractor(
+        archive_path=archive_path,
+        nrt_networks=nrt_networks,
+        output_dir=output_dir,
+    ).run()
+
+
 ismn.add_command(collect_metadata)
 ismn.add_command(export_geojson)
+ismn.add_command(nrt_download, name="nrt-download")
+ismn.add_command(nrt_extract, name="nrt-extract")
