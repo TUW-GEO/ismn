@@ -3,6 +3,7 @@ import tempfile
 import yaml
 import shutil
 import datetime
+from ismn.download import ISMNExtractor
 
 testdata_root = os.path.join(os.path.dirname(__file__), "test_data")
 
@@ -10,7 +11,6 @@ def test_download_extraction():
     """
     Test the extraction process of the ISMN dataset.
     """
-    from src.ismn.download import ISMNExtractor
 
     with tempfile.TemporaryDirectory() as tmpdir:
         archive_path = os.path.join(testdata_root, 'archive_sample', "ismn_archive.zip")

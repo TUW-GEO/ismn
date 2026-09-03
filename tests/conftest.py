@@ -8,3 +8,7 @@
 """
 
 # import pytest
+
+def pytest_deselected(items):
+    for item in items:
+        print(f"DESELECTED: {item.nodeid}")
