@@ -131,7 +131,6 @@ class Test_FileCollectionHeaderValuesUnzipped(Test_FileCollectionCeopSepUnzipped
         cls.coll = IsmnFileCollection.build_from_scratch(testdata_path_unzipped)
 
 
-@pytest.mark.zip
 class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
 
@@ -149,7 +148,6 @@ class Test_FileCollectionCeopSepZipped(Test_FileCollectionCeopSepUnzipped):
         cls.coll = IsmnFileCollection.build_from_scratch(testdata_zip_path)
 
 
-@pytest.mark.zip
 class Test_FileCollectionHeaderValuesZipped(Test_FileCollectionCeopSepUnzipped):
     # same tests as for ceop sep format,
     @classmethod

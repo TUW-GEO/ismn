@@ -290,7 +290,7 @@ class SensorTest(unittest.TestCase):
         start = self.sensor.metadata['timerange_from'].val.to_pydatetime()
         assert self.sensor.get_coverage(start=start-timedelta(days=100)) < cov
         np.testing.assert_almost_equal(
-            self.sensor.get_coverage(freq='2H'), 113.492, decimal=3)
+            self.sensor.get_coverage(freq='2h'), 113.492, decimal=3)
 
     def test_sensor_attributes(self):
         """

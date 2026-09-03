@@ -32,7 +32,7 @@ import time
 from typing import List, Tuple
 import pandas as pd
 from collections import OrderedDict
-from repurpose.process import parallel_process_async
+from repurpose.process import parallel_process
 import traceback
 
 from ismn.base import IsmnRoot
@@ -270,7 +270,7 @@ class IsmnFileCollection(object):
             'stat_dir': process_stat_dirs
         }
 
-        res = parallel_process_async(
+        res = parallel_process(
             _read_station_dir, ITER_KWARGS=ITER_KWARGS,
             STATIC_KWARGS=STATIC_KWARGS,
             n_proc=n_proc, show_progress_bars=True,
