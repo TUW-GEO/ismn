@@ -27,12 +27,13 @@ import numpy as np
 from pathlib import Path
 from tempfile import gettempdir
 import platform
-import sys
+import math
 import pandas as pd
 from collections import OrderedDict
 from collections.abc import Iterable
 from typing import Union
 import warnings
+from matplotlib.lines import Line2D
 
 from ismn.components import NetworkCollection, Network
 from ismn.filecollection import IsmnFileCollection
@@ -633,24 +634,28 @@ class ISMN_Interface:
             return stat
 
     def plot_station_locations(
-        self,
-        variable=None,
-        min_depth=-np.inf,
-        max_depth=np.inf,
-        extent=None,
-        stats_text=True,
-        check_only_sensor_depth_from=False,
-        markersize=12.5,
-        markeroutline=True,
-        borders=True,
-        legend=True,
-        text_scalefactor=1,
-        dpi=300,
-        filename=None,
-        ax=None,
+            self,
+            variable=None,
+            min_depth=-np.inf,
+            max_depth=np.inf,
+            extent=None,
+            stats_text=True,
+            check_only_sensor_depth_from=False,
+            markersize=12.5,
+            markeroutline=True,
+            borders=True,
+            states=False,
+            legend=True,
+            text_scalefactor=1,
+            dpi=300,
+            filename=None,
+            ax=None,
+            figsize=(5, 5),
+            max_legend_rows=8,
+            projection=None,
     ):
         """
-        Plots available stations on a world map in robinson projection.
+        Plots available stations on a world map.
 
         Parameters
         ----------
@@ -667,7 +672,7 @@ class ISMN_Interface:
             [lon min, lon max, lat min, lat max]
             Extent of the map that is plotted. If None is passed, a global map
             is plotted.
-        stats_text : bool, optianal (default: False)
+        stats_text : bool, optional (default: False)
             Include text of net/stat/sens counts in plot.
         check_only_sensor_depth_from : bool, optional (default: False)
             Ignores the sensors depth_to value and only checks if depth_from of
@@ -678,6 +683,8 @@ class ISMN_Interface:
             If True, a black outline is drawn around the markers.
         borders: bool, optional (default: True)
             If True, country borders are drawn.
+        states: bool, optional (default: True)
+            If True, state borders are drawn.
         legend: bool, optional (default: True)
             If True, a legend is drawn.
         text_scalefactor : float, optional (default: 1)
@@ -689,12 +696,24 @@ class ISMN_Interface:
             Filename where image is stored. If None is passed, no file is created.
         ax : plt.axes
             Axes object that can be used by cartopy (projection assigned).
+        figsize: tuple(width,height), optional
+            Figure size. Is ignored when ax is passed directly.
+        max_legend_rows : int, optional (default: 8)
+            Upper bound on how many rows the network legend is allowed to use
+            before it starts adding columns instead of growing taller.
+        projection : cartopy.crs.Projection, optional (default: None)
+            Map projection used for the plot axes, e.g. ccrs.Robinson(),
+            ccrs.Mollweide(), ccrs.Orthographic(...). If None, defaults to
+            ccrs.PlateCarree(). Ignored if `ax` is passed directly (the
+            projection is then whatever `ax` was already created with). Note
+            this only affects how the map is *displayed* - station coordinates
+            are always interpreted as lon/lat (PlateCarree) internally.
 
         Returns
         -------
         fig: matplotlib.Figure
             created figure instance. If axes was given this will be None.
-        ax: matplitlib.Axes
+        ax: matplotlib.Axes
             used axes instance, can be added to another figure for example.
         count : dict
             Number of valid sensors and stations that contain at least one valid
@@ -711,31 +730,53 @@ class ISMN_Interface:
                 "Please run `conda install -c conda-forge matplotlib cartopy` "
                 "to use this feature.")
 
+        # `data_crs` describes the coordinate system of the *data* (station
+        # lon/lat), which is always plain PlateCarree regardless of how the map
+        # itself is displayed - so this must NOT be tied to `projection`.
         data_crs = ccrs.PlateCarree()
 
-        if ax is None:
-            fig, ax = plt.subplots(1, 1)
-            ax.set_axis_off()
-            ax = plt.axes(projection=ccrs.Robinson())
+        if projection is None:
+            projection = ccrs.PlateCarree()
+
+        # Keep track of whether the caller supplied their own ax, so we know
+        # whether we're allowed to resize/tight_layout the figure and what to
+        # return for `fig` (None if the caller owns the axes/figure).
+        user_passed_ax = ax is not None
+        if not user_passed_ax:
+            _fig = plt.figure(figsize=figsize)
+            ax = _fig.add_subplot(1, 1, 1, projection=projection)
         else:
-            fig = None
+            _fig = ax.get_figure()
 
         ax.coastlines()
-        # show global map
         ax.set_global()
         if borders:
             ax.add_feature(cfeature.BORDERS, edgecolor="gray")
+        if states:
             ax.add_feature(cfeature.STATES, linewidth=0.5, edgecolor="gray")
 
-        if not (sys.version_info[0] == 3 and sys.version_info[1] == 4):
-            colormap = plt.get_cmap("tab20")
-        else:
-            colormap = plt.get_cmap("Set1")
+        colormap = plt.get_cmap("tab20")
+        n_colors = 20  # tab20 has 20 distinct colors
+
+        # tab20 alone can't visually distinguish more than 20 networks - colors
+        # start repeating. To support many more (e.g. up to 90) networks, cycle
+        # through marker shapes as well, so each (color, marker) *pair* is
+        # unique. With 20 colors x len(marker_cycle) shapes below, that's
+        # enough combinations for ~120+ networks before anything repeats.
+        marker_cycle = ["s", "o", "^", "D", "v", "P", "X", "*"]
+        n_markers = len(marker_cycle)
 
         all_networks = list(self.networks.keys())
-        colorsteps = np.arange(0, 1, 1 / float(len(all_networks)))
+        n_all_networks = max(len(all_networks), 1)  # avoid ZeroDivisionError below
 
-        rect = []
+        def _style_for(net_idx):
+            """Return (color, marker) for the net_idx'th network, cycling
+            marker shapes once we run out of distinct colors."""
+            color = colormap((net_idx % n_colors) / float(n_colors))
+            marker = marker_cycle[(net_idx // n_colors) % n_markers]
+            return color, marker
+
+        legend_handles = []
         act_networks = []
         act_stations = []
 
@@ -748,10 +789,24 @@ class ISMN_Interface:
 
         n_sens = 0
         for nw, stat, sens in iterator:
-            netcolor = colormap(colorsteps[all_networks.index(nw.name)])
+            net_idx = all_networks.index(nw.name)
+            netcolor, netmarker = _style_for(net_idx)
+
             if nw.name not in act_networks:
                 act_networks.append(nw.name)
-                rect.append(Rectangle((0, 0), 1, 1, fc=netcolor))
+                legend_handles.append(
+                    Line2D(
+                        [0],
+                        [0],
+                        marker=netmarker,
+                        color="none",
+                        markerfacecolor=netcolor,
+                        markeredgecolor="black" if markeroutline else netcolor,
+                        markeredgewidth=0.5,
+                        markersize=6,
+                        linestyle="None",
+                    )
+                )
 
             if stat.name not in act_stations:
                 act_stations.append(stat.name)
@@ -761,7 +816,7 @@ class ISMN_Interface:
                     color=netcolor,
                     s=markersize,
                     linewidth=0.5,
-                    marker="s",
+                    marker=netmarker,
                     transform=data_crs,
                     edgecolors="black" if markeroutline else None,
                     zorder=2,
@@ -771,63 +826,81 @@ class ISMN_Interface:
         if extent is not None:
             ax.set_extent(extent, crs=data_crs)
 
-        nrows = 8.0 if len(act_networks) > 8 else len(act_networks)
+        # Artists that must be included when computing the "tight" bbox on save,
+        # otherwise they can get clipped out of the saved image.
+        extra_artists = []
+        lgd = None
 
-        try:
-            ncols = int(len(act_networks) / nrows)
-        except ZeroDivisionError:
-            ncols = 0
-        if ncols == 0:
-            ncols = 1
+        if legend and act_networks:
+            n_entries = len(act_networks)
 
-        if legend:
-            handles, labels = ax.get_legend_handles_labels()
+            # Start from "how many columns do I need to keep rows <= max_legend_rows"
+            ncols = max(1, math.ceil(n_entries / max_legend_rows))
+            # ...then also cap columns so the legend can't sprawl wider than the
+            # figure - roughly 2.5 legend entries per inch of figure width.
+            max_cols_for_width = max(1, int(figsize[0] * 2.5))
+            ncols = min(ncols, max_cols_for_width, n_entries)
+            nrows = math.ceil(n_entries / ncols)
+
+            # Shrink the legend font a bit as rows increase, within sane bounds.
+            legend_fontsize = max(3.5, 6 - 0.15 * max(nrows - 4, 0)) * text_scalefactor
+
             lgd = ax.legend(
-                handles, labels, loc="lower center", bbox_to_anchor=(0.5, -0.1))
-
-            ax.legend(
-                rect,
+                legend_handles,
                 act_networks,
                 loc="upper center",
-                ncol=ncols,
                 bbox_to_anchor=(0.5, -0.05),
-                fontsize=4 * text_scalefactor,
+                ncol=ncols,
+                fontsize=legend_fontsize,
+                handlelength=1.0,
+                columnspacing=1.0,
+                labelspacing=0.3,
+                frameon=True,
             )
+            extra_artists.append(lgd)
 
-        postfix_depth = ("when only considering depth_from of the sensor"
-                         if check_only_sensor_depth_from else "")
-        depth_text = f"between {min_depth} and {max_depth} m \n {postfix_depth}"
+            # Give the figure a bit more room to breathe as the legend grows
+            # taller, so tight_layout/bbox_inches="tight" doesn't have to fight
+            # a figure that's too short to begin with. Only do this if we own
+            # the figure (i.e. caller didn't pass in their own ax).
+            if not user_passed_ax and _fig is not None:
+                w, h = figsize
+                extra_height = 0.22 * nrows * text_scalefactor
+                _fig.set_size_inches(w, h + extra_height)
+
+        postfix_depth = (
+            " (only considering sensor depth_from)"
+            if check_only_sensor_depth_from else "")
+        depth_text = f"between {min_depth} and {max_depth} m{postfix_depth}"
         feedback = (
             f"{n_sens} valid sensors in {len(act_stations)} stations "
-            f"in {len(act_networks)} networks (of {len(all_networks)} potential networks) \n"
-            f"for {f'variable {variable}' if variable is not None else 'all variables'} "
+            f"in {len(act_networks)} networks (of {len(all_networks)} potential)\n"
+            f"{f'variable: {variable}' if variable is not None else 'all variables'}, "
             f"{depth_text}")
 
+        text = None
         if stats_text:
-            text = ax.text(
-                0.5,
-                1.05,
-                feedback,
-                transform=ax.transAxes,
-                fontsize=5 * text_scalefactor,  # "xx-small",
-                horizontalalignment="center",
-            )
-        else:
-            text = None
+            # Using set_title (with `pad`) instead of a manually-positioned
+            # ax.text(...) lets tight_layout reason about the title's extent,
+            # which removes most of the stray whitespace above the map.
+            text = ax.set_title(feedback, fontsize=5 * text_scalefactor, pad=6)
+            extra_artists.append(text)
 
-        if fig:
-            fig.set_size_inches([6, 3.5 + (0.25 * text_scalefactor) * nrows])
+        if not user_passed_ax and _fig is not None:
+            _fig.tight_layout()
 
         if filename is not None:
-            fig.savefig(
+            _fig.savefig(
                 filename,
-                bbox_extra_artists=(lgd, text) if stats_text else (lgd),
+                bbox_extra_artists=tuple(extra_artists) if extra_artists else None,
                 bbox_inches="tight",
                 dpi=dpi,
             )
+            counts = (len(act_networks), len(act_stations), n_sens)
+            return None, ax, counts
         else:
             counts = (len(act_networks), len(act_stations), n_sens)
-            return fig, ax, counts
+            return (_fig if not user_passed_ax else None), ax, counts
 
     def get_min_max_obs_timestamps(
         self,
@@ -1021,4 +1094,3 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
-
