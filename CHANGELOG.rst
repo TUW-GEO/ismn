@@ -4,7 +4,7 @@ Changelog
 
 Unreleased changes in master branch
 ===================================
--
+- Plotting function for stations on a map was updated 
 
 Version 1.5.4
 =============
