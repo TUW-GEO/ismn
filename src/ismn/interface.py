@@ -1137,8 +1137,8 @@ class ISMN_Interface:
                             'timerange_to' span the overlap of all sensors.
                             If the selection failed (only with keep_failed),
                             primary_id = lowest passed sensor id, 'other_ids'
-                            is empty, 'instrument' is 'Tolerance selection
-                            failed', 'frm_class' is 'None', 'frm_snr' is None,
+                            is empty, 'instrument' is 'Depth averaging failed', 
+                            'frm_class' is 'None', 'frm_snr' is None,
                             'selection_failed' is True and 'selection_reason'
                             is 'point_measurement', 'depth' or 'no_overlap'.
         """
@@ -1162,7 +1162,7 @@ class ISMN_Interface:
             meta['other_ids'] = []
             meta['instrument_depthfrom'] = s_from_min
             meta['instrument_depthto'] = s_to_max
-            meta['instrument'] = 'Tolerance selection failed'
+            meta['instrument'] = 'Depth averaging failed'
             meta['frm_class'] = 'None'
             meta['frm_snr'] = None
             meta['selection_failed'] = True

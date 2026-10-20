@@ -63,7 +63,7 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
         primary, meta = self.ds.find_sensors_by_tolerance_station_selection(
             self.sensor_ids,
             depth_top=0.0,
-            depth_bottom=0.05,
+            depth_bottom=0.1,
             top_tol=0.05,
             bottom_tol=0.05,
             reshape_meta=reshape_meta,
@@ -73,7 +73,7 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
         assert meta["other_ids"] == [1, 2]
         assert meta["station"] == "Karolinenfeld"
         assert meta["instrument"] == "3 Averaged Sensors"
-        assert meta["frm_class"] == "3 Averaged Sensors"
+        assert meta["frm_class"] == "None"
         assert meta["frm_snr"] is None
         # depth span over all sensors of the station
         assert meta["instrument_depthfrom"] == 0.05
@@ -85,39 +85,23 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
     def test_station_discarded_outside_tolerance(self):
         """
         No sensor of the station reaches the 0.5 - 1.0 m layer -> station
-        is dropped.
+        is dropped, or with keep_failed returned as a placeholder on its
+        lowest sensor id.
         """
-        result = self.ds.find_sensors_by_tolerance_station_selection(
-            self.sensor_ids,
-            depth_top=0.5,
-            depth_bottom=1.0,
-            top_tol=0.0,
-            bottom_tol=0.0,
-            reshape_meta=reshape_meta,
-        )
+        kwargs = dict(depth_top=0.5, depth_bottom=1.0, top_tol=0.0,
+                      bottom_tol=0.0, reshape_meta=reshape_meta)
 
-        assert result is None
+        assert self.ds.find_sensors_by_tolerance_station_selection(
+            self.sensor_ids, **kwargs) is None
 
-    def test_keep_failed_outside_tolerance(self):
-        """
-        With keep_failed, a station that fails the depth selection is
-        returned as a placeholder on its lowest sensor id instead of None.
-        """
         primary, meta = self.ds.find_sensors_by_tolerance_station_selection(
-            self.sensor_ids,
-            depth_top=0.5,
-            depth_bottom=1.0,
-            top_tol=0.0,
-            bottom_tol=0.0,
-            reshape_meta=reshape_meta,
-            keep_failed=True,
-        )
+            self.sensor_ids, keep_failed=True, **kwargs)
 
         assert primary == 0
         assert meta["other_ids"] == []
         assert meta["station"] == "Karolinenfeld"
-        assert meta["instrument"] == "Tolerance selection failed"
-        assert meta["frm_class"] == "Tolerance selection failed"
+        assert meta["instrument"] == "Depth averaging failed"
+        assert meta["frm_class"] == "None"
         assert meta["frm_snr"] is None
         assert meta["selection_failed"] is True
         assert meta["selection_reason"] == "depth"
@@ -153,7 +137,7 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
 
         assert primary == 0
         assert meta["other_ids"] == []
-        assert meta["instrument"] == "Tolerance selection failed"
+        assert meta["instrument"] == "Depth averaging failed"
         assert meta["selection_failed"] is True
         assert meta["selection_reason"] == "no_overlap"
 
@@ -175,14 +159,46 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
         assert meta_kf["instrument"] == "3 Averaged Sensors"
         assert "selection_failed" not in meta_kf
 
+    def test_single_point_measurement_discarded(self):
+        """
+        A station with a single point-measurement sensor (depth_from ==
+        depth_to) is discarded, or with keep_failed returned as a placeholder.
+        """
+        kwargs = dict(depth_top=0.05, depth_bottom=0.05, top_tol=0.0,
+                      bottom_tol=0.0, reshape_meta=reshape_meta)
+
+        assert self.ds.find_sensors_by_tolerance_station_selection(
+            [2], **kwargs) is None
+
+        primary, meta = self.ds.find_sensors_by_tolerance_station_selection(
+            [2], keep_failed=True, **kwargs)
+
+        assert primary == 2
+        assert meta["other_ids"] == []
+        assert meta["instrument"] == "Depth averaging failed"
+        assert meta["selection_failed"] is True
+        assert meta["selection_reason"] == "point_measurement"
+
     def test_single_sensor_metadata_untouched(self):
         """
         A station with a single matching sensor is kept as is, no merging
         metadata is written.
         """
+        read_metadata = self.ds.read_metadata
+
+        def read_metadata_layer(idx, format="pandas"):
+            # turn the 0.05 m point measurement of sensor 2 into a
+            # 0.0 - 0.05 m layer measurement
+            meta = read_metadata(idx, format=format)
+            if idx == 2:
+                meta["variable"] = [("soil_moisture", 0.0, 0.05)]
+            return meta
+
+        self.ds.read_metadata = read_metadata_layer
+
         primary, meta = self.ds.find_sensors_by_tolerance_station_selection(
             [2],
-            depth_top=0.05,
+            depth_top=0.0,
             depth_bottom=0.05,
             top_tol=0.0,
             bottom_tol=0.0,
@@ -192,7 +208,7 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
         assert primary == 2
         assert meta["other_ids"] == []
         assert meta["instrument"] == "EC-ET_1_5"
-        assert meta["instrument_depthfrom"] == 0.05
+        assert meta["instrument_depthfrom"] == 0.0
         assert meta["instrument_depthto"] == 0.05
         # original period of that sensor, no intersection applied
         assert meta["timerange_from"] == np.datetime64("2008-05-17T23:00:00")
