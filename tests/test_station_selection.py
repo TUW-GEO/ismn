@@ -51,6 +51,10 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
                                       groupby="station")
         self.sensor_ids = ids["Karolinenfeld"]
         assert self.sensor_ids == [0, 1, 2]
+        # which sensor gets which id follows the file system's directory
+        # order and differs between machines, so look ids up by instrument
+        self.id_of = {self.ds.metadata.loc[i, ("instrument", "val")]: i
+                      for i in self.sensor_ids}
 
     def tearDown(self) -> None:
         self.ds.close_files()
@@ -184,20 +188,21 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
         A station with a single matching sensor is kept as is, no merging
         metadata is written.
         """
+        sid = self.id_of["EC-ET_1_5"]
         read_metadata = self.ds.read_metadata
 
         def read_metadata_layer(idx, format="pandas"):
-            # turn the 0.05 m point measurement of sensor 2 into a
+            # turn the 0.05 m point measurement of the EC-ET sensor into a
             # 0.0 - 0.05 m layer measurement
             meta = read_metadata(idx, format=format)
-            if idx == 2:
+            if idx == sid:
                 meta["variable"] = [("soil_moisture", 0.0, 0.05)]
             return meta
 
         self.ds.read_metadata = read_metadata_layer
 
         primary, meta = self.ds.find_sensors_by_tolerance_station_selection(
-            [2],
+            [sid],
             depth_top=0.0,
             depth_bottom=0.05,
             top_tol=0.0,
@@ -205,7 +210,7 @@ class Test_FindSensorsByToleranceStationSelection(unittest.TestCase):
             reshape_meta=reshape_meta,
         )
 
-        assert primary == 2
+        assert primary == sid
         assert meta["other_ids"] == []
         assert meta["instrument"] == "EC-ET_1_5"
         assert meta["instrument_depthfrom"] == 0.0
