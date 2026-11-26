@@ -460,10 +460,8 @@ class DataFile(IsmnFile):
         else:
             headr, _, last, fname = self.get_elements_from_file()
 
-        if len(fname) > 9:
-            instr = "_".join(fname[6:len(fname) - 2])
-        else:
-            instr = fname[6]
+        instr = "_".join(fname[6:len(fname) - 2])
+
 
         if fname[3] in const.VARIABLE_LUT:
             variable = const.VARIABLE_LUT[fname[3]]
@@ -514,10 +512,8 @@ class DataFile(IsmnFile):
         else:
             headr, scnd, last, fname = self.get_elements_from_file()
 
-        if len(fname) > 9:
-            instrument = "_".join(fname[6:len(fname) - 2])
-        else:
-            instrument = fname[6]
+        instrument = "_".join(fname[6:len(fname) - 2])
+
 
         if fname[3] in const.VARIABLE_LUT:
             variable = const.VARIABLE_LUT[fname[3]]

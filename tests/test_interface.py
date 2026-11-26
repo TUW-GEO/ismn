@@ -86,6 +86,11 @@ class Test_ISMN_Interface_CeopUnzipped(unittest.TestCase):
         assert list(ids.keys()) == ["COSMOS"]
         assert ids["COSMOS"] == [0, 1]
 
+        ids = self.ds.get_dataset_ids("soil_moisture", max_depth=100,
+                                      groupby=["network", "station"])
+        assert ids == {("COSMOS", "ARM-1"): [0],
+                       ("COSMOS", "Barrow-ARM"): [1]}
+
         ids = self.ds.get_dataset_ids("soil_moisture", max_depth=0.19)
         assert ids == [0]
 

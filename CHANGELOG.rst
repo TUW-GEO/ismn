@@ -4,7 +4,11 @@ Changelog
 
 Unreleased changes in master branch
 ===================================
+
+Version 1.5.5
+=============
 - Plotting function for stations on a map was updated 
+- Add QA4SM tolerance filter selection
 
 Version 1.5.4
 =============

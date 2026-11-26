@@ -1,0 +1,39 @@
+{
+    "@context": "https://schema.org/",
+    "@type": "Dataset",
+    "name": "Soil Moisture Data",
+    "description": "Soil Moisture Data",
+    "publisher": {
+        "@type": "Organization",
+        "name": "German Federal Institute of Hydrology",
+        "url": "https://www.bafg.de",
+        "subOrganization": {
+            "@type": "Organization",
+            "name": "International Centre for Water Resources and Global Change (ICWRGC)",
+            "url": "https://waterandchange.org/"
+        }
+    },
+    "distribution": {
+        "@type": "DataDownload",
+        "name": "ISMN Soil Moisture Network - Data Download",
+        "contentUrl": "https://ismn.earth"
+    },
+    "download_info": {
+        "created": "2026-08-17T12:47:13.226989+00:00",
+        "networks": "['UDC_SMOS']",
+        "swlng": 11.9586,
+        "nelng": 12.2058,
+        "swlat": 47.7836,
+        "nelat": 47.9679,
+        "start_date": "2008-03-01",
+        "end_date": "2010-03-31",
+        "format": "own",
+        "fill_nan": false,
+        "g_flag_only": false,
+        "variables": "Soil Moisture, ",
+        "climates": "Tropical, Arid, Temperate, Cold, Water, Polar",
+        "landcovers": "Crop land, Tree cover, Grassland, Lichens and mosses, Sparse vegetation, Urban areas, Bare areas, Water bodies, Permanent snow and ice",
+        "depth_from": 0.0,
+        "depth_to": 255.0
+    }
+}

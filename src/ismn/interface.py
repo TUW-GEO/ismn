@@ -449,8 +449,12 @@ class ISMN_Interface:
         check_only_sensor_depth_from : bool, optional (default: False)
             Ignores the sensors depth_to value and only checks if depth_from of
             the sensor is in the passed depth (e.g. for cosmic ray probes).
-        groupby : str, optional (default: None)
-            A metadata field name that is used to group sensors, e.g. network
+        groupby : str or list[str], optional (default: None)
+            A metadata field name that is used to group sensors, e.g. network.
+            If a list of field names is passed, the group keys are tuples of
+            the field values, e.g. ['network', 'station'] gives keys
+            ('network', 'station'). Use this to group by station, as station
+            names are not unique across networks.
         """
         if groupby is None:
             ids = []
@@ -470,7 +474,11 @@ class ISMN_Interface:
 
             if eval:
                 if groupby is not None:
-                    groupval = filehandler.metadata[groupby].val
+                    if isinstance(groupby, str):
+                        groupval = filehandler.metadata[groupby].val
+                    else:
+                        groupval = tuple(filehandler.metadata[g].val
+                                         for g in groupby)
                     if groupval not in ids.keys():
                         ids[groupval] = []
                     ids[groupval].append(id)
@@ -1094,3 +1102,122 @@ class ISMN_Interface:
     def close_files(self):
         # close all open filehandlers
         self.__file_collection.close()
+
+    def find_sensors_by_tolerance_station_selection(self, sensor_ids, depth_top,
+                                                depth_bottom, top_tol,
+                                                bottom_tol, reshape_meta,
+                                                keep_failed=False):
+        """
+        Depth-filter the sensors of a single ISMN station against the validation layer
+        [depth_top, depth_bottom] within tolerances.
+
+        Parameters
+        ----------
+        keep_failed : bool, optional (default: False)
+            If False, a station that fails the selection is discarded (None is
+            returned). If True, it is returned as a placeholder instead, see
+            below, so that it can still be reported downstream.
+
+        Returns
+        -------
+        None                if the station fails the selection and
+                            keep_failed is False. The selection fails if the
+                            station has a single point-measurement sensor, if
+                            no sensor matches the layer within tolerances, or
+                            if the sensors have no overlapping measurement
+                            period (their average would be empty)
+        (primary_id, meta)  primary_id = lowest kept sensor id,
+                            meta = reshaped metadata of the primary, extended with:
+                            'other_ids'            : other kept sensor ids
+                            'instrument_depthfrom' : min s_from over all passed sensor_ids
+                            'instrument_depthto'   : max s_to over all passed sensor_ids
+                            If more than one sensor_id was passed, 'instrument'
+                            is '<n> Averaged Sensors', 'frm_class' is 'None',
+                            'frm_snr' is None and 'timerange_from' /
+                            'timerange_to' span the overlap of all sensors.
+                            If the selection failed (only with keep_failed),
+                            primary_id = lowest passed sensor id, 'other_ids'
+                            is empty, 'instrument' is 'Depth averaging failed', 
+                            'frm_class' is 'None', 'frm_snr' is None,
+                            'selection_failed' is True and 'selection_reason'
+                            is 'point_measurement', 'depth' or 'no_overlap'.
+        """
+        # read full metadata once per sensor; depth comes from the 'variable' tuple
+        depths, raw_meta = {}, {}
+        for sid in sensor_ids:
+            meta = self.read_metadata(sid, format="dict")
+            raw_meta[sid] = meta
+            _, s_from, s_to = meta['variable'][0]   # ('soil_moisture', s_from, s_to)
+            depths[sid] = (s_from, s_to)
+
+        # depth span and sensor count over all passed sensor_ids
+        s_from_min = min(sf for sf, _ in depths.values())
+        s_to_max = max(st for _, st in depths.values())
+
+        def failed(reason):
+            if not keep_failed:
+                return None
+            primary = min(sensor_ids)
+            meta = reshape_meta(raw_meta[primary])
+            meta['other_ids'] = []
+            meta['instrument_depthfrom'] = s_from_min
+            meta['instrument_depthto'] = s_to_max
+            meta['instrument'] = 'Depth averaging failed'
+            meta['frm_class'] = 'None'
+            meta['frm_snr'] = None
+            meta['selection_failed'] = True
+            meta['selection_reason'] = reason
+            return primary, meta
+
+        # single-sensor point measurement -> discard station
+        if len(sensor_ids) == 1:
+            s_from, s_to = next(iter(depths.values()))
+            if s_from == s_to:
+                return failed('point_measurement')
+
+        # station keep conditions, any sensor may satisfy each independently
+        top_match = any(
+            (sf >= depth_top - top_tol) and (sf <= depth_top + top_tol)
+            and (st <= depth_bottom + bottom_tol)
+            for sf, st in depths.values()
+        )
+        bottom_match = any(
+            (st >= depth_bottom - bottom_tol) and (st <= depth_bottom + bottom_tol)
+            and (sf >= depth_top - top_tol)
+            for sf, st in depths.values()
+        )
+        if not (top_match and bottom_match):
+            return failed('depth')
+
+        # sensors inside the tolerance-extended layer (top_match implies
+        # membership, so this is guaranteed non-empty once the station passed)
+        inside = sorted(
+            sid for sid, (sf, st) in depths.items()
+            if (sf >= depth_top - top_tol) and (st <= depth_bottom + bottom_tol)
+        )
+        primary, other_ids = inside[0], inside[1:]
+
+        meta = reshape_meta(raw_meta[primary])
+        meta['other_ids'] = other_ids
+        meta['instrument_depthfrom'] = s_from_min
+        meta['instrument_depthto'] = s_to_max
+        if len(sensor_ids) > 1:
+            meta['instrument'] = f'{len(sensor_ids)} Averaged Sensors'
+            meta['frm_class'] = f'None'
+            meta['frm_snr'] = None
+            # merged sensors are averaged on the intersection of their
+            # timestamps (inner join in MergeSensorsAdapter), so the covered
+            # period is the overlap, not the union
+            time_from = max(
+                pd.Timestamp(raw_meta[sid]['timerange_from'][0][0])
+                for sid in sensor_ids)
+            time_to = min(
+                pd.Timestamp(raw_meta[sid]['timerange_to'][0][0])
+                for sid in sensor_ids)
+            # sensors never run at the same time -> merged series is empty
+            if time_from > time_to:
+                return failed('no_overlap')
+            # same scalar/dtype convention as reshape_meta
+            meta['timerange_from'] = time_from.to_numpy()
+            meta['timerange_to'] = time_to.to_numpy()
+        return primary, meta
